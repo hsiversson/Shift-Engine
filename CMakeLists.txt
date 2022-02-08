@@ -32,4 +32,5 @@ endif()
 
 ##################################
 # Repository sub-directories
+add_subdirectory(${ENGINE_SOURCE_DIRECTORY})
 add_subdirectory(${GAME_SOURCE_DIRECTORY})
