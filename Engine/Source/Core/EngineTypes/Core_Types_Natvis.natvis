@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+    <Type Name="SC_Array&lt;*&gt;">
+    	<DisplayString>ItemCount={mCurrentItemCount} ItemCapacity={mItemCapacity}</DisplayString>
+    	<Expand>
+    		<Item Name="ItemCount">mCurrentItemCount</Item>
+    		<Item Name="ItemCapacity">mItemCapacity</Item>
+    		<ArrayItems>
+    			<Size>mCurrentItemCount</Size>
+    			<ValuePointer>mInternalItemBuffer</ValuePointer>
+    		</ArrayItems>
+    	</Expand>
+    </Type>
+
+</AutoVisualizer>
