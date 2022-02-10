@@ -1,8 +1,5 @@
 ## Ignore the build folder for now
-##_build/
+/_build/
 
 ## Temporarily ignore the built binaries
-##Bin/
-
-## Temporarily ignore the built binaries
-## lib/
+/Bin/
