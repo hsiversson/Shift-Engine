@@ -19,12 +19,12 @@ bool SGF_Framework::Init(SGF_GameInterface* aGameInstance)
 	// Create window
 	// Init game modules
 
-	return true;
+	return mGameInstance->Init();
 }
 
 void SGF_Framework::Run()
 {
-	while (UpdateSingleFrame()) {}
+	while (Tick()) {}
 }
 
 void SGF_Framework::Exit()
@@ -32,7 +32,7 @@ void SGF_Framework::Exit()
 
 }
 
-bool SGF_Framework::UpdateSingleFrame()
+bool SGF_Framework::Tick()
 {
 
 	mGameInstance->Update();

@@ -19,7 +19,7 @@ public:
 	void Exit();
 
 private:
-	bool UpdateSingleFrame();
+	bool Tick();
 
 private:
 	SGF_GameInterface* mGameInstance;
