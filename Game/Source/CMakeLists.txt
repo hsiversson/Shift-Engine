@@ -1,7 +1,6 @@
-
 ##################################
 # Gather all .cpp and .h files in current directory
-file(GLOB GAME_FILES "*.cpp" "*.h")
+file(GLOB_RECURSE GAME_FILES CONFIGURE_DEPENDS "*.cpp" "*.h")
 
 ##################################
 # Launchable project (outputs .exe)
@@ -12,6 +11,21 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${GAME_FILES})
 
 ##################################
 # Target Settings
-target_include_directories(ExampleGame PUBLIC ${ENGINE_SOURCE_DIRECTORY}/Modules/GameFramework)
+target_include_directories(ExampleGame PRIVATE 
+                            ${ENGINE_SOURCE_DIRECTORY}/Modules/GameFramework
+                            ${ENGINE_SOURCE_DIRECTORY}/Core/RenderCore
+                            ${ENGINE_SOURCE_DIRECTORY}/Core/Common
+                            ${ENGINE_SOURCE_DIRECTORY}/Core/InputOutput
+                            ${ENGINE_SOURCE_DIRECTORY}/Core/Memory
+                            ${ENGINE_SOURCE_DIRECTORY}/Core/EngineTypes
+                            ${ENGINE_SOURCE_DIRECTORY}/Core/Platform)
+                            
+target_link_libraries(ExampleGame
+                        GameFramework	
+                        Common
+                        InputOutput
+                        Memory
+						EngineTypes
+                        Platform)
 
-target_link_libraries(ExampleGame GameFramework)
+target_precompile_headers(ExampleGame PRIVATE ${ENGINE_SOURCE_DIRECTORY}/Core/Common/SC_Base.h)

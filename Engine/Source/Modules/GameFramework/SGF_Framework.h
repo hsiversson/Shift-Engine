@@ -14,12 +14,15 @@ public:
 	SGF_Framework();
 	~SGF_Framework();
 
-	bool Init(SGF_GameInterface* aGameInstance);
-	void Run();
-	void Exit();
+	int32 InternalMain(SGF_GameInterface* aGameInstance);
 
 private:
+	bool Init();
+
+	void MainLoop();
 	bool Tick();
+
+	void Exit();
 
 private:
 	SGF_GameInterface* mGameInstance;

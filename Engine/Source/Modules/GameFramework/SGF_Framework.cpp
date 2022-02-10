@@ -11,25 +11,44 @@ SGF_Framework::~SGF_Framework()
 
 }
 
-bool SGF_Framework::Init(SGF_GameInterface* aGameInstance)
+int32 SGF_Framework::InternalMain(SGF_GameInterface* aGameInstance)
 {
+	SC_Thread::GetMainThreadId();
+#if ENABLE_LOGGING
+	SC_Logger::Create();
+#endif
+	SC_ThreadPool::Create();
+#if ENABLE_CONSOLE
+	SC_Console::Create();
+#endif
+
 	mGameInstance = aGameInstance;
+	if (mGameInstance->Init())
+	{
+		MainLoop();
+	}
 
-	// Init engine modules
-	// Create window
-	// Init game modules
+	Exit();
 
-	return mGameInstance->Init();
+#if ENABLE_CONSOLE
+	SC_Console::Destroy();
+#endif
+	SC_ThreadPool::Destroy();
+#if ENABLE_LOGGING
+	SC_Logger::Destroy();
+#endif
+
+	return 0;
 }
 
-void SGF_Framework::Run()
+bool SGF_Framework::Init()
 {
-	while (Tick()) {}
+	return false;
 }
 
-void SGF_Framework::Exit()
+void SGF_Framework::MainLoop()
 {
-
+	while (Tick());
 }
 
 bool SGF_Framework::Tick()
@@ -38,4 +57,9 @@ bool SGF_Framework::Tick()
 	mGameInstance->Update();
 
 	return true;
+}
+
+void SGF_Framework::Exit()
+{
+
 }

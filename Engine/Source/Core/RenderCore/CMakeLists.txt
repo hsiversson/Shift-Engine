@@ -1,0 +1,5 @@
+file(GLOB_RECURSE RENDERCORE_FILES CONFIGURE_DEPENDS "*.cpp" "*.h")
+
+add_library(RenderCore ${RENDERCORE_FILES})
+set_property(TARGET RenderCore PROPERTY FOLDER "1. Core") 
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${RENDERCORE_FILES})

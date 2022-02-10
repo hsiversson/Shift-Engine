@@ -12,7 +12,7 @@ GameInstance::~GameInstance()
 
 bool GameInstance::Init()
 {
-	return false;
+	return true;
 }
 
 void GameInstance::Update()

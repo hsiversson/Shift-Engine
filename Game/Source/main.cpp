@@ -1,6 +1,4 @@
-
-
-#include <windows.h>
+#include "SC_Base.h"
 
 #include "SGF_Framework.h"
 #include "GameInstance.h"
@@ -23,14 +21,8 @@ int APIENTRY WinMain(HINSTANCE /*hInst*/, HINSTANCE /*hInstPrev*/, PSTR /*cmdlin
 	SGF_Framework frameworkInstance;
 	GameInstance gameInstance;
 
-	if (!frameworkInstance.Init(&gameInstance))
-	{
-		return -1;
-	}
+	int32 returnCode = frameworkInstance.InternalMain(&gameInstance);
 
-	frameworkInstance.Run();
-	frameworkInstance.Exit();
-
-	return 0;
+	return returnCode;
 }
 
