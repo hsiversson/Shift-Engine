@@ -1,16 +1,17 @@
 
 ##################################
 # Engine Core sub-directories
-add_subdirectory(./Core/Platform)
-add_subdirectory(./Core/EngineTypes)
-add_subdirectory(./Core/Memory)
-add_subdirectory(./Core/Common)
-add_subdirectory(./Core/Render)
-add_subdirectory(./Core/Network)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Core/Platform)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Core/EngineTypes)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Core/Memory)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Core/InputOutput)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Core/Common)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Core/Render)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Core/Network)
 
 ##################################
 # Engine Modules sub-directories
-add_subdirectory(./Modules/Audio)
-add_subdirectory(./Modules/Graphics)
-add_subdirectory(./Modules/GameFramework)
-add_subdirectory(./Modules/Physics)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Modules/Audio)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Modules/Graphics)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Modules/GameFramework)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Modules/Physics)

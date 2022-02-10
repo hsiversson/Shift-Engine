@@ -1,22 +1,22 @@
 #pragma once
 
 // Platform
-#include "SC_Platform.h"
-#include "SC_Atomics.h"
-#include "SC_Time.h"
+#include "Platform/SC_Platform.h"
+#include "Atomics/SC_Atomics.h"
+#include "Time/SC_Time.h"
 
 // Types
 #include "SC_TypesInclude.h"
 
 // IO
-#include "SC_File.h"
-#include "SC_EnginePaths.h"
-#include "SC_Json.h"
+#include "File/SC_File.h"
+#include "File/SC_EnginePaths.h"
+#include "Json/SC_Json.h"
 
 // Common
-#include "SC_Logger.h"
-#include "SC_Mutex.h"
-#include "SC_Thread.h"
-#include "SC_ThreadPool.h"
-#include "SC_CommandLine.h"
-#include "SC_Console.h"
+#include "Logging/SC_Logger.h"
+#include "Async/SC_Mutex.h"
+#include "Async/SC_Thread.h"
+#include "ThreadPool/SC_ThreadPool.h"
+#include "Configuration/SC_CommandLine.h"
+#include "Console/SC_Console.h"

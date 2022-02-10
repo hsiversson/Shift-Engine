@@ -22,6 +22,10 @@ set(GAME_SOURCE_DIRECTORY ${PROJECT_SOURCE_DIR}/Game/Source)      ## Where is th
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 ##################################
+# Global Defines
+add_definitions(-DUNICODE -D_UNICODE)
+
+##################################
 # Compiler options
 if (MSVC)
     add_compile_options(-W4 -WX)                            ## Adds warning level 4 and enables warnings as errors
