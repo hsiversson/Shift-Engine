@@ -1,5 +1,5 @@
 #pragma once
-#include "View/SGfx_Camera.h"
+#include "Graphics/View/SGfx_Camera.h"
 #include "SGfx_ShadowConstants.h"
 
 struct SGfx_ViewData;

@@ -1,0 +1,22 @@
+#ifndef STATIC_SAMPLERS_HEADER
+#define STATIC_SAMPLERS_HEADER
+
+SamplerState gPointClamp : register(s0, space1);
+SamplerState gPointWrap : register(s1, space1);
+SamplerState gPointMirror : register(s2, space1);
+
+SamplerState gBilinearClamp : register(s3, space1);
+SamplerState gBilinearWrap : register(s4, space1);
+SamplerState gBilinearMirror : register(s5, space1);
+
+SamplerState gTrilinearClamp : register(s6, space1);
+SamplerState gTrilinearWrap : register(s7, space1);
+SamplerState gTrilinearMirror : register(s8, space1);
+
+SamplerState gAnisotropicClamp : register(s9, space1);
+SamplerState gAnisotropicWrap : register(s10, space1);
+SamplerState gAnisotropicMirror : register(s11, space1);
+
+SamplerComparisonState gShadowSampler : register(s12, space1);
+
+#endif //STATIC_SAMPLERS_HEADER

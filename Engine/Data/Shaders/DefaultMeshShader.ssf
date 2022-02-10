@@ -1,0 +1,152 @@
+#include "SceneConstants.ssh"
+
+#include "Lighting.ssh"
+
+struct PixelShaderInput
+{
+    float4 mClipPosition : SV_POSITION;
+    float3 mViewPosition : View_POSITION;
+    float3 mWorldPosition : WORLD_POSITION;
+    float3 mPrevWorldPosition : PREV_WORLD_POSITION;
+    float3 mNormal : NORMAL0;
+    float3 mTangent : TANGENT;
+    float3 mBitangent : BITANGENT;
+    float2 mUV : UV0;
+    nointerpolation uint   mMeshletIndex : MESHLET_INDEX0;
+    nointerpolation uint   mMaterialIndex : MATERIAL_INDEX;
+    nointerpolation uint   maoIndex : ao_INDEX;
+};
+
+#ifdef MESH_SHADER
+struct SR_Meshlet
+{
+    uint mVertexCount;
+    uint mVertexOffset;
+    uint mPrimitiveCount;
+    uint mPrimitiveOffset;
+};
+
+struct DrawInfoStruct
+{
+    float4x4 mTransform;
+    float4x4 mPrevTransform;
+	uint mVertexBufferDescriptorIndex;
+	uint mMeshletBufferDescriptorIndex;
+	uint mPrimitiveIndexBufferDescriptorIndex;
+	uint mVertexIndexBufferDescriptorIndex;
+    uint mMaterialIndex;
+    uint aoTex;
+};
+ConstantBuffer<DrawInfoStruct> DrawInfo : register(b0);
+
+//PixelShaderInput MainVS(in SR_VertexLayout input)
+//{
+//    PixelShaderInput output;
+//
+//    float4 worldPos = mul(DrawInfo.mTransform, float4(input.mPosition, 1.0f));
+//    output.mClipPosition = mul(ViewConstants.mWorldToClip, float4(worldPos.xyz, 1.0f));
+//    output.mNormal = normalize(input.mNormal);
+//    //output.mMeshletIndex = meshletIndex;
+//
+//    return output;
+//}
+
+
+#define MAX_VERTS 64
+#define MAX_PRIMITIVES 64
+
+uint3 UnpackPrimitive(uint primitive)
+{
+    // Unpacks a 10 bits per index triangle from a 32-bit uint.
+    return uint3(primitive & 0x3FF, (primitive >> 10) & 0x3FF, (primitive >> 20) & 0x3FF);
+}
+
+[outputtopology("triangle")]
+[numthreads(MAX_PRIMITIVES,1,1)]
+void MainMS(in uint groupId : SV_GroupID, in uint groupThreadId : SV_GroupThreadID, out vertices PixelShaderInput outVertices[MAX_VERTS], out indices uint3 outIndices[MAX_PRIMITIVES])
+{
+    const uint meshletIndex = groupId;
+    StructuredBuffer<SR_Meshlet> meshlets = GetStructuredBuffer<SR_Meshlet>(DrawInfo.mMeshletBufferDescriptorIndex);
+    SR_Meshlet meshlet = meshlets[meshletIndex];
+    SetMeshOutputCounts(meshlet.mVertexCount, meshlet.mPrimitiveCount);
+
+    if (groupThreadId < meshlet.mVertexCount)
+    {
+        StructuredBuffer<SR_VertexLayout> vertices = GetStructuredBuffer<SR_VertexLayout>(DrawInfo.mVertexBufferDescriptorIndex);
+        Buffer<uint> vertexIndices = GetBuffer<uint>(DrawInfo.mVertexIndexBufferDescriptorIndex);
+
+        uint vertexIndex = vertexIndices[meshlet.mVertexOffset + groupThreadId];
+        SR_VertexLayout vertex = vertices[vertexIndex];
+
+        float3x3 transform33 = (float3x3)DrawInfo.mTransform;
+
+        float4 worldPos = mul(DrawInfo.mTransform, float4(vertex.mPosition, 1.0f));
+        outVertices[groupThreadId].mWorldPosition = worldPos.xyz;
+        outVertices[groupThreadId].mViewPosition = mul(gSceneConstants.mViewConstants.mWorldToCamera, float4(worldPos.xyz, 1.0f)).xyz;
+        outVertices[groupThreadId].mClipPosition = mul(gSceneConstants.mViewConstants.mWorldToClip, float4(worldPos.xyz, 1.0f));
+
+        outVertices[groupThreadId].mNormal = normalize(mul(transform33, vertex.mNormal));
+        outVertices[groupThreadId].mTangent = normalize(mul(transform33, vertex.mTangent));
+        outVertices[groupThreadId].mBitangent = normalize(mul(transform33, vertex.mBitangent));
+
+        outVertices[groupThreadId].mUV = vertex.mUV0;
+        
+        outVertices[groupThreadId].mMeshletIndex = meshletIndex;
+        outVertices[groupThreadId].mMaterialIndex = DrawInfo.mMaterialIndex;
+        outVertices[groupThreadId].maoIndex = DrawInfo.aoTex;
+
+        float4 prevWorldPos = mul(DrawInfo.mPrevTransform, float4(vertex.mPosition, 1.0f));
+        outVertices[groupThreadId].mPrevWorldPosition = prevWorldPos.xyz;
+    }
+
+    if (groupThreadId < meshlet.mPrimitiveCount)
+    {
+        StructuredBuffer<uint> primitiveIndices = GetStructuredBuffer<uint>(DrawInfo.mPrimitiveIndexBufferDescriptorIndex);
+        uint packedIndices = primitiveIndices[meshlet.mPrimitiveOffset + groupThreadId];
+        outIndices[groupThreadId] = UnpackPrimitive(packedIndices);
+    }
+}
+#endif // MESH_SHADER
+
+#ifdef PIXEL_SHADER
+float4 MainPS(in PixelShaderInput aInput) : SV_TARGET0
+{
+    const EnvironmentConstants environmentConstants = gSceneConstants.mEnvironmentConstants;
+
+    float3 lightDirection = environmentConstants.mSunLightDirection;
+    float3 lightColor = environmentConstants.mSunLightColor;
+
+    float3 viewDirection = normalize(aInput.mWorldPosition - gSceneConstants.mViewConstants.mCameraPosition);
+
+    SR_MaterialInfo materialInfo = SR_GetMaterialInfo(aInput.mMaterialIndex);
+    Texture2D<float4> baseColorMap = GetTexture2D<float4>(materialInfo.mTextureIndices[0]);
+    Texture2D<float3> normalMap = GetTexture2D<float3>(materialInfo.mTextureIndices[2]);
+    Texture2D<float> roughnessMap = GetTexture2D<float>(materialInfo.mTextureIndices[3]);
+    Texture2D<float> metallicMap = GetTexture2D<float>(materialInfo.mTextureIndices[1]);
+
+    Texture2D<float> aoTex = GetTexture2D<float>(aInput.maoIndex);
+
+    //float4 baseColorSample = float4(0.964f, 0.337f, 0.035f, 1.0f);
+    //float3 normalSample = float3(0.0f, 0.0f, 1.0f);
+    //float roughnessSample = 0.0f;
+    //float metallicSample = 1.0f;
+    
+    float4 baseColorSample = baseColorMap.Sample(gAnisotropicWrap, aInput.mUV);
+    float3 normalSample = normalize(normalMap.Sample(gAnisotropicWrap, aInput.mUV).rgb * 2.0f - 1.0f); // Remap to -1 -> 1 range (NormalMaps are stored in 0 -> 1 range)
+    float roughnessSample = roughnessMap.Sample(gAnisotropicWrap, aInput.mUV).r;
+    float metallicSample = metallicMap.Sample(gAnisotropicWrap, aInput.mUV).r;
+    float aoSample = aoTex.SampleLevel(gBilinearClamp, aInput.mClipPosition.xy * gSceneConstants.mViewConstants.mRenderTargetSizeAndInvSize.zw, 0);
+
+    float3x3 tangentToWorld = float3x3(
+            aInput.mTangent.x, aInput.mBitangent.x, aInput.mNormal.x,
+            aInput.mTangent.y, aInput.mBitangent.y, aInput.mNormal.y,
+            aInput.mTangent.z, aInput.mBitangent.z, aInput.mNormal.z
+        );
+    float3 normal = mul(tangentToWorld, normalSample);
+
+    MaterialData materialData = BuildMaterialData(float4(baseColorSample.rgb, 1.0f), normal, float4(roughnessSample, metallicSample, aoSample, 1.0f));
+    float3 color = CalculateLighting(materialData, aInput.mWorldPosition, viewDirection, aInput.mViewPosition.z);
+
+    return float4(color, 1.0f);
+}
+#endif // PIXEL_SHADER

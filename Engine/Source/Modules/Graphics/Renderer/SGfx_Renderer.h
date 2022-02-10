@@ -1,5 +1,5 @@
 #pragma once
-#include "Misc/SGfx_Surface.h"
+#include "Graphics/Misc/SGfx_Surface.h"
 #include "RenderCore/Defines/SR_Format.h"
 #include "RenderCore/RenderTasks/SR_RenderTaskManager.h"
 

@@ -1,10 +1,10 @@
 #include "SGfx_World.h"
 #include "SGfx_SceneGraph.h"
-#include "View/SGfx_View.h"
-#include "Environment/SGfx_Environment.h"
-#include "Material/SGfx_MaterialCache.h"
-#include "Renderer/SGfx_Renderer.h"
-#include "Lighting/Shadows/SGfx_ShadowSystem.h"
+#include "Graphics/View/SGfx_View.h"
+#include "Graphics/Environment/SGfx_Environment.h"
+#include "Graphics/Material/SGfx_MaterialCache.h"
+#include "Graphics/Renderer/SGfx_Renderer.h"
+#include "Graphics/Lighting/Shadows/SGfx_ShadowSystem.h"
 
 SGfx_World::SGfx_World()
 {

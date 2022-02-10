@@ -1,0 +1,28 @@
+#include "Common.ssh"
+
+struct PixelInput
+{
+    float4 mPos : SV_POSITION;
+    float2 mUV : UV0;
+};
+
+PixelInput MainVS(uint aVertexId : SV_VertexID)
+{
+    PixelInput output;
+    output.mUV = float2(((2 - aVertexId) << 1) & 2, (aVertexId & 2));
+    output.mPos = float4(output.mUV * float2(2.0f, -2.0f) + float2(-1.0f, 1.0f), 0.0f, 1.0f);
+    return output;
+}
+
+struct CopyInfoStruct
+{
+    uint mInputTextureDescriptorIndex;
+};
+ConstantBuffer<CopyInfoStruct> CopyInfo : register(b0);
+
+float4 MainPS(const PixelInput aInput) : SV_TARGET0 
+{
+    Texture2D<float3> screenColorTexture = GetTexture2D<float3>(CopyInfo.mInputTextureDescriptorIndex);
+    float3 color = screenColorTexture.Sample(gBilinearClamp, aInput.mUV);
+    return float4(color, 1.0f);
+}

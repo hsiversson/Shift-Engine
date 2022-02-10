@@ -1,5 +1,5 @@
 #include "SGfx_Sky.h"
-#include "View/SGfx_View.h"
+#include "Graphics/View/SGfx_View.h"
 
 SGfx_Sky::SGfx_Sky()
 {

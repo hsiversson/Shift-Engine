@@ -1,5 +1,5 @@
 #pragma once
-#include "Misc/SGfx_Surface.h"
+#include "Graphics/Misc/SGfx_Surface.h"
 
 class SR_ShaderState;
 class SR_CommandList;

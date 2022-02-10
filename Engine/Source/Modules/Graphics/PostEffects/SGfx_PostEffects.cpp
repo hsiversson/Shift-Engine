@@ -1,5 +1,5 @@
 #include "SGfx_PostEffects.h"
-#include "View/SGfx_View.h"
+#include "Graphics/View/SGfx_View.h"
 
 SGfx_PostEffects::SGfx_PostEffects()
 {

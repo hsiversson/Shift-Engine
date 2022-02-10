@@ -1,0 +1,86 @@
+#include "Raytracing.ssh"
+
+struct HitInfo
+{
+	float mOcclusionFactor;
+};
+struct Attributes 
+{
+	float2 uv;
+};
+
+struct RTAOConstants
+{
+    float4 mTargetSizeAndInvSize;
+    uint mNumRaysPerPixel;
+    float mRadius;
+    uint mDepthBufferDescriptorIndex;
+    uint mOutputTextureDescriptorIndex;
+};
+ConstantBuffer<RTAOConstants> Constants : register(b0);
+
+[shader("closesthit")]
+void HitGroup0_ClosestHit(inout HitInfo aPayload, Attributes aAttributes)
+{
+    aPayload.mOcclusionFactor = RayTCurrent();
+}
+
+[shader("miss")]
+void Miss(inout HitInfo aPayload)
+{
+}
+
+float TraceOcclusionRay(float3 aRayStart, float3 aRayDirection, float aMinT, float aMaxT)
+{
+    RayDesc ray;
+    ray.Origin = aRayStart + aRayDirection * 0.001f;
+    ray.Direction = aRayDirection;
+    ray.TMin = 0.0f;
+    ray.TMax = aMaxT;
+
+    HitInfo payload;
+    payload.mOcclusionFactor = aMaxT; // Start as not occluded.
+
+    uint rayFlags = RAY_FLAG_CULL_NON_OPAQUE;
+    TraceRay(GetRaytracingScene(), rayFlags, 0xff, 0, 0, 0, ray, payload);
+
+    return 1.0f - (payload.mOcclusionFactor / aMaxT);
+}
+
+[shader("raygeneration")]
+void Main()
+{
+    uint3 dispatchIndex = DispatchRaysIndex();
+    uint2 fullscreenCoord = dispatchIndex.xy << 1;
+    uint numRays = Constants.mNumRaysPerPixel;
+
+    Texture2D<float> depthBuffer = GetTexture2D<float>(Constants.mDepthBufferDescriptorIndex);
+    float depthSample = depthBuffer.Load(int3(fullscreenCoord, 0));
+    
+    float finalOcclusionFactor = 0.0f;
+
+    [branch]
+    if (depthSample > 0.0f && numRays > 0)
+    {
+	    float noise = InterleavedGradientNoise(dispatchIndex.xy, gSceneConstants.mFrameIndex);
+	    uint2 random = uint2(asuint(noise), 0x1813 * noise);
+
+        float2 clipPos = SR_PixelToClip(float2(fullscreenCoord + 0.5f));
+        float3 rayStartPosition = SR_ClipToWorld(float3(clipPos, depthSample));
+        float3 surfaceNormal = ReconstructNormalFromDepth(depthBuffer, fullscreenCoord, rayStartPosition);
+
+        float accumulatedOcclusion = 0.0f;
+
+        for (uint i = 0; i < numRays; ++i)
+        {
+			float2 E = Hammersley16(i, numRays, random);
+            float3 rayDirectionTangent = CosineSampleHemisphere(E).xyz;
+            float3 rayDirection = TangentToWorld(rayDirectionTangent, surfaceNormal);
+            accumulatedOcclusion += TraceOcclusionRay(rayStartPosition, rayDirection, 0.01f, Constants.mRadius);
+        }
+        finalOcclusionFactor = accumulatedOcclusion / max(numRays, 1);
+    }
+
+    RWTexture2D<float4> outputTexture = GetRWTexture2D<float4>(Constants.mOutputTextureDescriptorIndex);
+    outputTexture[dispatchIndex.xy] = saturate(1.0f - finalOcclusionFactor);
+}

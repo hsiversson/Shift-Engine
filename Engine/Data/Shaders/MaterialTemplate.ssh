@@ -1,0 +1,46 @@
+#ifndef MATERIAL_TEMPLATE_HEADER
+#define MATERIAL_TEMPLATE_HEADER
+
+#include "MaterialData.ssh"
+
+float GetMaterialBaseColor()
+{
+    return 0.0f;
+}
+
+float3 GetMaterialNormal()
+{
+    return (float3)0.0f;
+}
+
+float GetMaterialRoughness()
+{
+    return 0.0f;
+}
+
+float GetMaterialMetallic()
+{
+    return 0.0f;
+}
+
+float GetMaterialAmbientOcclusion()
+{
+    return 0.0f;
+}
+
+float GetMaterialSpecular()
+{
+    return 0.0f;
+}
+
+float GetMaterialOpacity()
+{
+    return 1.0f;
+}
+
+uint GetMaterialShadingModel()
+{
+    return 1;
+}
+
+#endif //MATERIAL_TEMPLATE_HEADER

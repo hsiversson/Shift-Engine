@@ -1,0 +1,87 @@
+#ifndef COMMON_HEADER
+#define COMMON_HEADER
+//#pragma once
+
+#define PI 3.14159265359
+
+float  Squared(float  aX)    { return aX*aX; }
+float2 Squared(float2 aX)    { return aX*aX; }
+float3 Squared(float3 aX)    { return aX*aX; }
+float4 Squared(float4 aX)    { return aX*aX; }
+float  Pow2(float  aX)       { return aX*aX; }
+float2 Pow2(float2 aX)       { return aX*aX; }
+float3 Pow2(float3 aX)       { return aX*aX; }
+float4 Pow2(float4 aX)       { return aX*aX; }
+float  Pow3(float  aX)       { return aX*aX*aX; }
+float2 Pow3(float2 aX)       { return aX*aX*aX; }
+float3 Pow3(float3 aX)       { return aX*aX*aX; }
+float4 Pow3(float4 aX)       { return aX*aX*aX; }
+float  Pow4(float  aX)       { return aX*aX*aX*aX; }
+float2 Pow4(float2 aX)       { return aX*aX*aX*aX; }
+float3 Pow4(float3 aX)       { return aX*aX*aX*aX; }
+float4 Pow4(float4 aX)       { return aX*aX*aX*aX; }
+float  Pow5(float  aX)       { return aX*aX*aX*aX*aX; }
+float2 Pow5(float2 aX)       { return aX*aX*aX*aX*aX; }
+float3 Pow5(float3 aX)       { return aX*aX*aX*aX*aX; }
+float4 Pow5(float4 aX)       { return aX*aX*aX*aX*aX; }
+float  Pow6(float  aX)       { return aX*aX*aX*aX*aX*aX; }
+float2 Pow6(float2 aX)       { return aX*aX*aX*aX*aX*aX; }
+float3 Pow6(float3 aX)       { return aX*aX*aX*aX*aX*aX; }
+float4 Pow6(float4 aX)       { return aX*aX*aX*aX*aX*aX; }
+
+float4 GetMatrixXAxis(float4x4 aMat)   { return aMat._m00_m10_m20_m30; }
+float4 GetMatrixYAxis(float4x4 aMat)   { return aMat._m01_m11_m21_m31; }
+float4 GetMatrixZAxis(float4x4 aMat)   { return aMat._m02_m12_m22_m32; }
+float4 GetMatrixPos(float4x4   aMat)   { return aMat._m03_m13_m23_m33; }
+float3 GetMatrixXAxis(float3x4 aMat)   { return aMat._m00_m10_m20; }
+float3 GetMatrixYAxis(float3x4 aMat)   { return aMat._m01_m11_m21; }
+float3 GetMatrixZAxis(float3x4 aMat)   { return aMat._m02_m12_m22; }
+float3 GetMatrixPos(float3x4   aMat)   { return aMat._m03_m13_m23; }
+float3 GetMatrixXAxis(float3x3 aMat)   { return aMat._m00_m10_m20; }
+float3 GetMatrixYAxis(float3x3 aMat)   { return aMat._m01_m11_m21; }
+float3 GetMatrixZAxis(float3x3 aMat)   { return aMat._m02_m12_m22; }
+
+bool IsSaturated(float  a) { return a == saturate(a); }
+bool IsSaturated(float2 a) { return IsSaturated(a.x) && IsSaturated(a.y); }
+bool IsSaturated(float3 a) { return IsSaturated(a.x) && IsSaturated(a.y) && IsSaturated(a.z); }
+bool IsSaturated(float4 a) { return IsSaturated(a.x) && IsSaturated(a.y) && IsSaturated(a.z) && IsSaturated(a.w); }
+
+/** Reverses all the 32 bits. */
+uint ReverseBits32( uint aBits )
+{
+#if 1
+	return reversebits( aBits );
+#else
+	aBits = ( aBits << 16)              | ( aBits >> 16);
+	aBits = ((aBits & 0x00ff00ff) << 8) | ((aBits & 0xff00ff00) >> 8);
+	aBits = ((aBits & 0x0f0f0f0f) << 4) | ((aBits & 0xf0f0f0f0) >> 4);
+	aBits = ((aBits & 0x33333333) << 2) | ((aBits & 0xcccccccc) >> 2);
+	aBits = ((aBits & 0x55555555) << 1) | ((aBits & 0xaaaaaaaa) >> 1);
+	return aBits;
+#endif
+}
+
+/** Reverses all the <aBitCount> lowest significant bits. */
+uint ReverseBitsN(uint aBitfield, const uint aBitCount)
+{
+	return ReverseBits32(aBitfield) >> (32 - aBitCount);
+}
+
+float RelativeLuminance(in float3 aColor)
+{
+	return dot(aColor, float3(0.2126f, 0.7152f, 0.0722f));
+}
+
+float LumaRec601(in float3 aColor)
+{
+	return dot(aColor, float3(0.299f, 0.587f, 0.114f));
+}
+
+float LumaRec709(in float3 aColor)
+{
+	return RelativeLuminance(aColor);
+}
+
+#include "BindlessResources.ssh"
+#include "StaticSamplers.ssh"
+#endif //COMMON_HEADER

@@ -1,0 +1,147 @@
+#ifndef IMPORTANCE_SAMPLING_HEADER
+#define IMPORTANCE_SAMPLING_HEADER
+
+#include "Common.ssh"
+
+// [ Duff et al. 2017, "Building an Orthonormal Basis, Revisited" ]
+float3x3 GetTangentBasis( float3 aTangentZ )
+{
+	const float sign = aTangentZ.z >= 0 ? 1 : -1;
+	const float a = -rcp( sign + aTangentZ.z );
+	const float b = aTangentZ.x * aTangentZ.y * a;
+	
+	float3 tangentX = { 1 + sign * a * Pow2( aTangentZ.x ), sign * b, -sign * aTangentZ.x };
+	float3 tangentY = { b,  sign + a * Pow2( aTangentZ.y ), -aTangentZ.y };
+
+	return float3x3( tangentX, tangentY, aTangentZ );
+}
+
+float3 TangentToWorld( float3 aVector, float3 aTangentZ )
+{
+	return mul( aVector, GetTangentBasis( aTangentZ ) );
+}
+
+float3 WorldToTangent(float3 aVector, float3 aTangentZ)
+{
+	return mul(GetTangentBasis(aTangentZ), aVector);
+}
+
+float2 Hammersley(uint aIndex, uint aNumSamples, uint2 aRandom)
+{
+	float E1 = frac((float)aIndex / aNumSamples + float(aRandom.x & 0xffff) / (1<<16));
+	float E2 = float(ReverseBits32(aIndex) ^ aRandom.y) * 2.3283064365386963e-10;
+	return float2( E1, E2 );
+}
+
+float2 Hammersley16(uint aIndex, uint aNumSamples, uint2 aRandom)
+{
+	float E1 = frac((float)aIndex / aNumSamples + float(aRandom.x) * (1.0f / 65536.0f));
+	float E2 = float((ReverseBits32(aIndex) >> 16) ^ aRandom.y) * (1.0f / 65536.0f);
+	return float2(E1, E2);
+}
+
+float4 UniformSampleSphere(float2 E)
+{
+	float phi = 2 * PI * E.x;
+	float cosTheta = 1.0f - 2.0f * E.y;
+	float sinTheta = sqrt(1.0f - cosTheta * cosTheta);
+
+	float3 H;
+	H.x = sinTheta * cos(phi);
+	H.y = sinTheta * sin(phi);
+	H.z = cosTheta;
+
+	float PDF = 1.0f / (4.0f * PI);
+
+	return float4(H, PDF);
+}
+
+float4 CosineSampleHemisphere( float2 E )
+{
+	float phi = 2 * PI * E.x;
+	float cosTheta = sqrt(E.y);
+	float sinTheta = sqrt(1.0f - cosTheta * cosTheta);
+
+	float3 H;
+	H.x = sinTheta * cos(phi);
+	H.y = sinTheta * sin(phi);
+	H.z = cosTheta;
+
+	float PDF = cosTheta * (1.0f / PI);
+
+	return float4(H, PDF);
+}
+
+float4 CosineSampleHemisphere(float2 E, float3 N) 
+{
+	float3 H = UniformSampleSphere(E).xyz;
+	H = normalize(N + H);
+
+	float PDF = dot(H, N) * (1.0f / PI);
+
+	return float4(H, PDF);
+}
+
+
+float4 ImportanceSampleGGX(float2 E, float a2)
+{
+	float phi = 2.0f * PI * E.x;
+	float cosTheta = sqrt((1.0f - E.y) / (1.0f + (a2 - 1.0f) * E.y));
+	float sinTheta = sqrt(1.0f - cosTheta * cosTheta);
+
+	float3 H;
+	H.x = sinTheta * cos(phi);
+	H.y = sinTheta * sin(phi);
+	H.z = cosTheta;
+	
+	float d = (cosTheta * a2 - cosTheta) * cosTheta + 1.0f;
+	float D = a2 / (PI*d*d);
+	float PDF = D * cosTheta;
+
+	return float4(H, PDF);
+}
+
+float VisiblePDFGGX(float3 V, float3 H, float a2)
+{
+	float nDotV = V.z;
+	float nDotH = H.z;
+	float vDotH = dot(V, H);
+
+	float d = (nDotH * a2 - nDotH) * nDotH + 1.0f;
+	float D = a2 / (PI*d*d);
+
+	float PDF = 2.0f * vDotH * D / (nDotV + sqrt(nDotV * (nDotV - nDotV * a2) + a2));
+	return PDF;
+}
+
+// [ Heitz 2018, "Sampling the GGX Distribution of Visible Normals" ]
+// http://jcgt.org/published/0007/04/01/
+float4 ImportanceSampleVisibleGGX(float2 aDiskE, float a2, float3 V)
+{
+	float a = sqrt(a2);
+
+	// stretch
+	float3 Vh = normalize(float3(a * V.xy, V.z));
+
+	// Stable tangent basis based on V
+	// tangent0 is orthogonal to N
+	float lenSq = Vh.x * Vh.x + Vh.y * Vh.y;
+	float3 tangent0 = lenSq > 0.0f ? float3(-Vh.y, Vh.x, 0.0f) * rsqrt(lenSq) : float3(1.0f, 0.0f, 0.0f);
+	float3 tangent1 = cross(Vh, tangent0);
+
+	float2 p = aDiskE;
+	float s = 0.5f + 0.5f * Vh.z;
+	p.y = (1.0f - s) * sqrt(1.0f - p.x * p.x) + s * p.y;
+
+	float3 H;
+	H  = p.x * tangent0;
+	H += p.y * tangent1;
+	H += sqrt(saturate(1.0f - dot(p, p))) * Vh;
+
+	// unstretch
+	H = normalize(float3(a * H.xy, max(0.0f, H.z)));
+
+	return float4(H, VisiblePDFGGX(V, H, a2));
+}
+
+#endif //IMPORTANCE_SAMPLING_HEADER

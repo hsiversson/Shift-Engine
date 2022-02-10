@@ -1,0 +1,130 @@
+#include "Common.ssh"
+#include "SceneConstants.ssh"
+#include "StaticSamplers.ssh"
+#include "Filtering.ssh"
+#include "ColorPacking.ssh"
+
+struct TAAConstantsStruct
+{
+    uint mTextureDescriptorIndex;
+    uint mHistoryTextureDescriptorIndex;
+    uint mMotionVectorTextureDescriptorIndex;
+    uint mDepthStencilTextureDescriptorIndex;
+    uint mOutputTextureDescriptorIndex;
+    float4 mTargetResolutionAndRcp;
+};
+ConstantBuffer<TAAConstantsStruct> Constants : register(b0);
+
+#define THREAD_GROUP_SIZE 8
+#define USE_LDS 1
+
+static const uint gTileBorder = 1;
+static const uint gTileSize = THREAD_GROUP_SIZE + gTileBorder * 2;
+static const uint gTileSize2 = gTileSize*gTileSize;
+
+#if USE_LDS 
+static groupshared uint gTileColorLDS[gTileSize2];
+static groupshared float gTileDepthLDS[gTileSize2];
+#endif
+
+[numthreads(THREAD_GROUP_SIZE,THREAD_GROUP_SIZE,1)]
+void TAAResolve(uint3 aThreadIndex : SV_DispatchThreadId, uint3 aGroupThreadIndex : SV_GroupThreadId, uint3 aGroupId : SV_GroupId, uint aGroupIndex : SV_GroupIndex)
+{
+    Texture2D<float4> currentTexture = GetTexture2D<float4>(Constants.mTextureDescriptorIndex);
+    Texture2D<float4> historyTexture = GetTexture2D<float4>(Constants.mHistoryTextureDescriptorIndex);
+    Texture2D<float2> motionVectorTexture = GetTexture2D<float2>(Constants.mMotionVectorTextureDescriptorIndex);
+    Texture2D<float> depthStencilTexture = GetTexture2D<float>(Constants.mDepthStencilTextureDescriptorIndex);
+    RWTexture2D<float4> outputTexture = GetRWTexture2D<float4>(Constants.mOutputTextureDescriptorIndex);
+
+    const int2 pixelPosition = aThreadIndex.xy;
+    const float2 uv = (aThreadIndex.xy + 0.5f) * Constants.mTargetResolutionAndRcp.zw;
+
+	float3 neighborhoodMin = (float3)100000.0f;
+	float3 neighborhoodMax = (float3)-100000.0f;
+	float3 current = (float3)0.0f;
+	float bestDepth = 0.0f;
+
+#if USE_LDS 
+	const int2 tileTopLeft = aGroupId.xy * THREAD_GROUP_SIZE - gTileBorder;
+	for (uint t = aGroupIndex; t < gTileSize2; t += THREAD_GROUP_SIZE * THREAD_GROUP_SIZE)
+	{
+		const uint2 pixel = tileTopLeft + uint2(t % gTileSize, t / gTileSize);
+		const float depth = depthStencilTexture[pixel];
+		const float3 color = currentTexture[pixel].rgb;
+		gTileColorLDS[t] = PackRG11B10_FLOAT(color);
+		gTileDepthLDS[t] = depth;
+	}
+	GroupMemoryBarrierWithGroupSync();
+
+	int2 bestOffset = 0;
+	for (int x = -1; x <= 1; ++x)
+	{
+		for (int y = -1; y <= 1; ++y)
+		{
+			const int2 offset = int2(x, y);
+			const uint2 coord = aGroupThreadIndex.xy + gTileBorder + offset;
+			const uint idx = coord.x + coord.y * gTileSize;
+
+			const float3 neighbor = UnpackRG11B10_FLOAT(gTileColorLDS[idx]);
+			neighborhoodMin = min(neighborhoodMin, neighbor);
+			neighborhoodMax = max(neighborhoodMax, neighbor);
+			if (x == 0 && y == 0)
+			{
+				current = neighbor;
+			}
+
+			const float depth = gTileDepthLDS[idx];
+			if (depth > bestDepth)
+			{
+				bestDepth = depth;
+				bestOffset = offset;
+			}
+		}
+	}
+	const float2 pixelMotion = motionVectorTexture[aThreadIndex.xy + bestOffset].xy;
+
+#else //USE_LDS 
+
+    int2 bestPixel = int2(0, 0);
+	for (int x = -1; x <= 1; ++x)
+	{
+		for (int y = -1; y <= 1; ++y)
+		{
+			int2 currentPixel = pixelPosition + int2(x, y);
+			currentPixel = clamp(currentPixel, 0, Constants.mTargetResolutionAndRcp.xy - 1);
+
+			const float3 neighbor = currentTexture.Load(int3(currentPixel, 0)).rgb;
+
+			neighborhoodMin = min(neighborhoodMin, neighbor);
+			neighborhoodMax = max(neighborhoodMax, neighbor);
+			if (x == 0 && y == 0)
+			{
+				current = neighbor;
+			}
+
+			const float depth = depthStencilTexture[currentPixel];
+			if (depth > bestDepth)
+			{
+				bestDepth = depth;
+				bestPixel = currentPixel;
+			}
+		}
+	}
+
+	const float2 pixelMotion = motionVectorTexture[bestPixel].xy;
+#endif //USE_LDS 
+
+	float2 viewportMaxUV = float2(gSceneConstants.mViewConstants.mViewportSizeAndScale.xy / Constants.mTargetResolutionAndRcp.xy);
+
+	const float2 prevUV = uv + (pixelMotion * gSceneConstants.mViewConstants.mViewportPosAndInvSize.zw);
+    float3 history = historyTexture.SampleLevel(gBilinearClamp, prevUV, 0).rgb;
+    history.rgb = clamp(history.rgb, neighborhoodMin, neighborhoodMax);
+
+	float subpixelCorrection = frac(max(abs(pixelMotion.x) * Constants.mTargetResolutionAndRcp.x, abs(pixelMotion.y) * Constants.mTargetResolutionAndRcp.y)) * 0.5f;
+	
+
+    float blendfactor = (prevUV.x < viewportMaxUV.x && prevUV.y < viewportMaxUV.y) ? saturate(lerp(0.05f, 0.8f, subpixelCorrection)) : 1.0f;
+    float3 resolved = lerp(history, current, blendfactor);
+
+    outputTexture[pixelPosition] = float4(resolved, 1.0f);
+}

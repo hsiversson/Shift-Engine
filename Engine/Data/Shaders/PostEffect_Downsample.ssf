@@ -1,0 +1,48 @@
+#include "Common.ssh"
+
+struct DownsampleConstants
+{
+	float2 mMinUV;
+	float2 mMaxUV;
+
+	float2 mTexelSizeAndUVScale;
+	float2 mUVOffset;
+
+	float2 m2DivTexelSizeAndUVScale;
+    uint mInputTextureDescriptorIndex;
+    uint mOutputTextureDescriptorIndex;
+};
+ConstantBuffer<DownsampleConstants> Constants : register(b0);
+
+float4 SampleInput(Texture2D<float3> aInputTexture, float2 aTexCoord)
+{
+    float2 uv = (aTexCoord * Constants.mTexelSizeAndUVScale) + Constants.mUVOffset;
+    float2 clampedUV = clamp(uv, Constants.mMinUV, Constants.mMaxUV);
+    float t = saturate(1 - dot(float2(1, 1), abs(uv - clampedUV) * Constants.m2DivTexelSizeAndUVScale));
+    return float4(aInputTexture.SampleLevel(gBilinearClamp, clampedUV, 0), 1.0f) * t;
+}
+
+[numthreads(8,8,1)]
+void StableDownsample(uint3 aDispatchThreadId : SV_DispatchThreadId)
+{
+    Texture2D<float3> inputTexture = GetTexture2D<float3>(Constants.mInputTextureDescriptorIndex);
+    RWTexture2D<float3> outputTexture = GetRWTexture2D<float3>(Constants.mOutputTextureDescriptorIndex);
+
+    float2 centerPosition = float2(aDispatchThreadId.xy << 1);
+
+	float4 s00 = SampleInput(inputTexture, centerPosition + float2(-1.0f, -1.0f));
+	float4 s10 = SampleInput(inputTexture, centerPosition + float2( 1.0f, -1.0f));
+	float4 s20 = SampleInput(inputTexture, centerPosition + float2( 3.0f, -1.0f));
+	float4 s01 = SampleInput(inputTexture, centerPosition + float2(-1.0f,  1.0f));
+	float4 s11 = SampleInput(inputTexture, centerPosition + float2( 1.0f,  1.0f));
+	float4 s21 = SampleInput(inputTexture, centerPosition + float2( 3.0f,  1.0f));
+	float4 s02 = SampleInput(inputTexture, centerPosition + float2(-1.0f,  3.0f));
+	float4 s12 = SampleInput(inputTexture, centerPosition + float2( 1.0f,  3.0f));
+	float4 s22 = SampleInput(inputTexture, centerPosition + float2( 3.0f,  3.0f));
+
+    float4 finalColor = ((s00 + s20 + s02 + s22) + ((s10 + s01 + s21 + s12) * 4.0f) + (s11 * 16.0f)) / 36.0f;
+	finalColor.xyz = (all(finalColor.xyz >= 0) && all(finalColor.xyz < 100000.0f)) ? finalColor.xyz : float3(0.0f, 0.0f, 0.0f);
+	finalColor.w = max(finalColor.w, 0.0000001f);
+
+    outputTexture[aDispatchThreadId.xy] = float3(finalColor.xyz / finalColor.w);
+}

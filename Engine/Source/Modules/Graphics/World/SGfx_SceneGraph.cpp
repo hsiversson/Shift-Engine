@@ -1,14 +1,14 @@
 #include "SGfx_SceneGraph.h"
 #include "SGfx_World.h"
-#include "Mesh/SGfx_Model.h"
-#include "Lighting/SGfx_Light.h"
-#include "Particles/SGfx_ParticleEffect.h"
-#include "Decals/SGfx_Decal.h"
-#include "View/SGfx_Camera.h"
-#include "View/SGfx_View.h"
-#include "Mesh/SGfx_MeshInstance.h"
-#include "Lighting/Shadows/SGfx_ShadowSystem.h"
-#include "Renderer/SGfx_Renderer.h"
+#include "Graphics/Mesh/SGfx_Model.h"
+#include "Graphics/Lighting/SGfx_Light.h"
+#include "Graphics/Particles/SGfx_ParticleEffect.h"
+#include "Graphics/Decals/SGfx_Decal.h"
+#include "Graphics/View/SGfx_Camera.h"
+#include "Graphics/View/SGfx_View.h"
+#include "Graphics/Mesh/SGfx_MeshInstance.h"
+#include "Graphics/Lighting/Shadows/SGfx_ShadowSystem.h"
+#include "Graphics/Renderer/SGfx_Renderer.h"
 
 SGfx_SceneGraph::SGfx_SceneGraph(SGfx_World* aParentWorld)
 	: mParentWorld(aParentWorld)

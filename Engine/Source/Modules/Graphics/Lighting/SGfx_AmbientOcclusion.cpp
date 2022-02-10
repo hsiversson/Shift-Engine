@@ -1,6 +1,6 @@
 #include "SGfx_AmbientOcclusion.h"
-#include "View/SGfx_ViewData.h"
-#include "Misc/SGfx_DefaultTextures.h"
+#include "Graphics/View/SGfx_ViewData.h"
+#include "Graphics/Misc/SGfx_DefaultTextures.h"
 
 struct RTAOConstants
 {

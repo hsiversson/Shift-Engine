@@ -15,6 +15,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Core/Network)
 ##################################
 # Engine Modules sub-directories
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Modules/Audio)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Modules/Application)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Modules/Graphics)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Modules/GameFramework)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Modules/Physics)

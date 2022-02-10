@@ -1,0 +1,34 @@
+#include "TonemapCommon.ssh"
+#include "StaticSamplers.ssh"
+#include "BindlessResources.ssh"
+
+struct DispatchInfoStruct
+{
+    float4 mTargetResolutionAndRcp;
+    uint mSceneColorDescriptorIndex;
+	uint mBloomTextureDescriptorIndex;
+    uint mOutputTextureDescriptorIndex;
+};
+ConstantBuffer<DispatchInfoStruct> DispatchInfo : register(b0);
+
+[numthreads(8, 8, 1)]
+void Tonemap(uint3 aDispatchThreadId : SV_DispatchThreadID)
+{
+    Texture2D<float3> sceneColorTexture = GetTexture2D<float3>(DispatchInfo.mSceneColorDescriptorIndex);
+    Texture2D<float4> bloomTexture = GetTexture2D<float4>(DispatchInfo.mBloomTextureDescriptorIndex);
+    RWTexture2D<float4> outTexture = GetRWTexture2D<float4>(DispatchInfo.mOutputTextureDescriptorIndex);
+
+    uint2 pixelPosition = aDispatchThreadId.xy;
+    const float2 uv = (pixelPosition + 0.5f) * DispatchInfo.mTargetResolutionAndRcp.zw;
+	int3 loadLocation = int3(pixelPosition, 0);
+
+    float3 sceneColor = sceneColorTexture.Load(loadLocation);
+    float3 bloomColor = bloomTexture.SampleLevel(gBilinearClamp, uv, 0).xyz;
+
+    // apply exposure
+
+    // apply tonemapping
+    float3 screenColor = ACESFitted(sceneColor + bloomColor);
+
+    outTexture[pixelPosition] = float4(screenColor, 1.0f);
+}

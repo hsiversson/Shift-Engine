@@ -1,0 +1,105 @@
+#ifndef SCENE_CONSTANTS_HEADER
+#define SCENE_CONSTANTS_HEADER
+//#pragma once
+
+// Must reflect SGfx_ViewConstants in SGfx_Camera.h
+struct ViewConstants
+{
+	float4x4 mWorldToClip;
+	float4x4 mWorldToClip_NoJitter;
+	float4x4 mClipToWorld;
+
+	float4x4 mWorldToCamera;
+	float4x4 mCameraToWorld;
+
+	float4x4 mCameraToClip;
+	float4x4 mClipToCamera;
+	
+	float4x4 mPrevWorldToClip;
+	float4x4 mPrevWorldToClip_NoJitter;
+	float4x4 mPrevClipToWorld;
+
+	float4x4 mPrevWorldToCamera;
+	float4x4 mPrevCameraToWorld;
+
+	float4x4 mPrevCameraToClip;
+	float4x4 mPrevClipToCamera;
+
+	float4 mPixelToClipScaleAndOffset;
+
+	float4 mViewportPosAndInvSize;
+	float4 mViewportSizeAndScale;
+	float4 mRenderTargetSizeAndInvSize;
+
+	float3 mCameraPosition;
+	float mFov;
+};
+
+// Must reflect SGfx_EnvrionmentConstants in SGfx_Environment.h
+struct EnvironmentConstants
+{
+    float3 mSunLightDirection;
+    float mSunLightIntensity;
+
+    float3 mSunLightColor;
+    uint mEnvironmentalIrradianceMapDescriptorIndex;
+
+    uint mPreFilteredEnvironmentMapDescriptorIndex;
+	uint mEnvironmentBrdfLUTDescriptorIndex;
+	uint mPreFilteredEnvironmentMapMips;
+    uint _pad;
+};
+
+// Must reflect SGfx_ShadowConstants in SGfx_ShadowConstants.h
+struct ShadowConstants
+{
+	float4x4 mCSMWorldToClip[4];
+    float4 mCSMSplitPoints;
+	int4 mCSMDescriptorIndices;
+	float2 mCSMResolutionAndInv;
+	float2 __pad;
+};
+
+struct SceneConstants
+{
+    ViewConstants mViewConstants;
+    EnvironmentConstants mEnvironmentConstants;
+	ShadowConstants mShadowConstants;
+
+	uint mInstanceDataBufferIndex;
+	uint mMaterialInfoBufferIndex;
+	uint mRaytracingSceneDescriptorIndex;
+	uint mFrameIndex;
+	float mFrameTimeDelta;
+	uint3 _pad;
+};
+
+ConstantBuffer<SceneConstants> gSceneConstants : register(b1);
+
+float2 SR_PixelToClip(float2 aPixelCoord)
+{
+	return aPixelCoord * gSceneConstants.mViewConstants.mPixelToClipScaleAndOffset.xy + gSceneConstants.mViewConstants.mPixelToClipScaleAndOffset.zw;
+}
+
+float4 __GetZAxis(float4x4 aMatrix) { return aMatrix._m02_m12_m22_m32; } // ONLY TEMPORARY
+float4 __GetPos(float4x4 aMatrix) { return aMatrix._m03_m13_m23_m33; } // ONLY TEMPORARY
+float3 SR_ClipToCamera(float3 aClipPos)
+{
+	//float4 clip;
+	//clip.xy = aClipPos.xy;
+	//clip.zw = __GetZAxis(gSceneConstants.mViewConstants.mCameraToClip).zw * aClipPos.z + __GetPos(gSceneConstants.mViewConstants.mCameraToClip).zw;
+	//clip.z /= clip.w;
+	//clip.w = 1;
+
+	float4 cameraPos = mul(gSceneConstants.mViewConstants.mClipToCamera, float4(aClipPos, 1.0f));
+	cameraPos /= cameraPos.w;
+	return cameraPos.xyz;
+}
+
+float3 SR_ClipToWorld(float3 aClipPos)
+{	
+	float3 cameraPos = SR_ClipToCamera(aClipPos);
+	return mul(gSceneConstants.mViewConstants.mCameraToWorld, float4(cameraPos, 1.0f)).xyz;
+}
+
+#endif //SCENE_CONSTANTS_HEADER

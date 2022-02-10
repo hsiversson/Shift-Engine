@@ -1,0 +1,111 @@
+#ifndef SHADOWS_HEADER
+#define SHADOWS_HEADER
+
+#include "StaticSamplers.ssh"
+#include "SceneConstants.ssh"
+
+float CalculateBlendAmount(in int aCurrentCascadeIndex, in float aPixelDepth)
+{
+    float splitPoint = gSceneConstants.mShadowConstants.mCSMSplitPoints[aCurrentCascadeIndex];
+    float blendAmount = smoothstep(splitPoint - 3.0f, splitPoint, aPixelDepth);
+    return blendAmount;
+}
+
+float ShadowTap(Texture2D<float> aCascadeMap, in float4 aShadowSpacePosition)
+{
+    float depthCompare = aShadowSpacePosition.z;
+    return saturate(aCascadeMap.SampleCmpLevelZero(gShadowSampler, aShadowSpacePosition.xy, depthCompare));
+}
+
+float ShadowTapPCF(Texture2D<float> aCascadeMap, in float4 aShadowSpacePosition) 
+{
+    // 5x5 tap
+    const int pcfTapStart = -2;
+    const int pcfTapEnd = 3;
+    const float nativeTexelSize = gSceneConstants.mShadowConstants.mCSMResolutionAndInv.y;
+
+    float blurRowSize = float(pcfTapEnd - pcfTapStart);
+    blurRowSize *= blurRowSize;
+
+    float shadowFactor = 0.0f;
+    [unroll]
+    for(int x = pcfTapStart; x < pcfTapEnd; ++x) 
+    {
+        for(int y = pcfTapStart; y < pcfTapEnd; ++y) 
+        {
+            float depthCompare = aShadowSpacePosition.z;
+            float2 uv = float2(aShadowSpacePosition.x + (((float)x) * nativeTexelSize), aShadowSpacePosition.y + (((float)y) * nativeTexelSize));
+            shadowFactor += saturate(aCascadeMap.SampleCmpLevelZero(gShadowSampler, uv, depthCompare));
+        }
+    }
+    return (shadowFactor / blurRowSize);
+}
+
+float4 CalculateShadowSpacePosition(uint aCascadeIndex, float3 aWorldPosition)
+{
+    return mul(gSceneConstants.mShadowConstants.mCSMWorldToClip[aCascadeIndex], float4(aWorldPosition, 1.0f));
+}
+
+float CalculateCascadedShadowFactor(float3 aWorldPosition, float aPixelDepth, out uint aCurrentCascadeIndex, out uint aNextCascadeIndex, out float aCascadeBlend)
+{
+    float4 comparison = (aPixelDepth > gSceneConstants.mShadowConstants.mCSMSplitPoints);
+    float comp = dot(float4(1, 1, 1, 1), comparison);
+    uint currentCascadeIndex = min(3, (uint)comp);
+
+    float4 shadowSpacePosition = CalculateShadowSpacePosition(currentCascadeIndex, aWorldPosition);
+    Texture2D<float> currentCascade = GetTexture2D<float>(gSceneConstants.mShadowConstants.mCSMDescriptorIndices[currentCascadeIndex]);
+    float shadowFactor = ShadowTapPCF(currentCascade, shadowSpacePosition);
+
+    uint nextCascadeIndex = min(3, currentCascadeIndex + 1); 
+    float cascadeBlendAmount = CalculateBlendAmount(currentCascadeIndex, aPixelDepth);
+    if(cascadeBlendAmount > 0.0f) 
+    {
+        Texture2D<float> nextCascade = GetTexture2D<float>(gSceneConstants.mShadowConstants.mCSMDescriptorIndices[nextCascadeIndex]);
+        shadowSpacePosition = CalculateShadowSpacePosition(nextCascadeIndex, aWorldPosition);
+        float tap2 = ShadowTapPCF(nextCascade, shadowSpacePosition);
+        shadowFactor = lerp(shadowFactor, tap2, cascadeBlendAmount);
+    }
+
+    aCurrentCascadeIndex = currentCascadeIndex;
+    aNextCascadeIndex = nextCascadeIndex;
+    aCascadeBlend = cascadeBlendAmount;
+    return shadowFactor;
+}
+
+float3 GetCascadeDebugColor(uint aIndex)
+{
+    if (aIndex == 0)
+        return float3(1.0f, 0.0f, 0.0f);
+    else if (aIndex == 1)
+        return float3(1.0f, 1.0f, 0.0f);
+    else if (aIndex == 2)
+        return float3(0.0f, 1.0f, 0.0f);
+    else if (aIndex == 3)
+        return float3(0.0f, 0.0f, 1.0f);
+    else
+        return float3(0.0f, 0.0f, 0.0f);
+}
+
+float CalculateCascadedShadowFactor(float3 aWorldPosition, float aPixelDepth, out float3 aOutDebugColor)
+{
+    uint currentCascadeIndex = 0;
+    uint nextCascadeIndex = 0; 
+    float cascadeBlend = 0.0f;
+    float result = CalculateCascadedShadowFactor(aWorldPosition, aPixelDepth, currentCascadeIndex, nextCascadeIndex, cascadeBlend);
+
+    float3 cascadeColor0 = GetCascadeDebugColor(currentCascadeIndex);
+    float3 cascadeColor1 = GetCascadeDebugColor(nextCascadeIndex);
+    aOutDebugColor = lerp(cascadeColor0, cascadeColor1, cascadeBlend);
+
+    return result;
+}
+
+float CalculateCascadedShadowFactor(float3 aWorldPosition, float aPixelDepth)
+{
+    uint currentCascadeIndex = 0;
+    uint nextCascadeIndex = 0; 
+    float cascadeBlend = 0.0f;
+    return CalculateCascadedShadowFactor(aWorldPosition, aPixelDepth, currentCascadeIndex, nextCascadeIndex, cascadeBlend);
+}
+
+#endif //SHADOWS_HEADER

@@ -1,0 +1,7 @@
+
+
+[numthreads(4,4,4)]
+void TraceVolumetricFog()
+{
+    RWTexture3D<float4> outVolumeTexture;
+}

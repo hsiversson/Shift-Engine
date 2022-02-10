@@ -1,7 +1,7 @@
 #include "SGfx_ShadowSystem.h"
-#include "View/SGfx_Camera.h"
-#include "View/SGfx_View.h"
-#include "Renderer/SGfx_DrawInfo.h"
+#include "Graphics/View/SGfx_Camera.h"
+#include "Graphics/View/SGfx_View.h"
+#include "Graphics/Renderer/SGfx_DrawInfo.h"
 
 SGfx_CascadedShadowMap::SGfx_CascadedShadowMap()
 {

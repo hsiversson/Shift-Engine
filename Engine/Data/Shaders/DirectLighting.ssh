@@ -1,0 +1,61 @@
+#ifndef DIRECT_LIGHTING_HEADER
+#define DIRECT_LIGHTING_HEADER
+//#pragma once
+
+#include "ShadingModels.ssh"
+#include "Shadows.ssh"
+
+float3 CalculateDirectionalLightContribution(in const MaterialData aMaterialData, in const float3 aWorldPosition, in const float3 aViewDirection, in float aPixelDepth)
+{
+    const EnvironmentConstants environmentConstants = gSceneConstants.mEnvironmentConstants;
+    float3 lightDirection = environmentConstants.mSunLightDirection;
+    float3 lightColor = environmentConstants.mSunLightColor;
+    float lightRadiance = environmentConstants.mSunLightIntensity;
+
+    float shadowFactor = CalculateCascadedShadowFactor(aWorldPosition, aPixelDepth);
+    float3 shading = (float3)0.0f;
+
+    if (shadowFactor > 0.0f)
+        shading = DefaultShading(aMaterialData, lightDirection, aViewDirection);
+
+    return shading * lightColor * lightRadiance * shadowFactor;
+}
+
+float3 CalculateSpotLightContribution()
+{
+    return (float3)0.0f;
+}
+
+float3 CalculatePointLightContribution()
+{
+    return (float3)0.0f;
+}
+
+float3 CalculateDirectLighting(in const MaterialData aMaterialData, in const float3 aWorldPosition, in const float3 aViewDirection, in float aPixelDepth)
+{
+    float3 lighting = (float3)0.0f;
+
+    // Should we only support one directional light?
+    lighting += CalculateDirectionalLightContribution(aMaterialData, aWorldPosition, aViewDirection, aPixelDepth);
+
+    // Get Tile Index
+    // Get Lights List
+    // Integrate Lights
+
+    //for (uint i = 0; i < NumSpotLights; ++i)
+    //{
+    //  switch(lightType)
+    //  {
+    //      case SR_LightType_Spot:
+    //      lighting += CalculateSpotLightContribution();
+    //      break;    
+    //      case SR_LightType_Point:
+    //      lighting += CalculatePointLightContribution();
+    //      break;    
+    //  }
+    //}
+
+    return lighting;
+}
+
+#endif //DIRECT_LIGHTING_HEADER

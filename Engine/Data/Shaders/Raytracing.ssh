@@ -1,0 +1,27 @@
+#ifndef RAYTRACING_HEADER
+#define RAYTRACING_HEADER
+
+#include "Random.ssh"
+#include "ImportanceSampling.ssh"
+#include "SceneConstants.ssh"
+
+RaytracingAccelerationStructure GetRaytracingScene()
+{
+    return ResourceDescriptorHeap[gSceneConstants.mRaytracingSceneDescriptorIndex];
+}
+
+float3 ReconstructNormalFromDepth(Texture2D<float> aDepthBuffer, uint2 aPixelCoordinate, float3 aWorldPosition)
+{
+    uint2 coord1 = aPixelCoordinate + int2(1, 0);
+    uint2 coord2 = aPixelCoordinate + int2(0, 1);
+
+    float d1 = aDepthBuffer.Load(int3(coord1, 0));
+    float d2 = aDepthBuffer.Load(int3(coord2, 0));
+
+    float3 p1 = SR_ClipToWorld(float3(SR_PixelToClip(float2(coord1 + 0.5f)), d1));
+    float3 p2 = SR_ClipToWorld(float3(SR_PixelToClip(float2(coord2 + 0.5f)), d2));
+
+    return normalize(cross(p1 - aWorldPosition, p2 - aWorldPosition));
+}
+
+#endif //RAYTRACING_HEADER

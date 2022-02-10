@@ -1,0 +1,49 @@
+
+/*float3 ReconstructNormal(Texture2D<float> aDepthTexture, float2 aSvPosition)
+{
+    float2 stc = spos / ScreenSize;
+    float depth = DepthBuffer.Sample(DepthBuffer_Sampler, stc).x;
+
+    float4 H;
+    H.x = DepthBuffer.Sample(DepthBuffer_Sampler, stc - float2(1 / ScreenSize.x, 0)).x;
+    H.y = DepthBuffer.Sample(DepthBuffer_Sampler, stc + float2(1 / ScreenSize.x, 0)).x;
+    H.z = DepthBuffer.Sample(DepthBuffer_Sampler, stc - float2(2 / ScreenSize.x, 0)).x;
+    H.w = DepthBuffer.Sample(DepthBuffer_Sampler, stc + float2(2 / ScreenSize.x, 0)).x;
+    float2 he = abs(H.xy * H.zw * rcp(2 * H.zw - H.xy) - depth);
+    float3 hDeriv;
+    if (he.x > he.y)
+        hDeriv = Calculate horizontal derivative of world position from taps | z | x |
+    else
+        hDeriv = Calculate horizontal derivative of world position from taps | y | w |
+
+    float4 V;
+    V.x = DepthBuffer.Sample(DepthBuffer_Sampler, stc - float2(0, 1 / ScreenSize.y)).x;
+    V.y = DepthBuffer.Sample(DepthBuffer_Sampler, stc + float2(0, 1 / ScreenSize.y)).x;
+    V.z = DepthBuffer.Sample(DepthBuffer_Sampler, stc - float2(0, 2 / ScreenSize.y)).x;
+    V.w = DepthBuffer.Sample(DepthBuffer_Sampler, stc + float2(0, 2 / ScreenSize.y)).x;
+    float2 ve = abs(V.xy * V.zw * rcp(2 * V.zw - V.xy) - depth);
+    float3 vDeriv;
+    if (ve.x > ve.y)
+        vDeriv = Calculate vertical derivative of world position from taps | z | x |
+    else
+        vDeriv = Calculate vertical derivative of world position from taps | y | w |
+
+    return normalize(cross(hDeriv, vDeriv));
+}*/
+
+
+struct SSAOConstants
+{
+    uint mDepthTextureDescriptorIndex;
+    uint mOutputTextureDescriptorIndex;
+};
+ConstantBuffer<SSAOConstants> Constants : register(b1);
+
+[numthreads(8,8,1)]
+void SSAO(uint3 aThreadIndex : SV_DispatchThreadId)
+{
+    Texture2D<float> depthTexture = GetTexture2D<float>(Constants.mDepthTextureDescriptorIndex);
+    RWTexture2D<float> outputTexture = GetTexture2D<float>(Constants.mOutputTextureDescriptorIndex);
+
+    
+}

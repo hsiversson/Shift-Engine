@@ -1,5 +1,5 @@
 #include "SGfx_Environment.h"
-#include "Misc/SGfx_Shapes.h"
+#include "Graphics/Misc/SGfx_Shapes.h"
 #include "RenderCore/Interface/SR_CommandList.h"
 
 SGfx_Skybox::SGfx_Skybox()

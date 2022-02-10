@@ -1,0 +1,34 @@
+#ifndef SHADING_MODELS_HEADER
+#define SHADING_MODELS_HEADER
+//#pragma once
+
+#include "BRDF.ssh"
+#include "MaterialData.ssh"
+
+float3 DefaultShading(in const MaterialData aMaterialData, in const float3 aLightDirection, in const float3 aViewDirection)
+{
+    float3 n = aMaterialData.mWorldNormal;
+
+    float3 h = normalize(aViewDirection + aLightDirection);
+    float nDotL = dot(n, aLightDirection);
+    float nDotV = dot(n, aViewDirection);
+    float vDotL = dot(aViewDirection, aLightDirection);
+	float nDotH = saturate(dot(n, h));
+	float vDotH = saturate(dot(aViewDirection, h));
+
+    nDotV = saturate(abs(nDotV) + 1e-5f);
+
+    float a2 = Pow4(aMaterialData.mRoughness);
+    float energy = 1.0f;
+
+    float D = D_GGX(a2, nDotH) * energy;
+    float G = G_SmithJointApprox(a2, nDotV, nDotL);
+    float3 F = F_Schlick(aMaterialData.mSpecularColor, vDotH);
+
+    float3 diffuseBRDF = aMaterialData.mDiffuseColor * (1/PI);
+    float3 specularBRDF = (D*G*F);
+
+    return (diffuseBRDF + specularBRDF) * saturate(nDotL);
+}
+
+#endif //SHADING_MODELS_HEADER

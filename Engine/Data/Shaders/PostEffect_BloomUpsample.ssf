@@ -1,0 +1,54 @@
+#include "Common.ssh"
+
+struct UpsampleConstants
+{
+	float2 mMinUV;
+	float2 mMaxUV;
+
+	float2 mTexelSizeAndUVScale;
+	float2 mTentFilterScale;
+
+    int2 mDestOffset;
+	float mStrength;
+    uint mInput0TextureDescriptorIndex;
+
+    uint mInput1TextureDescriptorIndex;
+    uint mOutputTextureDescriptorIndex;
+};
+ConstantBuffer<UpsampleConstants> Constants : register(b0);
+
+float3 SampleInput(Texture2D<float4> aInputTexture, float2 aTexCoord)
+{
+    return aInputTexture.SampleLevel(gBilinearClamp, clamp(aTexCoord * Constants.mTexelSizeAndUVScale, Constants.mMinUV, Constants.mMaxUV), 0).xyz;
+}
+
+[numthreads(8,8,1)]
+void BloomUpsample(uint3 aDispatchThreadId : SV_DispatchThreadId)
+{
+    Texture2D<float4> inputTexture0 = GetTexture2D<float4>(Constants.mInput0TextureDescriptorIndex);
+    Texture2D<float4> inputTexture1 = GetTexture2D<float4>(Constants.mInput1TextureDescriptorIndex);
+    RWTexture2D<float4> outputTexture = GetRWTexture2D<float4>(Constants.mOutputTextureDescriptorIndex);
+
+	float2 baseUV = float2(aDispatchThreadId.xy) + float2(0.5f, 0.5f);
+    float x0 = -Constants.mTentFilterScale.x;
+	float x1 = 0.0f;
+	float x2 =  Constants.mTentFilterScale.x;
+	float y0 = -Constants.mTentFilterScale.y;
+	float y1 = 0.0f;
+	float y2 =  Constants.mTentFilterScale.y;
+
+    float3 s00 = SampleInput(inputTexture0, baseUV + float2(x0, y0));
+	float3 s10 = SampleInput(inputTexture0, baseUV + float2(x1, y0));
+	float3 s20 = SampleInput(inputTexture0, baseUV + float2(x2, y0));
+	float3 s01 = SampleInput(inputTexture0, baseUV + float2(x0, y1));
+	float3 s11 = SampleInput(inputTexture0, baseUV + float2(x1, y1));
+	float3 s21 = SampleInput(inputTexture0, baseUV + float2(x2, y1));
+	float3 s02 = SampleInput(inputTexture0, baseUV + float2(x0, y2));
+	float3 s12 = SampleInput(inputTexture0, baseUV + float2(x1, y2));
+	float3 s22 = SampleInput(inputTexture0, baseUV + float2(x2, y2));
+	
+	float3 combinedSamples = ((s00 + s20 + s02 + s22) + ((s10 + s01 + s21 + s12) * 2.0f) + (s11 * 4.0f)) / 16.0f;
+	float3 existingSample = inputTexture1.Load(int3(aDispatchThreadId.xy + Constants.mDestOffset, 0)).xyz;
+
+	outputTexture[aDispatchThreadId.xy] = float4(lerp(existingSample, combinedSamples, Constants.mStrength), 1.0f);
+}

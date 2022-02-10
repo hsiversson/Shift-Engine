@@ -1,0 +1,41 @@
+/*
+    Gathers brightest parts of input using a smooth threshold.
+*/
+
+#include "Common.ssh"
+
+struct FilterConstants
+{
+    float4 mTargetResolutionAndRcp;
+    float mThreshold;
+    float mSoftThreshold;
+    uint mInputTextureDescriptorIndex;
+    uint mOutputTextureDescriptorIndex;
+};
+ConstantBuffer<FilterConstants> Constants : register(b0);
+
+float3 BrightnessFilter(in float3 aColor)
+{
+    float brightness = RelativeLuminance(aColor);
+
+    float knee = Constants.mThreshold * Constants.mSoftThreshold;
+    float softThreshold = brightness - Constants.mThreshold + knee;
+    softThreshold = clamp(softThreshold, 0.0f, knee * 2.0f);
+    softThreshold = Pow2(softThreshold) / (4 * knee + 0.0000001f);
+
+    float contrib = max(softThreshold, brightness - Constants.mThreshold);
+    contrib /= max(brightness, 0.0000001f);
+    return aColor * contrib;
+}
+
+[numthreads(8,8,1)]
+void BloomBrightnessFilter(uint3 aDispatchThreadId : SV_DispatchThreadId)
+{
+    Texture2D<float4> inputTexture = GetTexture2D<float4>(Constants.mInputTextureDescriptorIndex);
+    RWTexture2D<float4> outputTexture = GetRWTexture2D<float4>(Constants.mOutputTextureDescriptorIndex);
+
+    const float2 uv = (aDispatchThreadId.xy + 0.5f) * Constants.mTargetResolutionAndRcp.zw;
+
+    float3 finalColor = BrightnessFilter(inputTexture.SampleLevel(gBilinearClamp, uv, 0).rgb);
+    outputTexture[aDispatchThreadId.xy] = float4(finalColor, 1.0f);
+}

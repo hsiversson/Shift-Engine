@@ -1,0 +1,9 @@
+#ifndef SKY_REFLECTION_HEADER
+#define SKY_REFLECTION_HEADER
+
+float3 SampleSky(in float3 aViewDirection)
+{
+    
+}
+
+#endif //SKY_REFLECTION_HEADER

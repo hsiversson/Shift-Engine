@@ -1,0 +1,23 @@
+#include "SkyCommon.ssh"
+
+struct ReflectionProbeConstantsStruct
+{
+    uint mReflectionCubeFaceOutputDescriptorIndex;
+};
+
+ConstantBuffer<ReflectionProbeConstantsStruct> ReflectionProbeConstants : register(b1);
+
+[numthreads(8,8,1)]
+void ReflectionProbe(uint3 aThreadIndex : SV_DispatchThreadId)
+{
+    RWTexture2D<float4> outReflectionTexture = GetRWTexture2D<float4>(ReflectionProbeConstants.mReflectionCubeFaceOutputDescriptorIndex);
+
+	int3 pixelLocation = int3(aThreadIndex.xy, 0);
+    float2 uv = SR_PixelToUV();
+    float3 worldPosition = SR_PixelToWorld();
+    float3 viewDir = normalize(worldPosition - gSceneConstants.mViewConstants.mCameraPosition);
+
+    float4 outColor = (float4)0;
+    outColor.rgb = SampleSky(viewDir);
+    outReflectionTexture[aThreadIndex.xy] = outColor;
+}

@@ -1,0 +1,83 @@
+#ifndef BRDF_HEADER
+#define BRDF_HEADER
+//#pragma once
+
+#include "Common.ssh"
+
+////////////////////////////////////////////
+/* Specular BRDF microfacet model:
+*
+*            D(h)F(l,h)G(l,v,h)
+*  f(l,v) = --------------------
+*             4(ndotl)(ndotv)
+*
+*/
+////////////////////////////////////////////
+
+
+////////////////////////////////////////////
+// Distribution    <D(h)>
+
+// GGX / Trowbridge-Reitz
+// [Walter et al. 2007, "Microfacet models for refraction through rough surfaces"]
+float D_GGX(float a2, float nDotH)
+{
+	float denom = (nDotH * a2 - nDotH) * nDotH + 1;	// 2 mad
+	return a2 / (PI*denom*denom);				        // 4 mul, 1 rcp
+}
+
+// Anisotropic GGX
+// [Burley 2012, "Physically-Based Shading at Disney"]
+float D_GGX_Aniso(float ax, float ay, float nDotH, float xDotH, float yDotH)
+{
+	float a2 = ax * ay;
+	float3 v = float3(ay * xDotH, ax * yDotH, a2 * nDotH);
+	float s = dot(v, v);
+	return (1.0f / PI) * a2 * Squared(a2 / s);
+}
+
+
+////////////////////////////////////////////
+// Geometric Attenuation    <G(l,v,h)>
+
+// Tuned to match behavior of Vis_Smith
+// [Schlick 1994, "An Inexpensive BRDF Model for Physically-Based Rendering"]
+float G_SchlickGGX(float a2, float nDotV, float nDotL)
+{
+	float k = sqrt(a2) * 0.5f;
+	float g_SchlickV = nDotV * (1 - k) + k;
+	float g_SchlickL = nDotL * (1 - k) + k;
+	return 0.25f / (g_SchlickV * g_SchlickL);
+}
+
+// Smith term for GGX
+// [Smith 1967, "Geometrical shadowing of a random rough surface"]
+float G_SmithGGX(float a2, float nDotV, float nDotL)
+{
+	float g_SmithV = nDotV + sqrt(nDotV * (nDotV - nDotV * a2) + a2);
+	float g_SmithL = nDotL + sqrt(nDotL * (nDotL - nDotL * a2) + a2);
+	return rcp(g_SmithV * g_SmithL);
+}
+
+// Appoximation of joint Smith term for GGX
+// [Heitz 2014, "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"]
+float G_SmithJointApprox(float a2, float nDotV, float nDotL)
+{
+	float a = sqrt(a2);
+	float g_SmithV = nDotL * ( nDotV * ( 1 - a ) + a );
+	float g_SmithL = nDotV * ( nDotL * ( 1 - a ) + a );
+	return 0.5f * rcp( g_SmithV + g_SmithL );
+}
+
+////////////////////////////////////////////
+// Fresnel                  <F(l,h)>
+
+// [Schlick 1994, "An Inexpensive BRDF Model for Physically-Based Rendering"]
+float3 F_Schlick(float3 aSpecularColor, float vDotH)
+{
+	float fc = Pow5(1 - vDotH);					// 1 sub, 3 mul
+	return saturate(50.0 * aSpecularColor.g) * fc + (1 - fc) * aSpecularColor;
+	
+}
+
+#endif //BRDF_HEADER

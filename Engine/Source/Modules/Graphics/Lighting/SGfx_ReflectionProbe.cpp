@@ -1,6 +1,6 @@
 #include "SGfx_ReflectionProbe.h"
-#include "View/SGfx_ViewData.h"
-#include "Renderer/SGfx_DrawInfo.h"
+#include "Graphics/View/SGfx_ViewData.h"
+#include "Graphics/Renderer/SGfx_DrawInfo.h"
 
 
 SGfx_ReflectionProbe::SGfx_ReflectionProbe()

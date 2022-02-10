@@ -1,0 +1,54 @@
+#include "Common.ssh"
+#include "SceneConstants.ssh"
+
+struct VertexInput
+{
+    float3 mPosition : POSITION;
+};
+
+struct PixelInput
+{
+    float4 mClipPosition : SV_POSITION;
+    centroid float3 mViewDirection : VIEW_DIRECTION;
+};
+
+PixelInput MainVS(VertexInput aInput)
+{
+    PixelInput output;
+
+    float3 worldPos = aInput.mPosition;
+    float4 clipPos = mul(gSceneConstants.mViewConstants.mWorldToClip, float4(worldPos, 1.0f));
+
+    output.mClipPosition = clipPos.xyww;
+    output.mClipPosition.z = 0.0f;
+    output.mViewDirection = normalize(worldPos - gSceneConstants.mViewConstants.mCameraPosition);
+    return output;
+}
+
+struct DrawInfoStruct
+{
+    uint mSkyCubeMapDescriptorIndex;
+};
+ConstantBuffer<DrawInfoStruct> DrawInfo : register(b0);
+
+float4 MainPS(PixelInput aInput) : SV_TARGET0
+{
+    float4 color = (float4)0;
+
+    TextureCube skyCubeMap = GetTextureCube(DrawInfo.mSkyCubeMapDescriptorIndex);
+    color.rgb = skyCubeMap.SampleLevel(gBilinearWrap, aInput.mViewDirection, 0).rgb;
+
+    //const float3 sunLightDirection = gSceneConstants.mEnvironmentConstants.mSunLightDirection;
+    //const float sunLightIntensity = gSceneConstants.mEnvironmentConstants.mSunLightIntensity;
+    //const float3 sunLightColor = gSceneConstants.mEnvironmentConstants.mSunLightColor;
+
+    //const float dirScalar      = saturate( dot( aInput.mViewDirection, sunLightDirection ) );    
+    //const float3 sunHaloPow    = pow( dirScalar, 0.8f );
+    //const float3 sunHalo       = float3(1.0f, 0.0f, 1.0f) * 2.0f * sunHaloPow * 1.0f;
+
+    //const float3 sunPow        = pow( dirScalar, max(1e-8f, 35.0f) );
+    //const float3 sun           = sunLightColor * 35.0f * sunPow;
+    //const float3 combinedSun   = lerp( sunHalo, sun, sunPow );
+
+    return color;
+}

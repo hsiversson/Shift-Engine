@@ -1,8 +1,8 @@
 #pragma once
 #include "SGfx_Camera.h"
-#include "Lighting/SGfx_Light.h"
-#include "Lighting/Shadows/SGfx_ShadowConstants.h"
-#include "Environment/SGfx_Environment.h"
+#include "Graphics/Lighting/SGfx_Light.h"
+#include "Graphics/Lighting/Shadows/SGfx_ShadowConstants.h"
+#include "Graphics/Environment/SGfx_Environment.h"
 #include "Platform/Async/SC_Future.h"
 #include "RenderCore/RenderTasks/SR_TaskEvent.h"
 

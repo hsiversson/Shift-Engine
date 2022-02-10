@@ -1,0 +1,50 @@
+#ifndef MATERIAL_DATA_HEADER
+#define MATERIAL_DATA_HEADER
+//#pragma once
+
+#include "MaterialCommon.ssh"
+
+#define TANGENT_SPACE_NORMAL (1)
+
+struct MaterialData
+{
+    float3 mColor;
+    float mAlpha;    
+    float3 mWorldNormal;
+    float mRoughness;
+    float mMetallic;
+    float mAmbientOcclusion;
+    float mSpecular;
+    float mDepth;
+
+    float3 mDiffuseColor;
+    float3 mSpecularColor;
+};
+
+float DielectricSpecularToF0(float aSpecular)
+{
+	return 0.08f * aSpecular;
+}
+
+float3 ComputeF0(float3 aBaseColor, float aMetallic, float aSpecular)
+{
+	return lerp(DielectricSpecularToF0(aSpecular).xxx, aBaseColor, aMetallic.xxx);
+}
+
+MaterialData BuildMaterialData(float4 aBaseColor, float3 aWorldNormal, float4 aRMAS)
+{
+    MaterialData materialData;
+    materialData.mColor = aBaseColor.rgb;
+    materialData.mAlpha = aBaseColor.a;
+    materialData.mWorldNormal = aWorldNormal;
+    materialData.mRoughness = aRMAS.r;
+    materialData.mMetallic = aRMAS.g;
+    materialData.mAmbientOcclusion = aRMAS.b;
+    materialData.mSpecular = aRMAS.a;
+
+    materialData.mDiffuseColor = materialData.mColor - materialData.mColor * materialData.mMetallic;
+    materialData.mSpecularColor = ComputeF0(materialData.mColor, materialData.mMetallic, materialData.mSpecular);
+    return materialData;
+}
+
+#endif //MATERIAL_DATA_HEADER

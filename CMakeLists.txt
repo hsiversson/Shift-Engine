@@ -13,9 +13,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)       ## Enforce the C++17 Standard
 
 ##################################
 # Repository folder structure setup
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Bin)     ## Where to put the .exe files etc.
-set(ENGINE_SOURCE_DIRECTORY ${PROJECT_SOURCE_DIR}/Engine/Source)  ## Where is the engine source code located
-set(GAME_SOURCE_DIRECTORY ${PROJECT_SOURCE_DIR}/Game/Source)      ## Where is the game source code located
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Bin)               ## Where to put the .exe files etc.
+set(ENGINE_SOURCE_DIRECTORY ${PROJECT_SOURCE_DIR}/Engine/Source)            ## Where is the engine source code located
+set(GAME_SOURCE_DIRECTORY ${PROJECT_SOURCE_DIR}/Samples/ExampleGame/Source) ## Where is the game source code located
 set(ENGINE_EXTERNAL_DIRECTORY ${ENGINE_SOURCE_DIRECTORY}/External)
 
 ##################################

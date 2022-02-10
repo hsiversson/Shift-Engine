@@ -1,0 +1,23 @@
+#ifndef COLOR_PACKING_HEADER
+#define COLOR_PACKING_HEADER
+
+uint PackRG11B10_FLOAT(float3 aRGB)
+{
+    // Clamp upper bound so that it doesn't accidentally round up to INF 
+    // Exponent=15, Mantissa=1.11111
+    aRGB = min(aRGB, asfloat(0x477C0000));  
+    uint r = ((f32tof16(aRGB.x) + 8) >> 4) & 0x000007FF;
+    uint g = ((f32tof16(aRGB.y) + 8) << 7) & 0x003FF800;
+    uint b = ((f32tof16(aRGB.z) + 16) << 17) & 0xFFC00000;
+    return r | g | b;
+}
+
+float3 UnpackRG11B10_FLOAT( uint aPackedRGB )
+{
+    float r = f16tof32((aPackedRGB << 4 ) & 0x7FF0);
+    float g = f16tof32((aPackedRGB >> 7 ) & 0x7FF0);
+    float b = f16tof32((aPackedRGB >> 17) & 0x7FE0);
+    return float3(r, g, b);
+}
+
+#endif //COLOR_PACKING_HEADER

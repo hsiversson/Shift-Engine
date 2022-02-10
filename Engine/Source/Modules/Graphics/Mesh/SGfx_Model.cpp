@@ -5,7 +5,7 @@
 #if IS_EDITOR_BUILD
 #include "SGfx_ModelImporter.h"
 #endif
-#include "Material/SGfx_MaterialInstance.h"
+#include "Graphics/Material/SGfx_MaterialInstance.h"
 
 enum class SGfx_ModelFileType
 {

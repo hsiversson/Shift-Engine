@@ -1,0 +1,31 @@
+#ifndef MATERIAL_COMMON_HEADER
+#define MATERIAL_COMMON_HEADER
+//#pragma once
+
+#include "SceneConstants.ssh"
+#include "StaticSamplers.ssh"
+
+#define MAX_MATERIAL_TEXTURE_COUNT (16) // Need to match SGfx_MaxMaterialTextureCount in SGfx_Material.h
+
+#define SR_MaterialShadingModel_Flat        0
+#define SR_MaterialShadingModel_Default     1
+#define SR_MaterialShadingModel_Subsurface  2
+#define SR_MaterialShadingModel_ClearCoat   3
+#define SR_MaterialShadingModel_Hair        4
+#define SR_MaterialShadingModel_Eye         5
+#define SR_MaterialShadingModel_Cloth       6
+
+
+struct SR_MaterialInfo
+{
+    uint mTextureIndices[MAX_MATERIAL_TEXTURE_COUNT]; 
+    float colorMultiplier;
+};
+
+SR_MaterialInfo SR_GetMaterialInfo(uint aMaterialIndex)
+{
+    StructuredBuffer<SR_MaterialInfo> materialInfoBuffer = GetStructuredBuffer<SR_MaterialInfo>(gSceneConstants.mMaterialInfoBufferIndex);
+    return materialInfoBuffer[aMaterialIndex];
+}
+
+#endif //MATERIAL_COMMON_HEADER

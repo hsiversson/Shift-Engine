@@ -1,6 +1,6 @@
 #pragma once
 #include "SGfx_Mesh.h"
-#include "Material/SGfx_MaterialInstance.h"
+#include "Graphics/Material/SGfx_MaterialInstance.h"
 #include "RenderCore/Interface/SR_RaytracingStructs.h"
 
 class SGfx_MeshInstance
