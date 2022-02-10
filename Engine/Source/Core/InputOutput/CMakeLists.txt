@@ -6,8 +6,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${IO_FILES})
 
 ##################################
 # Target Settings
-target_include_directories(InputOutput PRIVATE ${ENGINE_SOURCE_DIRECTORY}/Core/InputOutput ${ENGINE_SOURCE_DIRECTORY}/Core/Memory ${ENGINE_SOURCE_DIRECTORY}/Core/EngineTypes ${ENGINE_SOURCE_DIRECTORY}/Core/Platform)
-target_link_libraries(InputOutput Memory EngineTypes Platform)
+target_include_directories(InputOutput PRIVATE ${ENGINE_SOURCE_DIRECTORY}/Core)
 
 ##################################
 # Precompiled Header

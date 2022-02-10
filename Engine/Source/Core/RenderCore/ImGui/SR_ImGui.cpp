@@ -1,9 +1,9 @@
 #include "SR_ImGui.h"
-#include "Interface/SR_RenderDevice.h"
+#include "RenderCore/Interface/SR_RenderDevice.h"
 
 #if IS_WINDOWS_PLATFORM
-#include "DX12/SR_RenderDevice_DX12.h"
-#include "DX12/SR_RootSignature_DX12.h"
+#include "RenderCore/DX12/SR_RenderDevice_DX12.h"
+#include "RenderCore/DX12/SR_RootSignature_DX12.h"
 #endif
 
 #include "imgui.h"

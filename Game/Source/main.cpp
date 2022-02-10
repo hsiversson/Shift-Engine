@@ -1,6 +1,6 @@
-#include "SC_Base.h"
+#include "Common/SC_Base.h"
 
-#include "SGF_Framework.h"
+#include "GameFramework/SGF_Framework.h"
 #include "GameInstance.h"
 
 int APIENTRY WinMain(HINSTANCE /*hInst*/, HINSTANCE /*hInstPrev*/, PSTR /*cmdline*/, int /*cmdshow*/)

@@ -1,5 +1,5 @@
 #pragma once
-#include "Defines/SR_RenderEnums.h"
+#include "RenderCore/Defines/SR_RenderEnums.h"
 
 struct SR_Rect
 {

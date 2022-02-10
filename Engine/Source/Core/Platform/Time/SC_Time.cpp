@@ -1,5 +1,5 @@
 #include "SC_Time.h"
-#include "Misc/SC_MemoryFunctions.h"
+#include "Platform/Misc/SC_MemoryFunctions.h"
 
 #include <time.h>
 

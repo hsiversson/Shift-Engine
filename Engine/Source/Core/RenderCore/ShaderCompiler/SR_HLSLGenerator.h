@@ -1,5 +1,5 @@
 #pragma once
-#include "Defines/SR_Semantics.h"
+#include "RenderCore/Defines/SR_Semantics.h"
 #include "SR_ShaderGenerationProperties.h"
 
 class SR_HLSLGenerator

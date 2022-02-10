@@ -6,7 +6,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${PLATFORM_FILES})
 
 ##################################
 # Target Settings
-target_include_directories(Platform PRIVATE ${ENGINE_SOURCE_DIRECTORY}/Core/Platform)
+target_include_directories(Platform PRIVATE ${ENGINE_SOURCE_DIRECTORY}/Core)
 
 ##################################
 # Precompiled Header

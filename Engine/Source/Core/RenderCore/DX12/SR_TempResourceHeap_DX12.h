@@ -1,5 +1,5 @@
 #pragma once
-#include "Interface/SR_TempResourceHeap.h"
+#include "RenderCore/Interface/SR_TempResourceHeap.h"
 
 #if ENABLE_DX12
 

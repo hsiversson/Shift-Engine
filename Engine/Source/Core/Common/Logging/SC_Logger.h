@@ -2,9 +2,9 @@
 
 #if ENABLE_LOGGING
 
-#include "Async/SC_Thread.h"
-#include "Async/SC_Event.h"
-#include "Async/SC_Mutex.h"
+#include "Platform/Async/SC_Thread.h"
+#include "Platform/Async/SC_Event.h"
+#include "Platform/Async/SC_Mutex.h"
 #include <queue>
 
 enum class SC_LogType

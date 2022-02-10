@@ -1,5 +1,5 @@
 #pragma once
-#include "Math/SC_Vector.h"
+#include "EngineTypes/Math/SC_Vector.h"
 #include "SC_AABB.h"
 
 class SC_Sphere

@@ -1,8 +1,8 @@
 #pragma once
-#include "Interface/SR_Fence.h"
-#include "Interface/SR_CommandList.h"
+#include "RenderCore/Interface/SR_Fence.h"
+#include "RenderCore/Interface/SR_CommandList.h"
 #include "SR_TaskEvent.h"
-#include "Async/SC_Event.h"
+#include "Platform/Async/SC_Event.h"
 
 using SR_RenderTaskFunctionSignature = std::function<void()>;
 

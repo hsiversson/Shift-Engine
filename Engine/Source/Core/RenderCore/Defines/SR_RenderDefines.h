@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Platform/SC_PlatformDefines.h"
+#include "Platform/Platform/SC_PlatformDefines.h"
 
 #if IS_DEBUG_BUILD
 	#define SR_ENABLE_DEBUG_NAMES		(1)

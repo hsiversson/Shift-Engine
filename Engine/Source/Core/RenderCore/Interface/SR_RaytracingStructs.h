@@ -1,6 +1,6 @@
 #pragma once
-#include "Defines/SR_RenderEnums.h"
-#include "Defines/SR_Format.h"
+#include "RenderCore/Defines/SR_RenderEnums.h"
+#include "RenderCore/Defines/SR_Format.h"
 
 #if ENABLE_RAYTRACING
 

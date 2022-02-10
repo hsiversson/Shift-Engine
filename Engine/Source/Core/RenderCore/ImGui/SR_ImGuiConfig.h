@@ -1,5 +1,5 @@
 #pragma once
-#include "SC_Base.h"
+#include "Common/SC_Base.h"
 
 #define IM_VEC2_CLASS_EXTRA                                                                     \
         ImVec2(const SC_Vector2& f) { x = f.x; y = f.y; }                                       \

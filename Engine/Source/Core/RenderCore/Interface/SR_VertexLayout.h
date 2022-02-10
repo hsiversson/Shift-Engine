@@ -1,6 +1,6 @@
 #pragma once
-#include "Types/SC_TypeDefines.h"
-#include "Defines/SR_Format.h"
+#include "Platform/Types/SC_TypeDefines.h"
+#include "RenderCore/Defines/SR_Format.h"
 
 enum class SR_VertexAttribute
 {

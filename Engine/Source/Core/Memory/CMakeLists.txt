@@ -7,7 +7,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${MEMORY_FILES})
 
 ##################################
 # Target Settings
-target_include_directories(Memory PRIVATE ${ENGINE_SOURCE_DIRECTORY}/Core/Memory ${ENGINE_SOURCE_DIRECTORY}/Core/EngineTypes ${ENGINE_SOURCE_DIRECTORY}/Core/Platform)
+target_include_directories(Memory PRIVATE ${ENGINE_SOURCE_DIRECTORY}/Core)
 target_link_libraries(Memory EngineTypes Platform)
 
 ##################################

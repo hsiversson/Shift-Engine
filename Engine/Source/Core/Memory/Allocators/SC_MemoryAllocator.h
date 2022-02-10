@@ -1,5 +1,5 @@
 #pragma once
-#include "Platform/SC_Platform.h"
+#include "Platform/Platform/SC_Platform.h"
 
 class SC_MemoryAllocator
 {

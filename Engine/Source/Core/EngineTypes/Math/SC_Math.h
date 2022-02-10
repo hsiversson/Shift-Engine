@@ -63,16 +63,16 @@ class SC_TVector3;
 template<class T>
 class SC_TVector4;
 
-#include "SIMD/SC_VectorInstructions.h"
-#include "SC_Vector2.h"
-#include "SC_Vector.h"
-#include "SC_Vector4.h"
-#include "SC_Matrix.h"
-#include "SC_MatrixTypes.h"
-#include "SC_Quaternion.h"
-#include "Geometry/SC_Plane.h"
-#include "Geometry/SC_AABB.h"
-#include "Geometry/SC_Sphere.h"
+#include "Platform/SIMD/SC_VectorInstructions.h"
+#include "EngineTypes/Math/SC_Vector2.h"
+#include "EngineTypes/Math/SC_Vector.h"
+#include "EngineTypes/Math/SC_Vector4.h"
+#include "EngineTypes/Math/SC_Matrix.h"
+#include "EngineTypes/Math/SC_MatrixTypes.h"
+#include "EngineTypes/Math/SC_Quaternion.h"
+#include "EngineTypes/Geometry/SC_Plane.h"
+#include "EngineTypes/Geometry/SC_AABB.h"
+#include "EngineTypes/Geometry/SC_Sphere.h"
 
 inline SC_Vector operator*(const SC_Vector& aVector, const SC_Matrix& aMatrix)
 {

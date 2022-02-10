@@ -1,6 +1,6 @@
 #include "SR_DDSTextureLoader.h"
 
-#include "Defines/SR_DDS.h"
+#include "RenderCore/Defines/SR_DDS.h"
 #include <fstream>
 
 static bool ReadTextureData(std::ifstream& aFile, SR_TextureData& /*aOutData*/, uint8* aDstBuffer, uint32 aSize, uint32 /*aOffset*/)

@@ -1,5 +1,5 @@
 #pragma once
-#include "Types/SC_TypeDefines.h"
+#include "Platform/Types/SC_TypeDefines.h"
 #include "SR_CommandList.h"
 
 class SR_FenceResource

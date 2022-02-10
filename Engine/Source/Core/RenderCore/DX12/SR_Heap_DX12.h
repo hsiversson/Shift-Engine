@@ -1,5 +1,5 @@
 #pragma once
-#include "Interface/SR_Heap.h"
+#include "RenderCore/Interface/SR_Heap.h"
 
 #if ENABLE_DX12
 

@@ -12,13 +12,8 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${GAME_FILES})
 ##################################
 # Target Settings
 target_include_directories(ExampleGame PRIVATE 
-                            ${ENGINE_SOURCE_DIRECTORY}/Modules/GameFramework
-                            ${ENGINE_SOURCE_DIRECTORY}/Core/RenderCore
-                            ${ENGINE_SOURCE_DIRECTORY}/Core/Common
-                            ${ENGINE_SOURCE_DIRECTORY}/Core/InputOutput
-                            ${ENGINE_SOURCE_DIRECTORY}/Core/Memory
-                            ${ENGINE_SOURCE_DIRECTORY}/Core/EngineTypes
-                            ${ENGINE_SOURCE_DIRECTORY}/Core/Platform)
+                            ${ENGINE_SOURCE_DIRECTORY}/Modules
+                            ${ENGINE_SOURCE_DIRECTORY}/Core)
                             
 target_link_libraries(ExampleGame
                         GameFramework	

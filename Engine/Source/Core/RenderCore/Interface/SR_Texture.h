@@ -1,5 +1,5 @@
 #pragma once
-#include "Defines/SR_Format.h"
+#include "RenderCore/Defines/SR_Format.h"
 #include "SR_TextureResource.h"
 #include "SR_Descriptor.h"
 

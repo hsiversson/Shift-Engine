@@ -1,6 +1,6 @@
 #pragma once
-#include "Defines/SR_Format.h"
-#include "Resources/SR_Resource.h"
+#include "RenderCore/Defines/SR_Format.h"
+#include "RenderCore/Resources/SR_Resource.h"
 
 class SR_Heap;
 

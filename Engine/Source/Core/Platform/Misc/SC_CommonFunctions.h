@@ -1,6 +1,6 @@
 #pragma once
-#include "Types/SC_TypeTraits.h"
-#include "Debugging/SC_Assert.h"
+#include "Platform/Types/SC_TypeTraits.h"
+#include "Platform/Debugging/SC_Assert.h"
 
 //-------------------------------------------------------------//
 // Min / Max

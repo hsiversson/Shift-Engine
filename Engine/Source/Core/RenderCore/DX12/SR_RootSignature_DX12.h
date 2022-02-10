@@ -1,5 +1,5 @@
 #pragma once
-#include "Interface/SR_RootSignature.h"
+#include "RenderCore/Interface/SR_RootSignature.h"
 
 #if ENABLE_DX12
 

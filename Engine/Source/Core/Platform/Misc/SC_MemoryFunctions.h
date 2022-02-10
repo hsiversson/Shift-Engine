@@ -1,6 +1,6 @@
 #pragma once
-#include "Types/SC_TypeDefines.h"
-#include "Types/SC_TypeTraits.h"
+#include "Platform/Types/SC_TypeDefines.h"
+#include "Platform/Types/SC_TypeTraits.h"
 
 #include <new>
 

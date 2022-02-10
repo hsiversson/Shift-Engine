@@ -1,6 +1,6 @@
 #include "SR_Convert_DX12.h"
-#include "Interface/SR_TextureResource.h"
-#include "Interface/SR_BufferResource.h"
+#include "RenderCore/Interface/SR_TextureResource.h"
+#include "RenderCore/Interface/SR_BufferResource.h"
 
 #if ENABLE_DX12
 

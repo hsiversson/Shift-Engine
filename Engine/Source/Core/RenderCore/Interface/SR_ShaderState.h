@@ -1,7 +1,7 @@
 #pragma once
 #include "SR_RenderStates.h"
 #include "SR_VertexLayout.h"
-#include "ShaderCompiler/SR_ShaderCompileStructs.h"
+#include "RenderCore/ShaderCompiler/SR_ShaderCompileStructs.h"
 
 class SR_RootSignature;
 

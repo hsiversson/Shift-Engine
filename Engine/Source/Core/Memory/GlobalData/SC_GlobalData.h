@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Allocators/SC_MemoryAllocator.h"
+#include "Memory/Allocators/SC_MemoryAllocator.h"
 
 class SC_GlobalData
 {

@@ -1,6 +1,6 @@
 #pragma once
 #include "SC_Vector4.h"
-#include "Misc/SC_MemoryFunctions.h"
+#include "Platform/Misc/SC_MemoryFunctions.h"
 
 class alignas(16) SC_Matrix
 {

@@ -1,5 +1,5 @@
 #pragma once
-#include "Interface/SR_Fence.h"
+#include "RenderCore/Interface/SR_Fence.h"
 
 class SR_BufferResource;
 

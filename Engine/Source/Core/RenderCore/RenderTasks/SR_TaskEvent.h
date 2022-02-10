@@ -1,6 +1,6 @@
 #pragma once
-#include "Async/SC_Event.h"
-#include "Interface/SR_Fence.h"
+#include "Platform/Async/SC_Event.h"
+#include "RenderCore/Interface/SR_Fence.h"
 
 struct SR_TaskEvent
 {

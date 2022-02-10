@@ -1,7 +1,7 @@
 #pragma once
 #include "SR_RenderTypes.h"
 #include "SR_RaytracingStructs.h"
-#include "Profiling/SR_GPUProfiler.h"
+#include "RenderCore/Profiling/SR_GPUProfiler.h"
 #include <bitset>
 
 class SR_ShaderState;

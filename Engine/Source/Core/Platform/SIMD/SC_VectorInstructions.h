@@ -1,5 +1,5 @@
 #pragma once
-#include "Platform/SC_PlatformDefines.h"
+#include "Platform/Platform/SC_PlatformDefines.h"
 
 #define SC_VECTOR_INSTRUCTIONS_HEADER
 

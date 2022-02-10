@@ -1,5 +1,5 @@
 #pragma once
-#include "Defines/SR_RenderDefines.h"
+#include "RenderCore/Defines/SR_RenderDefines.h"
 
 #include "SR_Texture.h"
 #include "SR_RenderTarget.h"
@@ -13,8 +13,8 @@
 #include "SR_CommandQueue.h"
 #include "SR_ShaderState.h"
 #include "SR_RootSignature.h"
-#include "Resources/SR_InstanceBuffer.h"
-#include "RenderTasks/SR_RenderTaskManager.h"
+#include "RenderCore/Resources/SR_InstanceBuffer.h"
+#include "RenderCore/RenderTasks/SR_RenderTaskManager.h"
 
 struct RENDERDOC_API_1_4_1;
 

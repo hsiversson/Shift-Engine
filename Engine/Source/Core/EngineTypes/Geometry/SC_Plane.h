@@ -1,5 +1,5 @@
 #pragma once
-#include "Debugging/SC_Assert.h"
+#include "Platform/Debugging/SC_Assert.h"
 
 class SC_Plane
 {

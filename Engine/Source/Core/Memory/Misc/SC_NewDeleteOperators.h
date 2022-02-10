@@ -1,8 +1,8 @@
 #pragma once
 
 #if SC_OVERLOAD_NEW_DELETE_OPERATORS
-#include "Allocators/SC_MemoryAllocator.h"
-#include "Debugging/SC_Assert.h"
+#include "Memory/Allocators/SC_MemoryAllocator.h"
+#include "Platform/Debugging/SC_Assert.h"
 #include <new>
 
 #pragma warning(push)

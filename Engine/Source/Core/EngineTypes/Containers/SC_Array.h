@@ -1,5 +1,5 @@
 #pragma once
-#include "Misc/SC_Relocation.h"
+#include "Platform/Misc/SC_Relocation.h"
 
 #include <initializer_list>
 #include <functional>

@@ -1,5 +1,5 @@
 #pragma once
-#include "Interface/SR_TextureResource.h"
+#include "RenderCore/Interface/SR_TextureResource.h"
 
 struct SR_TextureData
 {

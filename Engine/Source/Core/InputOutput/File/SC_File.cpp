@@ -1,5 +1,5 @@
 #include "SC_File.h"
-#include "String/SC_StringHelpers.h"
+#include "EngineTypes/String/SC_StringHelpers.h"
 
 #include <filesystem>
 

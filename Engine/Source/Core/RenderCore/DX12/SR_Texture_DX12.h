@@ -1,7 +1,7 @@
 #pragma once
 
 #if ENABLE_DX12
-#include "Interface/SR_Texture.h"
+#include "RenderCore/Interface/SR_Texture.h"
 
 class SR_TextureResource_DX12;
 class SR_Texture_DX12 : public SR_Texture

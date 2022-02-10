@@ -6,12 +6,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${RENDERCORE_FILES})
 add_definitions(-D_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING)
 
 target_include_directories(RenderCore PRIVATE 
-                            ${ENGINE_SOURCE_DIRECTORY}/Core/RenderCore
-                            ${ENGINE_SOURCE_DIRECTORY}/Core/Common
-                            ${ENGINE_SOURCE_DIRECTORY}/Core/InputOutput
-                            ${ENGINE_SOURCE_DIRECTORY}/Core/Memory
-                            ${ENGINE_SOURCE_DIRECTORY}/Core/EngineTypes
-                            ${ENGINE_SOURCE_DIRECTORY}/Core/Platform
+							${ENGINE_SOURCE_DIRECTORY}/Core
 							${D3D12_INCLUDE_PATH}
 							${DXC_INCLUDE_PATH}
 							${IMGUI_INCLUDE_PATH})

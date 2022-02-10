@@ -1,9 +1,11 @@
 #pragma once
 
 #include "SC_PlatformDefines.h"
-#include "Types/SC_TypeDefines.h"
-#include "Misc/SC_CommonFunctions.h"
-#include "Misc/SC_MemoryFunctions.h"
+#include "Platform/Types/SC_TypeDefines.h"
+#include "Platform/Misc/SC_CommonFunctions.h"
+#include "Platform/Misc/SC_MemoryFunctions.h"
+#include "Platform/Misc/SC_Relocation.h"
+#include "Platform/Debugging/SC_Assert.h"
 
 #if IS_WINDOWS_PLATFORM
 	#if !defined(WIN32_LEAN_AND_MEAN)

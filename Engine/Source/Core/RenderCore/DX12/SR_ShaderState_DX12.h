@@ -1,7 +1,7 @@
 #pragma once
 
 #if ENABLE_DX12
-#include "Interface/SR_ShaderState.h"
+#include "RenderCore/Interface/SR_ShaderState.h"
 
 struct ID3D12PipelineState;
 struct ID3D12StateObject;

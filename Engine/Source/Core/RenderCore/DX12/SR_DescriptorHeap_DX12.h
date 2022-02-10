@@ -1,7 +1,7 @@
 #pragma once
 #if ENABLE_DX12
-#include "Async/SC_Mutex.h"
-#include "Interface/SR_DescriptorHeap.h"
+#include "Platform/Async/SC_Mutex.h"
+#include "RenderCore/Interface/SR_DescriptorHeap.h"
 
 struct ID3D12DescriptorHeap;
 

@@ -1,6 +1,6 @@
 #pragma once
-#include "Async/SC_Future.h"
-#include "Async/SC_Event.h"
+#include "Platform/Async/SC_Future.h"
+#include "Platform/Async/SC_Event.h"
 
 // TEMP
 #include <atomic>

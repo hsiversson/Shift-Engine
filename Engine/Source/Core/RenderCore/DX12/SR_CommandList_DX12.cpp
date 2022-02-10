@@ -10,7 +10,7 @@
 #include "SR_DescriptorHeap_DX12.h"
 #include "SR_RootSignature_DX12.h"
 #include "SR_TextureResource_DX12.h"
-#include "Interface/SR_RaytracingStructs.h"
+#include "RenderCore/Interface/SR_RaytracingStructs.h"
 
 SR_CommandList_DX12::SR_CommandList_DX12(const SR_CommandListType& aType)
 	: SR_CommandList(aType)

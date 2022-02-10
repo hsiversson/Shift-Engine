@@ -1,5 +1,5 @@
 #include "SC_GlobalData.h"
-#include "Misc/SC_MemoryFunctions.h"
+#include "Platform/Misc/SC_MemoryFunctions.h"
 
 SC_ALIGN(16) uint8 _gGlobalDataInstance[sizeof(SC_GlobalData)];
 

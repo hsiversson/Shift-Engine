@@ -1,6 +1,6 @@
 #pragma once
 #include "SC_Message.h"
-#include "Async/SC_Mutex.h"
+#include "Platform/Async/SC_Mutex.h"
 #include <queue>
 
 class SC_MessageListener;

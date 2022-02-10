@@ -1,7 +1,7 @@
 #pragma once
 
 #if ENABLE_DX12
-#include "Interface/SR_SwapChain.h"
+#include "RenderCore/Interface/SR_SwapChain.h"
 #include "SR_RenderTarget_DX12.h"
 #include "SR_TextureResource_DX12.h"
 

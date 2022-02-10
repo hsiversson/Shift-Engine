@@ -1,5 +1,5 @@
 #include "SR_RingBuffer.h"
-#include "Interface/SR_BufferResource.h"
+#include "RenderCore/Interface/SR_BufferResource.h"
 
 SR_RingBuffer::SR_RingBuffer(const SC_Ref<SR_BufferResource>& aBuffer /*= nullptr*/, uint32 aAlignment /*= 1*/)
 	: mBuffer(aBuffer)

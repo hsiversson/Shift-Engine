@@ -1,7 +1,7 @@
 #pragma once
-#include "Interface/SR_Fence.h"
-#include "MessageQueue/SC_MessageListener.h"
-#include "KeyCodes/SC_KeyCodes.h"
+#include "RenderCore/Interface/SR_Fence.h"
+#include "Common/MessageQueue/SC_MessageListener.h"
+#include "InputOutput/KeyCodes/SC_KeyCodes.h"
 
 struct ID3D12RootSignature;
 

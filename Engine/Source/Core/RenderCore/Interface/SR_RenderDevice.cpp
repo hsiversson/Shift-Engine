@@ -1,7 +1,7 @@
 #include "SR_RenderDevice.h"
 
 #if ENABLE_DX12
-#include "DX12/SR_RenderDevice_DX12.h"
+#include "RenderCore/DX12/SR_RenderDevice_DX12.h"
 #endif
 
 #if ENABLE_RENDERDOC_API

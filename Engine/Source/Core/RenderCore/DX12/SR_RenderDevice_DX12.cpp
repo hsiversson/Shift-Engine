@@ -20,12 +20,12 @@ extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8"./"; }
 #include "SR_ShaderState_DX12.h"
 #include "SR_Buffer_DX12.h"
 #include "SR_RootSignature_DX12.h"
-#include "Resources/SR_TextureLoading.h"
-#include "ShaderCompiler/SR_DxcCompiler.h"
+#include "RenderCore/Resources/SR_TextureLoading.h"
+#include "RenderCore/ShaderCompiler/SR_DxcCompiler.h"
 
 #define USE_D3D12_DDS_LOADER (1)
 #if USE_D3D12_DDS_LOADER
-	#include "Resources/DDSTextureLoader.h"
+	#include "RenderCore/Resources/DDSTextureLoader.h"
 #endif
 
 #if IS_DESKTOP_PLATFORM

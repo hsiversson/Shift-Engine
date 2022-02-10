@@ -1,5 +1,5 @@
 #include "SC_Relocation.h"
-#include "Misc/SC_MemoryFunctions.h"
+#include "Platform/Misc/SC_MemoryFunctions.h"
 
 enum	SFaultyTestEnum { i = 1 };
 struct	SFaultyTestData { int32 i; };

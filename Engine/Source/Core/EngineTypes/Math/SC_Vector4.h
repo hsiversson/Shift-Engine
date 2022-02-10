@@ -1,6 +1,6 @@
 #pragma once
-#include "Debugging/SC_Assert.h"
-#include "SIMD/SC_VectorInstructions.h"
+#include "Platform/Debugging/SC_Assert.h"
+#include "Platform/SIMD/SC_VectorInstructions.h"
 
 template<class T>
 class alignas(16) SC_TVector4

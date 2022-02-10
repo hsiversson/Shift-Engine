@@ -19,10 +19,6 @@ set(IMGUIZMOFILES
 source_group("ImGuizmo" FILES ${IMGUIZMOFILES})
 
 target_include_directories(ImGui PRIVATE 
-                            ${ENGINE_SOURCE_DIRECTORY}/Core/Common
-                            ${ENGINE_SOURCE_DIRECTORY}/Core/InputOutput
-                            ${ENGINE_SOURCE_DIRECTORY}/Core/Memory
-                            ${ENGINE_SOURCE_DIRECTORY}/Core/EngineTypes
-                            ${ENGINE_SOURCE_DIRECTORY}/Core/Platform
+                            ${ENGINE_SOURCE_DIRECTORY}/Core
 							${ENGINE_EXTERNAL_DIRECTORY}/ImGui
                           )

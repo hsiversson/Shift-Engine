@@ -1,5 +1,5 @@
 #pragma once
-#include "Platform/SC_PlatformDefines.h"
+#include "Platform/Platform/SC_PlatformDefines.h"
 #include <cassert>
 #undef assert
 

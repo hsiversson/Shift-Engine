@@ -1,5 +1,5 @@
 #pragma once
-#include "SGF_Framework.h"
+#include "GameFramework/SGF_Framework.h"
 
 class GameInstance : public SGF_GameInterface
 {

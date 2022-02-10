@@ -8,8 +8,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${ENGINETYPES_FILES})
 
 ##################################
 # Target Settings
-target_include_directories(EngineTypes PRIVATE ${ENGINE_SOURCE_DIRECTORY}/Core/EngineTypes ${ENGINE_SOURCE_DIRECTORY}/Core/Platform)
-target_link_libraries(EngineTypes Platform)
+target_include_directories(EngineTypes PRIVATE ${ENGINE_SOURCE_DIRECTORY}/Core)
 
 ##################################
 # Precompiled Header

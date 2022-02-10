@@ -1,5 +1,5 @@
 #pragma once
-#include "Interface/SR_BufferResource.h"
+#include "RenderCore/Interface/SR_BufferResource.h"
 
 #if ENABLE_DX12
 

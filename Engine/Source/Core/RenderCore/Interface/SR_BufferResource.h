@@ -1,5 +1,5 @@
 #pragma once
-#include "Resources/SR_Resource.h"
+#include "RenderCore/Resources/SR_Resource.h"
 
 struct SR_BufferResourceProperties
 {

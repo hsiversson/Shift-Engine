@@ -1,5 +1,5 @@
 #pragma once	
-#include "SRP/SC_SRP.h"
+#include "InputOutput/SRP/SC_SRP.h"
 
 class SC_ResourceManager
 {

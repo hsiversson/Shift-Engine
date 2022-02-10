@@ -1,6 +1,6 @@
 #pragma once
-#include "Math/SC_Vector.h"
-#include "Misc/SC_CommonFunctions.h"
+#include "EngineTypes/Math/SC_Vector.h"
+#include "Platform/Misc/SC_CommonFunctions.h"
 
 class SC_AABB
 {	

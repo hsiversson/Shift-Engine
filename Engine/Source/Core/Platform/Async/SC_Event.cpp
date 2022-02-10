@@ -1,6 +1,6 @@
 #include "SC_Event.h"
 #include "SC_Thread.h"
-#include "Atomics/SC_Atomics.h"
+#include "Platform/Atomics/SC_Atomics.h"
 
 SC_Event::SC_Event()
 	: mState(0)

@@ -1,5 +1,5 @@
 #pragma once
-#include "KeyCodes/SC_KeyCodes.h"
+#include "InputOutput/KeyCodes/SC_KeyCodes.h"
 
 enum class SC_MessageType
 {

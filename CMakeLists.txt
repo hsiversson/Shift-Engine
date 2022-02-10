@@ -24,7 +24,11 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 ##################################
 # Global Defines
-add_definitions(-DUNICODE -D_UNICODE)
+add_definitions(
+    -DUNICODE 
+    -D_UNICODE
+    -DIMGUI_USER_CONFIG="${ENGINE_SOURCE_DIRECTORY}/Core/RenderCore/ImGui/SR_ImGuiConfig.h"
+)
 
 ##################################
 # Compiler options

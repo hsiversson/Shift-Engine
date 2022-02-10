@@ -1,6 +1,6 @@
 #include "SC_MemoryAllocator.h"
-#include "GlobalData/SC_GlobalData.h"
-#include "Misc/SC_NewDeleteOperators.h"
+#include "Memory/GlobalData/SC_GlobalData.h"
+#include "Memory/Misc/SC_NewDeleteOperators.h"
 
 SC_MemoryAllocator& SC_MemoryAllocator::Get()
 {
