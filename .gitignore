@@ -1,0 +1,6 @@
+## Ignore the build folder for now
+_build/
+
+
+## Temporarily ignore the built binaries
+Bin/
