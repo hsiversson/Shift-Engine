@@ -34,7 +34,7 @@
 #endif
 
 #if IS_WINDOWS_PLATFORM
-	#if SC_ENABLE_EDITOR				
+	#if ENABLE_EDITOR				
 		#define IS_EDITOR_BUILD			(1)
 	#endif
 #endif

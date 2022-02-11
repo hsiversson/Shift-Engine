@@ -12,7 +12,7 @@
 #include <filesystem>
 #include <fstream>
 
-#include "zlib.h"
+//#include "zlib.h"
 #include "SGfx_MeshLoader.h"
 
 SGfx_ModelImporterScene::SGfx_ModelImporterScene()

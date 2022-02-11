@@ -35,6 +35,9 @@ SOFTWARE.
 #define NLOHMANN_JSON_VERSION_MINOR 10
 #define NLOHMANN_JSON_VERSION_PATCH 2
 
+#pragma warning(push)
+#pragma warning(disable:26819) // Warning C26819: unannotated fallthrough between switch labels
+
 #include <algorithm> // all_of, find, for_each
 #include <cstddef> // nullptr_t, ptrdiff_t, size_t
 #include <functional> // hash, less
@@ -26474,6 +26477,8 @@ inline nlohmann::json::json_pointer operator "" _json_pointer(const char* s, std
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
+
+#pragma warning(pop)
 
 // clean up
 #undef JSON_ASSERT

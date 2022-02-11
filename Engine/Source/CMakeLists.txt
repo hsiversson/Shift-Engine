@@ -19,3 +19,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Modules/Application)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Modules/Graphics)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Modules/GameFramework)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Modules/Physics)
+
+##################################
+# Engine Editor sub-directories
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Editor)

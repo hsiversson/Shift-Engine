@@ -36,11 +36,14 @@ class SC_Message
 public:
 	SC_Message()
 		: mType(SC_MessageType::Unknown)
+		, mStorage{}
 	{
 		SC_Fill(mStorage, gInternalBlockSize, 0);
 	}
 
 	SC_Message(const SC_Message& aOther)
+		: mType(SC_MessageType::Unknown)
+		, mStorage{}
 	{
 		SC_Memcpy(this, &aOther, sizeof(SC_Message));
 	}

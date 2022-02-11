@@ -23,7 +23,8 @@ bool SGF_World::LoadLevel(const char* /*aLevel*/)
 {
 	SC_Ref<SGF_Level> level = SC_MakeRef<SGF_Level>();
 	level->SetWorld(this);
-	level->Load(SC_EnginePaths::Get().GetGameDataDirectory() + "/Levels/Sponza.slvl");
+	if (level->Load(SC_EnginePaths::Get().GetGameDataDirectory() + "/Levels/Sponza.slvl"))
+		mLevels.Add(level);
 
 	//SED_AssimpImporter importer;
 	//SED_AssimpScene scene;
@@ -33,7 +34,6 @@ bool SGF_World::LoadLevel(const char* /*aLevel*/)
 	//scene.ConvertToLevelAndSave(*level);
 	//level->Save(SC_EnginePaths::Get().GetGameDataDirectory() + "/Levels/Sponza.slvl");
 
-	mLevels.Add(level);
 	return true;
 }
 

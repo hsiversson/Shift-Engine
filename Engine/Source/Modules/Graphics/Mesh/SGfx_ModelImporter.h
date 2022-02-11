@@ -1,7 +1,7 @@
 #pragma once
 
 #if IS_EDITOR_BUILD
-#include "RenderCore/RenderCore/Interface/SR_VertexLayout.h"
+#include "RenderCore/Interface/SR_VertexLayout.h"
 
 struct aiScene;
 struct aiMesh;
