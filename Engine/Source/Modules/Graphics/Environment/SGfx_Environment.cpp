@@ -80,9 +80,9 @@ SGfx_Environment::SGfx_Environment()
 	mConstants.mSunLightDirection = SC_Vector(0.45f, 0.80f, 0.05f);
 	mConstants.mSunLightDirection.Normalize();
 
-	mConstants.mSunLightIntensity = 140.0f;
+	mConstants.mSunLightIntensity = 70.0f;
 
-	mConstants.mSunLightColor = SC_Vector(0.2f, 0.8f, 0.2f);
+	mConstants.mSunLightColor = SC_Vector(0.99f, 0.84f, 0.55f);
 
 	mEnvironmentalIrradianceMap = SR_RenderDevice::gInstance->LoadTexture(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Grey_Cube.dds");
 	mPreFilteredEnvironmentMap = SR_RenderDevice::gInstance->LoadTexture(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Grey_Cube.dds");
