@@ -316,18 +316,20 @@ SC_Ref<SGfx_Mesh> SED_AssimpMesh::GetMesh() const
 
 bool SED_AssimpMesh::SaveToDisk(const SC_FilePath& aFileDirectory) const
 {
-	SC_FilePath path(aFileDirectory);
-	SC_FilePath::CreateDirectory(path);
+	SC_FilePath gameDirPath(SC_EnginePaths::Get().GetGameDataDirectory());
+	SC_FilePath::CreateDirectory(gameDirPath + aFileDirectory);
 
+	SC_FilePath path(aFileDirectory);
 	path += std::string("/");
 	path += std::string(mImportedMesh->mName.C_Str());
 	path.RemoveExtension();
 	path += std::string(".smf");
 
+	SC_FilePath fullPath(gameDirPath + path);
 	bool result = true;
-	if (!SC_FilePath::Exists(path))
+	if (!SC_FilePath::Exists(fullPath))
 	{
-		result = SGfx_MeshLoader::Save(path, mMeshParams);
+		result = SGfx_MeshLoader::Save(fullPath, mMeshParams);
 	}
 
 	if (result)
@@ -413,7 +415,7 @@ bool SED_AssimpScene::ConvertToLevelAndSave(SGF_Level& aOutLevel)
 	if (!mImportedScene || !mImportedScene->mRootNode)
 		return false;
 
-	SC_FilePath saveDir(SC_EnginePaths::Get().GetGameDataDirectory() + "/ImportedMeshes");
+	SC_FilePath saveDir("ImportedMeshes");
 
 	SC_Array<SC_Future<bool>> futures;
 	futures.Reserve(mMeshes.Count());

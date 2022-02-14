@@ -112,7 +112,7 @@ bool SGF_StaticMeshComponent::Load(const SC_Json& aSavedData)
 	if (!SGF_Component::Load(aSavedData))
 		return false;
 
-	SC_FilePath meshPath = aSavedData["Mesh"].get<std::string>().c_str();
+	SC_FilePath meshPath = SC_EnginePaths::Get().GetGameDataDirectory() + "/" + aSavedData["Mesh"].get<std::string>().c_str();
 
 	SGfx_MeshCreateParams meshCreateParams;
 	if (!SGfx_MeshLoader::Load(meshPath, meshCreateParams))
