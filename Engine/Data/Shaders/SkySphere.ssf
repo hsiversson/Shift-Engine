@@ -35,8 +35,8 @@ float4 MainPS(PixelInput aInput) : SV_TARGET0
 {
     float4 color = (float4)0;
 
-    //TextureCube skyCubeMap = GetTextureCube(DrawInfo.mSkyCubeMapDescriptorIndex);
-    //color.rgb = skyCubeMap.SampleLevel(gBilinearWrap, aInput.mViewDirection, 0).rgb;
+    TextureCube skyCubeMap = GetTextureCube(DrawInfo.mSkyCubeMapDescriptorIndex);
+    color.rgb = skyCubeMap.SampleLevel(gBilinearWrap, aInput.mViewDirection, 0).rgb;
 
     //const float3 sunLightDirection = gSceneConstants.mEnvironmentConstants.mSunLightDirection;
     //const float sunLightIntensity = gSceneConstants.mEnvironmentConstants.mSunLightIntensity;

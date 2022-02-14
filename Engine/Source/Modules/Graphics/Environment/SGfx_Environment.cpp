@@ -14,7 +14,7 @@ SGfx_Skybox::~SGfx_Skybox()
 
 bool SGfx_Skybox::Init()
 {
-	mSkyCubeMap = SR_RenderDevice::gInstance->LoadTexture(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Black_1x1.dds");
+	mSkyCubeMap = SR_RenderDevice::gInstance->LoadTexture(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Grey_Cube.dds");
 
 	SC_Array<SC_Vector> vertices;
 	SC_Array<uint32> indices;
@@ -84,9 +84,9 @@ SGfx_Environment::SGfx_Environment()
 
 	mConstants.mSunLightColor = SC_Vector(0.2f, 0.8f, 0.2f);
 
-	mEnvironmentalIrradianceMap = SR_RenderDevice::gInstance->LoadTexture(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Black_1x1.dds");
-	mPreFilteredEnvironmentMap = SR_RenderDevice::gInstance->LoadTexture(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Black_1x1.dds");
-	mEnvironmentalBrdfLUT = SR_RenderDevice::gInstance->LoadTexture(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Black_1x1.dds");
+	mEnvironmentalIrradianceMap = SR_RenderDevice::gInstance->LoadTexture(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Grey_Cube.dds");
+	mPreFilteredEnvironmentMap = SR_RenderDevice::gInstance->LoadTexture(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Grey_Cube.dds");
+	mEnvironmentalBrdfLUT = SR_RenderDevice::gInstance->LoadTexture(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/EnvironmentBrdfLUT.dds");
 
 	mConstants.mEnvironmentalIrradianceMapDescriptorIndex = mEnvironmentalIrradianceMap->GetDescriptorHeapIndex();
 	mConstants.mPreFilteredEnvironmentMapDescriptorIndex = mPreFilteredEnvironmentMap->GetDescriptorHeapIndex();

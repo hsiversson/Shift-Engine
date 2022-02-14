@@ -1,6 +1,15 @@
 #ifndef SKY_COMMON_HEADER
 #define SKY_COMMON_HEADER
 
+float3 CalculateSky(in float3 aViewDirection)
+{
+    float3 color = (float3)0;
 
+    float3 totalRayleigh = (float3)0;
+    float3 totalMie = (float3)0;
+
+
+    return color;
+}
 
 #endif //SKY_COMMON_HEADER
