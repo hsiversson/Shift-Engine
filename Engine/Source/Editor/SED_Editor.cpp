@@ -127,6 +127,7 @@ bool SED_Editor::Render()
 			SGfx_Renderer* renderer = mActiveWorld->GetGraphicsWorld()->GetRenderer();
 			SGfx_Renderer::Settings& rendererSettings = renderer->GetSettings();
 			ImGui::Checkbox("Enable TAA", &rendererSettings.mEnableTemporalAA);
+			ImGui::Checkbox("Draw Grid", &rendererSettings.mDrawGridHelper);
 
 			if (ImGui::BeginMenu("Ambient Occlusion"))
 			{

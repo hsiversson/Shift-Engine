@@ -7,6 +7,7 @@ struct DispatchInfoStruct
     float4 mTargetResolutionAndRcp;
     uint mSceneColorDescriptorIndex;
 	uint mBloomTextureDescriptorIndex;
+	uint mDebugTargetTextureDescriptorIndex;
     uint mOutputTextureDescriptorIndex;
 };
 ConstantBuffer<DispatchInfoStruct> DispatchInfo : register(b0);
@@ -16,6 +17,7 @@ void Tonemap(uint3 aDispatchThreadId : SV_DispatchThreadID)
 {
     Texture2D<float3> sceneColorTexture = GetTexture2D<float3>(DispatchInfo.mSceneColorDescriptorIndex);
     Texture2D<float4> bloomTexture = GetTexture2D<float4>(DispatchInfo.mBloomTextureDescriptorIndex);
+    Texture2D<float3> debugTexture = GetTexture2D<float3>(DispatchInfo.mDebugTargetTextureDescriptorIndex);
     RWTexture2D<float4> outTexture = GetRWTexture2D<float4>(DispatchInfo.mOutputTextureDescriptorIndex);
 
     uint2 pixelPosition = aDispatchThreadId.xy;
@@ -30,5 +32,6 @@ void Tonemap(uint3 aDispatchThreadId : SV_DispatchThreadID)
     // apply tonemapping
     float3 screenColor = ACESFitted(sceneColor + bloomColor);
 
-    outTexture[pixelPosition] = float4(screenColor, 1.0f);
+    float3 debugTextureSample = debugTexture.Load(loadLocation);
+    outTexture[pixelPosition] = float4(screenColor + debugTextureSample, 1.0f);
 }

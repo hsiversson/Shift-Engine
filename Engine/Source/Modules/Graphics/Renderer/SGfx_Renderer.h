@@ -18,6 +18,7 @@ class SGfx_LightCulling;
 class SGfx_ReflectionProbe;
 class SGfx_AmbientOcclusion;
 class SGfx_PostEffects;
+class SGfx_DebugRenderer;
 
 /**
  * 
@@ -32,9 +33,11 @@ public:
 	{
 		Settings()
 			: mEnableTemporalAA(true)
+			, mDrawGridHelper(true)
 		{}
 
 		bool mEnableTemporalAA;
+		bool mDrawGridHelper;
 	};
 
 public:
@@ -88,6 +91,7 @@ private:
 	void RenderVolumetrics();
 	void RenderTranslucency();
 
+	void RenderDebugObjects();
 	void RenderUI();
 
 	void ComputePostEffects();
@@ -99,6 +103,7 @@ private:
 	SC_UniquePtr<SGfx_Sky> mSky; 
 	SC_UniquePtr<SGfx_AmbientOcclusion> mAmbientOcclusion;
 	SC_UniquePtr<SGfx_PostEffects> mPostEffects;
+	SC_UniquePtr<SGfx_DebugRenderer> mDebugRenderer;
 
 	// Temp
 	SC_Ref<SR_ShaderState> mShader;
@@ -115,6 +120,7 @@ private:
 	SGfx_Surface mSceneColor2;
 	SGfx_Surface mHistoryBuffer;
 	SGfx_Surface mScreenColor;
+	SGfx_Surface mDebugTarget;
 	SGfx_Surface mMotionVectors;
 	SC_Ref<SR_Buffer> mRaytracingScene;
 	//

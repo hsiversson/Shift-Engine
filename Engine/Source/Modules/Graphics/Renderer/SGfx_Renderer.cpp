@@ -11,6 +11,7 @@
 #include "Graphics/Misc/SGfx_DefaultTextures.h"
 #include "Graphics/PostEffects/SGfx_PostEffects.h"
 #include "SGfx_DrawInfo.h"
+#include "SGfx_DebugRenderer.h"
 
 SC_CVAR(bool, gEnableTemporalAA, "Renderer.TAA.Enable", true);
 
@@ -57,6 +58,7 @@ bool SGfx_Renderer::Init()
 	mSceneColor.Init(SC_IntVector(backbufferResolution), SR_Format::RG11B10_FLOAT, true, true, "SceneColor");
 	mSceneColor2.Init(SC_IntVector(backbufferResolution), SR_Format::RG11B10_FLOAT, true, true, "SceneColor2");
 	mScreenColor.Init(SC_IntVector(backbufferResolution), SR_Format::RGBA8_UNORM, true, true, "ScreenColor");
+	mDebugTarget.Init(SC_IntVector(backbufferResolution), SR_Format::RGBA8_UNORM, true, true, "DebugTarget");
 	mHistoryBuffer.Init(SC_IntVector(backbufferResolution), SR_Format::RG11B10_FLOAT, true, true, "HistoryBuffer");
 	mMotionVectors.Init(SC_IntVector(backbufferResolution), SR_Format::RG16_FLOAT, true, true, "MotionVectors");
 
@@ -117,6 +119,10 @@ bool SGfx_Renderer::Init()
 	if (!mPostEffects->Init())
 		return false;
 
+	mDebugRenderer = SC_MakeUnique<SGfx_DebugRenderer>();
+	if (!mDebugRenderer->Init())
+		return false;
+
 	return true;
 }
 
@@ -141,6 +147,7 @@ void SGfx_Renderer::RenderView(SGfx_View* aView)
 	SubmitGraphicsTask(std::bind(&SGfx_Renderer::RenderShadows, this), prepareData.mShadowsEvent);
 
 	SubmitGraphicsTask(std::bind(&SGfx_Renderer::RenderOpaque, this), prepareData.mRenderOpaqueEvent);
+	SubmitGraphicsTask(std::bind(&SGfx_Renderer::RenderDebugObjects, this), prepareData.mRenderDebugObjectsEvent);
 	SubmitGraphicsTask(std::bind(&SGfx_Renderer::ComputePostEffects, this), prepareData.mPostEffectsEvent);
 
 	for (SC_Event* taskEvent : mSubmittedTaskEvents)
@@ -445,8 +452,36 @@ void SGfx_Renderer::RenderOpaque()
 	if (renderData.mSkybox)
 		renderData.mSkybox->Render(cmdList.get());
 
-	cmdList->TransitionBarrier(SR_ResourceState_Read, mSceneColor.mResource.get());
 	cmdList->EndEvent(); // Render Opaque
+}
+
+void SGfx_Renderer::RenderDebugObjects()
+{
+	SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
+	const SGfx_ViewData& renderData = mCurrentView->GetRenderData();
+	cmdList->BeginEvent("DebugDraw");
+
+	cmdList->TransitionBarrier(SR_ResourceState_RenderTarget, mDebugTarget.mResource.get());
+	cmdList->ClearRenderTarget(mDebugTarget.mRenderTarget.get(), SC_Vector4(0.f, 0.f, 0.f, 0.f));
+
+	SR_Rect rect =
+	{
+		0,
+		0,
+		(uint32)renderData.mSceneConstants.mViewConstants.mViewportSizeAndScale.x,
+		(uint32)renderData.mSceneConstants.mViewConstants.mViewportSizeAndScale.y
+	};
+	cmdList->SetViewport(rect);
+	cmdList->SetScissorRect(rect);
+
+	cmdList->SetRenderTarget(mDebugTarget.mRenderTarget.get(), mDepthStencil.get());
+	cmdList->SetRootConstantBuffer(mViewConstantsBuffer.get(), 1);
+
+	mDebugRenderer->SetDrawGrid(mSettings.mDrawGridHelper);
+	mDebugRenderer->Render(cmdList.get(), renderData);
+
+	cmdList->TransitionBarrier(SR_ResourceState_Read, mDebugTarget.mResource.get());
+	cmdList->EndEvent();
 }
 
 void SGfx_Renderer::ComputePostEffects()
@@ -524,12 +559,14 @@ void SGfx_Renderer::ComputePostEffects()
 		SC_Vector4 mTargetResolutionAndRcp;
 		uint32 mSceneColorDescriptorIndex;
 		uint32 mBloomTextureDescriptorIndex;
+		uint32 mDebugTargetTextureDescriptorIndex;
 		uint32 mOutputTextureDescriptorIndex;
 	} dispatchInfo;
 	const SC_IntVector2 targetSize = mScreenColor.mResource->GetProperties().mSize.XY();
 	dispatchInfo.mTargetResolutionAndRcp = SC_Vector4(targetSize, SC_Vector2(1.0f / targetSize.x, 1.0f / targetSize.y));
 	dispatchInfo.mSceneColorDescriptorIndex = (mSettings.mEnableTemporalAA) ? mSceneColor2.mTexture->GetDescriptorHeapIndex() : mSceneColor.mTexture->GetDescriptorHeapIndex();
 	dispatchInfo.mBloomTextureDescriptorIndex = mPostEffects->GetBloomTexture()->GetDescriptorHeapIndex();
+	dispatchInfo.mDebugTargetTextureDescriptorIndex = mDebugTarget.mTexture->GetDescriptorHeapIndex();
 	dispatchInfo.mOutputTextureDescriptorIndex = mScreenColor.mTextureRW->GetDescriptorHeapIndex();
 
 	if (!mPostEffectCBuffers[0])

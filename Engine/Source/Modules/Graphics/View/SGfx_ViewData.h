@@ -87,6 +87,7 @@ public:
 		mShadowsEvent = SC_MakeUnique<SR_TaskEvent>();
 		mAmbientOcclusionEvent = SC_MakeUnique<SR_TaskEvent>();
 		mRenderOpaqueEvent = SC_MakeUnique<SR_TaskEvent>();
+		mRenderDebugObjectsEvent = SC_MakeUnique<SR_TaskEvent>();
 		mPostEffectsEvent = SC_MakeUnique<SR_TaskEvent>();
 	}
 
@@ -111,6 +112,7 @@ public:
 		mShadowsEvent->Reset();
 		mAmbientOcclusionEvent->Reset();
 		mRenderOpaqueEvent->Reset();
+		mRenderDebugObjectsEvent->Reset();
 		mPostEffectsEvent->Reset();
 	}
 
@@ -137,6 +139,7 @@ public:
 	SC_UniquePtr<SR_TaskEvent> mShadowsEvent;
 	SC_UniquePtr<SR_TaskEvent> mAmbientOcclusionEvent;
 	SC_UniquePtr<SR_TaskEvent> mRenderOpaqueEvent;
+	SC_UniquePtr<SR_TaskEvent> mRenderDebugObjectsEvent;
 	SC_UniquePtr<SR_TaskEvent> mPostEffectsEvent;
 
 };
