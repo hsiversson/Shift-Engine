@@ -1,5 +1,6 @@
 #include "SGfx_PostEffects.h"
 #include "Graphics/View/SGfx_View.h"
+#include "Graphics/Misc/SGfx_DefaultTextures.h"
 
 SGfx_PostEffects::SGfx_PostEffects()
 {
@@ -29,6 +30,7 @@ bool SGfx_PostEffects::Init()
 	if (!SR_RenderDevice::gInstance->CompileShader(compileArgs, bloomUpsampleShaderProps.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Compute)], &bloomUpsampleShaderProps.mShaderMetaDatas[static_cast<uint32>(SR_ShaderType::Compute)]))
 		return false;
 	mBloomData.mUpsampleShader = SR_RenderDevice::gInstance->CreateShaderState(bloomUpsampleShaderProps);
+	mBloomData.mEnabled = true;
 
 	compileArgs.mEntryPoint = "StableDownsample";
 	compileArgs.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/PostEffect_Downsample.ssf";
@@ -52,7 +54,7 @@ void SGfx_PostEffects::Render(SGfx_View* aView, SR_Texture* aScreenColor)
 
 SR_Texture* SGfx_PostEffects::GetBloomTexture() const
 {
-	return mBloomData.mResult.get();
+	return (mBloomData.mEnabled) ? mBloomData.mResult.get() : SGfx_DefaultTextures::GetBlack1x1().get();
 }
 
 void SGfx_PostEffects::RenderAverageLuminance()

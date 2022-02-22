@@ -129,6 +129,10 @@ bool SED_Editor::Render()
 			ImGui::Checkbox("Enable TAA", &rendererSettings.mEnableTemporalAA);
 			ImGui::Checkbox("Draw Grid", &rendererSettings.mDrawGridHelper);
 
+			ImGui::DragFloat3("Sun Direction", &mActiveWorld->GetGraphicsWorld()->GetEnvironment()->GetSunDirection().x, 0.1f); // temp
+			ImGui::ColorPicker3("Sun Color", &mActiveWorld->GetGraphicsWorld()->GetEnvironment()->GetSunColor().x);
+			ImGui::DragFloat("Sun Intensity", &mActiveWorld->GetGraphicsWorld()->GetEnvironment()->GetSunIntensity());
+
 			if (ImGui::BeginMenu("Ambient Occlusion"))
 			{
 				SGfx_AmbientOcclusion* ao = renderer->GetAmbientOcclusion();

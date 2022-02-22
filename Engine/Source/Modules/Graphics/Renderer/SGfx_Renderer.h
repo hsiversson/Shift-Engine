@@ -19,6 +19,7 @@ class SGfx_ReflectionProbe;
 class SGfx_AmbientOcclusion;
 class SGfx_PostEffects;
 class SGfx_DebugRenderer;
+class SGfx_Environment;
 
 /**
  * 
@@ -44,7 +45,7 @@ public:
 	SGfx_Renderer();
 	~SGfx_Renderer();
 
-	bool Init();
+	bool Init(SGfx_Environment* aEnvironment);
 
 	// Called from MainThread to kick off render tasks
 	void RenderView(SGfx_View* aView);
@@ -100,10 +101,11 @@ private:
 	SC_UniquePtr<SGfx_LightCulling> mLightCulling;
 	SC_UniquePtr<SGfx_ShadowSystem> mShadowMapSystem;
 	SC_UniquePtr<SGfx_Raytracing> mRaytracingSystem; 
-	SC_UniquePtr<SGfx_Sky> mSky; 
+	SC_UniquePtr<SGfx_Sky> mSky;
 	SC_UniquePtr<SGfx_AmbientOcclusion> mAmbientOcclusion;
 	SC_UniquePtr<SGfx_PostEffects> mPostEffects;
 	SC_UniquePtr<SGfx_DebugRenderer> mDebugRenderer;
+	SGfx_Environment* mEnvironment;
 
 	// Temp
 	SC_Ref<SR_ShaderState> mShader;

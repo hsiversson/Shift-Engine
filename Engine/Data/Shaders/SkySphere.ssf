@@ -1,5 +1,6 @@
 #include "Common.ssh"
 #include "SceneConstants.ssh"
+#include "SkyCommon.ssh"
 
 struct VertexInput
 {
@@ -9,14 +10,14 @@ struct VertexInput
 struct PixelInput
 {
     float4 mClipPosition : SV_POSITION;
-    centroid float3 mViewDirection : VIEW_DIRECTION;
+    float3 mViewDirection : VIEW_DIRECTION;
 };
 
 PixelInput MainVS(VertexInput aInput)
 {
     PixelInput output;
 
-    float3 worldPos = aInput.mPosition;
+    float3 worldPos = aInput.mPosition + SR_ViewConstants.mCameraPosition;
     float4 clipPos = mul(gSceneConstants.mViewConstants.mWorldToClip, float4(worldPos, 1.0f));
 
     output.mClipPosition = clipPos.xyww;
@@ -33,10 +34,8 @@ ConstantBuffer<DrawInfoStruct> DrawInfo : register(b0);
 
 float4 MainPS(PixelInput aInput) : SV_TARGET0
 {
-    float4 color = (float4)0;
-
-    TextureCube skyCubeMap = GetTextureCube(DrawInfo.mSkyCubeMapDescriptorIndex);
-    color.rgb = skyCubeMap.SampleLevel(gBilinearWrap, aInput.mViewDirection, 0).rgb;
+    //TextureCube skyCubeMap = GetTextureCube(DrawInfo.mSkyCubeMapDescriptorIndex);
+    //color.rgb = skyCubeMap.SampleLevel(gBilinearWrap, aInput.mViewDirection, 0).rgb;
 
     //const float3 sunLightDirection = gSceneConstants.mEnvironmentConstants.mSunLightDirection;
     //const float sunLightIntensity = gSceneConstants.mEnvironmentConstants.mSunLightIntensity;
@@ -50,5 +49,5 @@ float4 MainPS(PixelInput aInput) : SV_TARGET0
     //const float3 sun           = sunLightColor * 35.0f * sunPow;
     //const float3 combinedSun   = lerp( sunHalo, sun, sunPow );
 
-    return color;
+    return float4(SampleSkyColor(aInput.mViewDirection), 1.0f);
 }

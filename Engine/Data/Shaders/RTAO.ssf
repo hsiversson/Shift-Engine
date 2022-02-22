@@ -51,7 +51,8 @@ float TraceOcclusionRay(float3 aRayStart, float3 aRayDirection, float aMinT, flo
 void Main()
 {
     uint3 dispatchIndex = DispatchRaysIndex();
-    uint2 fullscreenCoord = dispatchIndex.xy << 1;
+    float2 uv = dispatchIndex.xy * Constants.mTargetSizeAndInvSize.zw;
+    uint2 fullscreenCoord = uv * gSceneConstants.mViewConstants.mRenderTargetSizeAndInvSize.xy;
     uint numRays = Constants.mNumRaysPerPixel;
 
     Texture2D<float> depthBuffer = GetTexture2D<float>(Constants.mDepthBufferDescriptorIndex);

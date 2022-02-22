@@ -59,7 +59,7 @@ bool SGfx_AmbientOcclusion::Init()
 #endif //ENABLE_RAYTRACING
 
 	SR_TextureResourceProperties textureResourceProps;
-	textureResourceProps.mSize = SC_IntVector(SR_RenderDevice::gInstance->GetSwapChain()->GetProperties().mSize / 2, 1);
+	textureResourceProps.mSize = SC_IntVector(SC_Vector2(SR_RenderDevice::gInstance->GetSwapChain()->GetProperties().mSize) * 0.75f, 1);
 	textureResourceProps.mFormat = SR_Format::R8_UNORM;
 	textureResourceProps.mType = SR_ResourceType::Texture2D;
 	textureResourceProps.mAllowUnorderedAccess = true;

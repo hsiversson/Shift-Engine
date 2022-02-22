@@ -1,13 +1,73 @@
 #ifndef SKY_COMMON_HEADER
 #define SKY_COMMON_HEADER
 
-float3 CalculateSky(in float3 aViewDirection)
+#include "ScatteringCommon.ssh"
+
+float3 GetCameraPosition()
+{
+    return SR_ScatteringConstants.mVirtualSkyCameraPosition;
+}
+
+float3 GetCameraPositionPlanetRelative()
+{
+	return (GetCameraPosition() - SR_ScatteringConstants.mPlanetCenterAndViewHeight.xyz) * M_TO_SKY_UNIT;
+}
+
+bool MoveToTopAtmosphere(inout float3 aWorldPosition, in float3 aWorldDirection)
+{
+	float viewHeight = length(aWorldPosition);
+	if (viewHeight > SR_ScatteringConstants.mPlanetAtmosphereRadiusKm)
+	{
+		float tTop = RaySphereIntersectNearest(aWorldPosition, aWorldDirection, float3(0.0f, 0.0f, 0.0f), SR_ScatteringConstants.mPlanetAtmosphereRadiusKm);
+		if (tTop >= 0.0f)
+		{
+			float3 upVector = aWorldPosition / viewHeight;
+			float3 upOffset = upVector * -PLANET_RADIUS_OFFSET;
+			aWorldPosition = aWorldPosition + aWorldDirection * tTop + upOffset;
+		}
+		else
+		{
+			// Ray is not intersecting the atmosphere
+			return false;
+		}
+	}
+	return true; // ok to start tracing
+}
+
+float3 SampleSkyColor(in float3 aViewDirection)
 {
     float3 color = (float3)0;
 
-    float3 totalRayleigh = (float3)0;
-    float3 totalMie = (float3)0;
+    float3 worldPosition = GetCameraPositionPlanetRelative();
+    float3 worldDirection = normalize(aViewDirection);
+    float3 lightDirection = SR_EnvironmentConstants.mSunLightDirection;
+    float3 sunIlluminance = SR_EnvironmentConstants.mSunLightIntensity * SR_EnvironmentConstants.mSunLightColor;
 
+    //if (enableSun)
+    //{
+        color += GetSunLuminance(worldPosition, worldDirection, lightDirection, sunIlluminance, SR_ScatteringConstants.mTransmittanceLUTDescriptorIndex);
+    //}
+
+    if (!MoveToTopAtmosphere(worldPosition, worldDirection))
+    {
+        return color;
+    }
+
+    // Apply the start offset after moving to the top of atmosphere to avoid black pixels
+    const float startOffsetKm = 0.1f; // 100m seems enough for long distances
+    worldPosition += worldDirection * startOffsetKm;
+
+    const bool mieRayPhase = true;
+    const bool isGround = false;
+
+    ScatteringSamplingParams samplingParams = (ScatteringSamplingParams)0;
+    samplingParams.mEnableVariableSampleCount = true;
+    samplingParams.mSampleCountMin = 4.0f;
+    samplingParams.mSampleCountMax = 14.0f;
+    samplingParams.mDistanceToSampleCountMaxRcp = 0.01f;
+
+    SingleScatteringResult result = IntegrateScatteredLuminance(worldPosition, worldDirection, lightDirection, sunIlluminance, mieRayPhase, isGround, samplingParams, SR_ScatteringConstants.mTransmittanceLUTDescriptorIndex);
+    color += result.mScatteredLuminance;
 
     return color;
 }

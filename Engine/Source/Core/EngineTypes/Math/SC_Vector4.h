@@ -116,7 +116,7 @@ inline SC_TVector4<T> SC_TVector4<T>::operator-() const
 template<class T>
 inline SC_TVector4<T>& SC_TVector4<T>::operator-=(const SC_TVector4<T>& aVector)
 {
-	SC_VectorInstructions::GetVector(SC_VectorInstructions::Subtract(mRegister, aVector.mRegister), x, y, z, w);
+	mRegister = SC_VectorInstructions::Subtract(mRegister, aVector.mRegister);
 	return *this;
 }
 
@@ -124,7 +124,7 @@ template<class T>
 inline SC_TVector4<T>& SC_TVector4<T>::operator-=(const T& aValue)
 {
 	SC_VectorInstructions::VectorRegister reg1 = SC_VectorInstructions::Load(aValue);
-	SC_VectorInstructions::GetVector(SC_VectorInstructions::Subtract(mRegister, reg1), x, y, z, w);
+	mRegister = SC_VectorInstructions::Subtract(mRegister, reg1);
 	return *this;
 }
 
@@ -132,7 +132,7 @@ template<class T>
 inline SC_TVector4<T> SC_TVector4<T>::operator-(const SC_TVector4<T>& aVector) const
 {
 	SC_TVector4<T> result;
-	SC_VectorInstructions::GetVector(SC_VectorInstructions::Subtract(mRegister, aVector.mRegister), result.x, result.y, result.z, result.w);
+	result.mRegister = SC_VectorInstructions::Subtract(mRegister, aVector.mRegister);
 	return result;
 }
 
@@ -142,14 +142,14 @@ inline SC_TVector4<T> SC_TVector4<T>::operator-(const T& aValue) const
 	SC_VectorInstructions::VectorRegister reg1 = SC_VectorInstructions::Load(aValue);
 
 	SC_TVector4<T> result;
-	SC_VectorInstructions::GetVector(SC_VectorInstructions::Subtract(mRegister, reg1), result.x, result.y, result.z, result.w);
+	result.mRegister = SC_VectorInstructions::Subtract(mRegister, reg1);
 	return result;
 }
 
 template<class T>
 inline SC_TVector4<T>& SC_TVector4<T>::operator*=(const SC_TVector4<T>& aVector)
 {
-	SC_VectorInstructions::GetVector(SC_VectorInstructions::Multiply(mRegister, aVector.mRegister), x, y, z, w);
+	mRegister = SC_VectorInstructions::Multiply(mRegister, aVector.mRegister);
 	return *this;
 }
 
@@ -157,7 +157,7 @@ template<class T>
 inline SC_TVector4<T>& SC_TVector4<T>::operator*=(const T& aValue)
 {
 	SC_VectorInstructions::VectorRegister reg1 = SC_VectorInstructions::Load(aValue);
-	SC_VectorInstructions::GetVector(SC_VectorInstructions::Multiply(mRegister, reg1), x, y, z, w);
+	mRegister = SC_VectorInstructions::Multiply(mRegister, reg1);
 	return *this;
 }
 
@@ -165,7 +165,7 @@ template<class T>
 inline SC_TVector4<T> SC_TVector4<T>::operator*(const SC_TVector4<T>& aVector) const
 {
 	SC_TVector4<T> result;
-	SC_VectorInstructions::GetVector(SC_VectorInstructions::Multiply(mRegister, aVector.mRegister), result.x, result.y, result.z, result.w);
+	result.mRegister = SC_VectorInstructions::Multiply(mRegister, aVector.mRegister);
 	return result;
 }
 
@@ -175,14 +175,14 @@ inline SC_TVector4<T> SC_TVector4<T>::operator*(const T& aValue) const
 	SC_VectorInstructions::VectorRegister reg1 = SC_VectorInstructions::Load(aValue);
 
 	SC_TVector4<T> result;
-	SC_VectorInstructions::GetVector(SC_VectorInstructions::Multiply(mRegister, reg1), result.x, result.y, result.z, result.w);
+	result.mRegister = SC_VectorInstructions::Multiply(mRegister, reg1);
 	return result;
 }
 
 template<class T>
 inline SC_TVector4<T>& SC_TVector4<T>::operator+=(const SC_TVector4<T>& aVector)
 {
-	SC_VectorInstructions::GetVector(SC_VectorInstructions::Add(mRegister, aVector.mRegister), x, y, z, w);
+	mRegister = SC_VectorInstructions::Add(mRegister, aVector.mRegister);
 	return *this;
 }
 
@@ -190,7 +190,7 @@ template<class T>
 inline SC_TVector4<T>& SC_TVector4<T>::operator+=(const T& aValue)
 {
 	SC_VectorInstructions::VectorRegister reg1 = SC_VectorInstructions::Load(aValue);
-	SC_VectorInstructions::GetVector(SC_VectorInstructions::Add(mRegister, reg1), x, y, z, w);
+	mRegister = SC_VectorInstructions::Add(mRegister, reg1);
 	return *this;
 }
 
@@ -198,7 +198,7 @@ template<class T>
 inline SC_TVector4<T> SC_TVector4<T>::operator+(const SC_TVector4<T>& aVector) const
 {
 	SC_TVector4<T> result;
-	SC_VectorInstructions::GetVector(SC_VectorInstructions::Add(mRegister, aVector.mRegister), result.x, result.y, result.z, result.w);
+	result.mRegister = SC_VectorInstructions::Add(mRegister, aVector.mRegister);
 	return result;
 }
 
@@ -208,14 +208,14 @@ inline SC_TVector4<T> SC_TVector4<T>::operator+(const T& aValue) const
 	SC_VectorInstructions::VectorRegister reg1 = SC_VectorInstructions::Load(aValue);
 
 	SC_TVector4<T> result;
-	SC_VectorInstructions::GetVector(SC_VectorInstructions::Add(mRegister, reg1), result.x, result.y, result.z, result.w);
+	result.mRegister = SC_VectorInstructions::Add(mRegister, reg1);
 	return result;
 }
 
 template<class T>
 inline SC_TVector4<T>& SC_TVector4<T>::operator/=(const SC_TVector4<T>& aVector)
 {
-	SC_VectorInstructions::GetVector(SC_VectorInstructions::Divide(mRegister, aVector.mRegister), x, y, z, w);
+	mRegister = SC_VectorInstructions::Divide(mRegister, aVector.mRegister);
 	return *this;
 }
 
@@ -223,7 +223,7 @@ template<class T>
 inline SC_TVector4<T>& SC_TVector4<T>::operator/=(const T& aValue)
 {
 	SC_VectorInstructions::VectorRegister reg1 = SC_VectorInstructions::Load(aValue);
-	SC_VectorInstructions::GetVector(SC_VectorInstructions::Divide(mRegister, reg1), x, y, z, w);
+	mRegister = SC_VectorInstructions::Divide(mRegister, reg1);
 	return *this;
 }
 
@@ -231,7 +231,7 @@ template<class T>
 inline SC_TVector4<T> SC_TVector4<T>::operator/(const SC_TVector4<T>& aVector) const
 {
 	SC_TVector4<T> result;
-	SC_VectorInstructions::GetVector(SC_VectorInstructions::Divide(mRegister, aVector.mRegister), result.x, result.y, result.z, result.w);
+	result.mRegister = SC_VectorInstructions::Divide(mRegister, aVector.mRegister);
 	return result;
 }
 
@@ -241,7 +241,7 @@ inline SC_TVector4<T> SC_TVector4<T>::operator/(const T& aValue) const
 	SC_VectorInstructions::VectorRegister reg1 = SC_VectorInstructions::Load(aValue);
 
 	SC_TVector4<T> result;
-	SC_VectorInstructions::GetVector(SC_VectorInstructions::Divide(mRegister, reg1), result.x, result.y, result.z, result.w);
+	result.mRegister = SC_VectorInstructions::Divide(mRegister, reg1);
 	return result;
 }
 

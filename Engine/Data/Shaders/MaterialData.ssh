@@ -47,4 +47,9 @@ MaterialData BuildMaterialData(float4 aBaseColor, float3 aWorldNormal, float4 aR
     return materialData;
 }
 
+//MaterialData GatherMaterialDataFromTriangle(uint aMaterialIndex, )
+//{
+//
+//}
+
 #endif //MATERIAL_DATA_HEADER

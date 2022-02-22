@@ -1,0 +1,105 @@
+#include "BindlessResources.ssh"
+#include "SkyCommon.ssh"
+
+struct ConstantsStruct
+{
+    float4 mTargetSizeAndInvSize;
+    uint mTransmittanceLUTDescriptorIndex;
+    uint mOutputTextureDescriptorIndex;
+};
+ConstantBuffer<ConstantsStruct> Constants : register(b0);
+
+[numthreads(8,8,1)]
+void ComputeSkyViewLUT(uint3 aDispatchThreadId : SV_DispatchThreadId)
+{
+    RWTexture2D<float3> outTexture = GetRWTexture2D<float3>(Constants.mOutputTextureDescriptorIndex);
+
+    float2 pixelPos = float2(aDispatchThreadId.xy) + 0.5f;
+    float2 uv = pixelPos * Constants.mTargetSizeAndInvSize.zw;
+
+    float3 worldPosition = GetCameraPositionPlanetRelative();
+    float viewHeight = length(worldPosition);
+
+    float viewZenithCosAngle;
+    float lightViewCosAngle;
+    UVToSkyViewLUTParams(viewZenithCosAngle, lightViewCosAngle, viewHeight, uv);
+
+    float3 sunDirection;
+    {
+		float3 upVector = min(worldPosition / viewHeight, 1.0); // Causes flickering without min(x, 1.0) for untouched/edited directional lights
+		float sunZenithCosAngle = dot(upVector, SR_EnvironmentConstants.mSunLightDirection);
+		sunDirection = normalize(float3(sqrt(1.0 - sunZenithCosAngle * sunZenithCosAngle), 0.0, sunZenithCosAngle));
+	}
+
+    worldPosition = float3(0.0, 0.0, viewHeight);
+    
+	float viewZenithSinAngle = sqrt(1 - viewZenithCosAngle * viewZenithCosAngle);
+	float3 worldDirection = float3(
+		viewZenithSinAngle * lightViewCosAngle,
+		viewZenithSinAngle * sqrt(1.0 - lightViewCosAngle * lightViewCosAngle),
+		viewZenithCosAngle);
+
+    if (!MoveToTopAtmosphere(worldPosition, worldDirection))
+    {
+        outTexture[aDispatchThreadId.xy] = (float3)0.0f;
+        return;
+    }
+
+    float3 sunIlluminance = SR_EnvironmentConstants.mSunLightIntensity * SR_EnvironmentConstants.mSunLightColor;
+    
+    const bool mieRayPhase = true;
+    const bool isGround = false;
+
+    ScatteringSamplingParams samplingParams;
+    samplingParams.mEnableVariableSampleCount = true;
+    samplingParams.mInitialSampleCount = 30.0f;
+    samplingParams.mSampleCountMin = 4.0f;
+    samplingParams.mSampleCountMax = 14.0f;
+    samplingParams.mDistanceToSampleCountMaxRcp = 0.01f;
+
+    SingleScatteringResult result = IntegrateScatteredLuminance(worldPosition, worldDirection, sunDirection, sunIlluminance, mieRayPhase, isGround, samplingParams, SR_ScatteringConstants.mTransmittanceLUTDescriptorIndex);
+
+    outTexture[aDispatchThreadId.xy] = result.mScatteredLuminance;
+}
+
+[numthreads(8,8,1)]
+void ComputeSkyLuminanceLUT(uint3 aDispatchThreadId : SV_DispatchThreadId)
+{
+}
+
+[numthreads(8,8,1)]
+void ComputeMultiScatteringLUT(uint3 aDispatchThreadId : SV_DispatchThreadId)
+{
+}
+
+[numthreads(8,8,1)]
+void ComputeTransmittanceLUT(uint3 aDispatchThreadId : SV_DispatchThreadId)
+{
+    RWTexture2D<float3> outTexture = GetRWTexture2D<float3>(Constants.mOutputTextureDescriptorIndex);
+
+    float2 pixelPos = float2(aDispatchThreadId.xy) + 0.5f;
+    float2 uv = pixelPos * Constants.mTargetSizeAndInvSize.zw;
+
+    float viewHeight;
+    float viewZenithCosAngle;
+    UVToLUTTransmittanceParams(viewHeight, viewZenithCosAngle, uv);
+
+    float3 worldPosition = float3(0.0f, 0.0f, viewHeight);
+    float3 worldDirection = float3(0.0f, sqrt(1.0f - viewZenithCosAngle * viewZenithCosAngle), viewZenithCosAngle);
+    //float3 sunDirection = SR_EnvironmentConstants.mSunLightDirection;
+    //float3 sunIlluminance = SR_EnvironmentConstants.mSunLightIntensity * SR_EnvironmentConstants.mSunLightColor;
+	const float3 nullSunDirection = float3(0.0f, 0.0f, 1.0f);
+	const float3 nullSunIlluminance = float3(0.0f, 0.0f, 0.0f);
+
+    const bool useMieRayPhase = false;
+    const bool isGround = false;
+    
+    ScatteringSamplingParams samplingParams;
+    samplingParams.mEnableVariableSampleCount = false;
+    samplingParams.mInitialSampleCount = 40.0f;
+
+    SingleScatteringResult result = IntegrateScatteredLuminance(worldPosition, worldDirection, nullSunDirection, nullSunIlluminance, useMieRayPhase, isGround, samplingParams, Constants.mTransmittanceLUTDescriptorIndex);
+    float3 transmittance = exp(-result.mOpticalDepth);
+
+    outTexture[aDispatchThreadId.xy] = transmittance;
+}

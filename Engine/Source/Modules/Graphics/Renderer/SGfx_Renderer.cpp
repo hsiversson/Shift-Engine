@@ -25,7 +25,7 @@ SGfx_Renderer::~SGfx_Renderer()
 
 }
 
-bool SGfx_Renderer::Init()
+bool SGfx_Renderer::Init(SGfx_Environment* aEnvironment)
 {
 	if (!SGfx_DefaultTextures::Init())
 		return false;
@@ -123,6 +123,7 @@ bool SGfx_Renderer::Init()
 	if (!mDebugRenderer->Init())
 		return false;
 
+	mEnvironment = aEnvironment;
 	return true;
 }
 
@@ -273,6 +274,10 @@ void SGfx_Renderer::PreRenderUpdates()
 	SGfx_MaterialGPUDataBuffer::Get().UpdateBuffer();
 	renderData.mSceneConstants.mMaterialInfoBufferIndex = SGfx_MaterialGPUDataBuffer::Get().GetBufferDescriptorIndex();
 	mViewConstantsBuffer->UpdateData(0, &renderData.mSceneConstants, sizeof(SGfx_SceneConstants));
+
+	SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
+	cmdList->SetRootConstantBuffer(mViewConstantsBuffer.get(), 1);
+	mEnvironment->ComputeScatteringLUTs(cmdList.get());
 }
 
 #if ENABLE_RAYTRACING

@@ -4,7 +4,7 @@
 #if ENABLE_DX12
 
 // D3D12 Agility SDK
-extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 4; }
+extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 700; }
 extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8"./"; }
 ////////////////////
 

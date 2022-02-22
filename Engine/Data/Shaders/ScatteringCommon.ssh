@@ -1,0 +1,470 @@
+#ifndef SCATTERING_COMMON_HEADER
+#define SCATTERING_COMMON_HEADER
+//#pragma once
+#include "Common.ssh"
+#include "SceneConstants.ssh"
+
+#define M_TO_SKY_UNIT 0.001f // Engine units are in meters
+#define SKY_UNIT_TO_M (1.0 / M_TO_SKY_UNIT)
+#define PLANET_RADIUS_OFFSET 0.001f // Float accuracy offset in Sky unit (km, so this is 1m)
+
+#define DEFAULT_SAMPLE_OFFSET 0.3f
+
+float3 GetPlanetCenter()
+{
+    return SR_ScatteringConstants.mPlanetCenterAndViewHeight.xyz;
+}
+
+float HenyeyGreensteinPhase(float aG, float aCosT)
+{
+	// Reference implementation http://www.pbr-book.org/3ed-2018/Volume_Scattering/Phase_Functions.html
+	float numer = 1.0f - aG * aG;
+	float denom = 1.0f + aG * aG + 2.0f * aG * aCosT;
+	return numer / (4.0f * PI * denom * sqrt(denom));
+}
+
+float RayleighPhase(float aCosT)
+{
+	float factor = 3.0f / (16.0f * PI);
+	return factor * (1.0f + aCosT * aCosT);
+}
+
+// Returns nearest and farthest intersections of a single sphere with a single ray
+float2 RayIntersectSphere(float3 aRayOrigin, float3 aRayDirection, float4 aSphere)
+{
+	float3 localPosition = aRayOrigin - aSphere.xyz;
+	float localPositionSqr = dot(localPosition, localPosition);
+
+	float3 quadraticCoef;
+	quadraticCoef.x = dot(aRayDirection, aRayDirection);
+	quadraticCoef.y = 2 * dot(aRayDirection, localPosition);
+	quadraticCoef.z = localPositionSqr - aSphere.w * aSphere.w;
+
+	float discriminant = quadraticCoef.y * quadraticCoef.y - 4 * quadraticCoef.x * quadraticCoef.z;
+
+	float2 intersections = -1;
+
+	// Only continue if the ray intersects the sphere
+	[flatten]
+	if (discriminant >= 0)
+	{
+		float sqrtDiscriminant = sqrt(discriminant);
+		intersections = (-quadraticCoef.y + float2(-1, 1) * sqrtDiscriminant) / (2 * quadraticCoef.x);
+	}
+
+	return intersections;
+}
+
+float RaySphereIntersectNearest(float3 aRayOrigin, float3 aRayDir, float3 aSphereCenter, float aSphereRadius)
+{
+    float2 sol = RayIntersectSphere(aRayOrigin, aRayDir, float4(aSphereCenter, aSphereRadius));
+	if (sol.x < 0.0f && sol.y < 0.0f)
+	{
+		return -1.0f;
+	}
+	if (sol.x < 0.0f)
+	{
+		return max(0.0f, sol.y);
+	}
+	else if (sol.y < 0.0f)
+	{
+		return max(0.0f, sol.x);
+	}
+	return max(0.0f, min(sol.x, sol.y));
+}
+
+void UVToLUTTransmittanceParams(out float aViewHeight, out float aViewZenithCosAngle, in float2 aUV)
+{
+	float Xmu = aUV.x;
+	float Xr = aUV.y;
+
+	float H = sqrt(SR_ScatteringConstants.mPlanetAtmosphereRadiusKm * SR_ScatteringConstants.mPlanetAtmosphereRadiusKm - SR_ScatteringConstants.mPlanetRadiusKm * SR_ScatteringConstants.mPlanetRadiusKm);
+	float Rho = H * Xr;
+	aViewHeight = sqrt(Rho * Rho + SR_ScatteringConstants.mPlanetRadiusKm * SR_ScatteringConstants.mPlanetRadiusKm);
+
+	float Dmin = SR_ScatteringConstants.mPlanetAtmosphereRadiusKm - aViewHeight;
+	float Dmax = Rho + H;
+	float D = Dmin + Xmu * (Dmax - Dmin);
+	aViewZenithCosAngle = D == 0.0f ? 1.0f : (H * H - Rho * Rho - D * D) / (2.0f * aViewHeight * D);
+	aViewZenithCosAngle = clamp(aViewZenithCosAngle, -1.0f, 1.0f);
+}
+
+void LUTTransmittanceParamsToUV(in float aViewHeight, in float aViewZenithCosAngle, out float2 aUV)
+{
+	float H = sqrt(max(0.0f, SR_ScatteringConstants.mPlanetAtmosphereRadiusKm * SR_ScatteringConstants.mPlanetAtmosphereRadiusKm - SR_ScatteringConstants.mPlanetRadiusKm * SR_ScatteringConstants.mPlanetRadiusKm));
+	float Rho = sqrt(max(0.0f, aViewHeight * aViewHeight - SR_ScatteringConstants.mPlanetRadiusKm * SR_ScatteringConstants.mPlanetRadiusKm));
+
+	float Discriminant = aViewHeight * aViewHeight * (aViewZenithCosAngle * aViewZenithCosAngle - 1.0f) + SR_ScatteringConstants.mPlanetAtmosphereRadiusKm * SR_ScatteringConstants.mPlanetAtmosphereRadiusKm;
+	float D = max(0.0f, (-aViewHeight * aViewZenithCosAngle + sqrt(Discriminant))); // Distance to atmosphere boundary
+
+	float Dmin = SR_ScatteringConstants.mPlanetAtmosphereRadiusKm - aViewHeight;
+	float Dmax = Rho + H;
+	float Xmu = (D - Dmin) / (Dmax - Dmin);
+	float Xr = Rho / H;
+
+	aUV = float2(Xmu, Xr);
+}
+
+float3 GetTransmittance(in float aLightZenithCosAngle, in float aPHeight, in uint aTransmittanceLUTDescriptorIndex)
+{
+    float2 uv;
+    LUTTransmittanceParamsToUV(aPHeight, aLightZenithCosAngle, uv);
+    Texture2D<float3> transmittanceLUT = GetTexture2D<float3>(aTransmittanceLUTDescriptorIndex);
+    return transmittanceLUT.SampleLevel(gBilinearClamp, uv, 0);
+}
+
+float FromUnitToSubUVs(float u, float resolution)
+{
+	return (u + 0.5f / resolution) * (resolution / (resolution + 1.0f));
+}
+float FromSubUVsToUnit(float u, float resolution)
+{
+	return (u - 0.5f / resolution) * (resolution / (resolution - 1.0f));
+}
+
+#define NONLINEARSKYVIEWLUT 1
+void UVToSkyViewLUTParams(out float aViewZenithCosAngle, out float aLightViewCosAngle, in float aViewHeight, in float2 aUV)
+{
+	// Constrain uvs to valid sub texel range (avoid zenith derivative issue making LUT usage visible)
+	aUV = float2(FromSubUVsToUnit(aUV.x, 192.0f), FromSubUVsToUnit(aUV.y, 104.0f));
+
+	float Vhorizon = sqrt(aViewHeight * aViewHeight - SR_ScatteringConstants.mPlanetRadiusKm * SR_ScatteringConstants.mPlanetRadiusKm);
+	float CosBeta = Vhorizon / aViewHeight; // GroundToHorizonCos
+	float Beta = acos(CosBeta);
+	float ZenithHorizonAngle = PI - Beta;
+
+	if (aUV.y < 0.5f)
+	{
+		float coord = 2.0 * aUV.y;
+		coord = 1.0 - coord;
+#if NONLINEARSKYVIEWLUT
+		coord *= coord;
+#endif
+		coord = 1.0 - coord;
+		aViewZenithCosAngle = cos(ZenithHorizonAngle * coord);
+	}
+	else
+	{
+		float coord = aUV.y * 2.0 - 1.0;
+#if NONLINEARSKYVIEWLUT
+		coord *= coord;
+#endif
+		aViewZenithCosAngle = cos(ZenithHorizonAngle + Beta * coord);
+	}
+
+	float coord = aUV.x;
+	coord *= coord;
+	aLightViewCosAngle = -(coord * 2.0 - 1.0);
+}
+
+void SkyViewLUTParamsToUV(in bool aIntersectGround, in float aViewZenithCosAngle, in float aLightViewCosAngle, in float aViewHeight, out float2 aUV)
+{
+	float Vhorizon = sqrt(aViewHeight * aViewHeight - SR_ScatteringConstants.mPlanetRadiusKm * SR_ScatteringConstants.mPlanetRadiusKm);
+	float CosBeta = Vhorizon / aViewHeight; // GroundToHorizonCos
+	float Beta = acos(CosBeta);
+	float ZenithHorizonAngle = PI - Beta;
+
+	if (!aIntersectGround)
+	{
+		float coord = acos(aViewZenithCosAngle) / ZenithHorizonAngle;
+		coord = 1.0 - coord;
+#if NONLINEARSKYVIEWLUT
+		coord = sqrt(abs(coord));
+#endif
+	}
+
+	{
+		float coord = -aLightViewCosAngle * 0.5f + 0.5f;
+		coord = sqrt(coord);
+		aUV.x = coord;
+	}
+
+	// Constrain uvs to valid sub texel range (avoid zenith derivative issue making LUT usage visible)
+	aUV = float2(FromUnitToSubUVs(aUV.x, 192.0f), FromUnitToSubUVs(aUV.y, 104.0f));
+}
+
+
+struct MediumProperties
+{
+    float3 mScattering;
+    float3 mAbsorption;
+    float3 mExtinction;
+
+    float3 mScatteringMie;
+    float3 mAbsorptionMie;
+    float3 mExtinctionMie;
+
+    float3 mScatteringRayleigh;
+    float3 mAbsorptionRayleigh;
+    float3 mExtinctionRayleigh;
+
+    float3 mScatteringOzone;
+    float3 mAbsorptionOzone;
+    float3 mExtinctionOzone;
+
+    float3 mAlbedo;
+};
+
+MediumProperties SampleMedium(in float3 aWorldPosition)
+{
+	const float sampleHeight = max(0.0, (length(aWorldPosition) - SR_ScatteringConstants.mPlanetRadiusKm));
+	const float densityMie = exp(SR_ScatteringConstants.mMieDensityExpScale * sampleHeight);
+	const float densityRayleigh = exp(SR_ScatteringConstants.mRayleighDensityExpScale * sampleHeight);
+	const float densityOzone = sampleHeight < SR_ScatteringConstants.mAbsorptionDensity0LayerWidth ?
+		saturate(SR_ScatteringConstants.mAbsorptionDensity0LinearTerm * sampleHeight + SR_ScatteringConstants.mAbsorptionDensity0ConstantTerm) :
+		saturate(SR_ScatteringConstants.mAbsorptionDensity1LinearTerm * sampleHeight + SR_ScatteringConstants.mAbsorptionDensity1ConstantTerm);
+
+    MediumProperties output;
+
+	output.mScatteringMie = densityMie * SR_ScatteringConstants.mMieScattering;
+	output.mAbsorptionMie = densityMie * SR_ScatteringConstants.mMieAbsorption;
+	output.mExtinctionMie = densityMie * SR_ScatteringConstants.mMieExtinction;
+
+	output.mScatteringRayleigh = densityRayleigh * SR_ScatteringConstants.mRayleighScattering;
+	output.mAbsorptionRayleigh = 0.0f;
+	output.mExtinctionRayleigh = output.mScatteringRayleigh + output.mAbsorptionRayleigh;
+
+	output.mScatteringOzone = 0.0f;
+	output.mAbsorptionOzone = densityOzone * SR_ScatteringConstants.mAbsorptionExtinction;
+	output.mExtinctionOzone = output.mScatteringOzone + output.mAbsorptionOzone;
+
+    output.mScattering = output.mScatteringMie + output.mScatteringRayleigh + output.mScatteringOzone;
+    output.mAbsorption = output.mAbsorptionMie + output.mAbsorptionRayleigh + output.mAbsorptionOzone;
+    output.mExtinction = output.mExtinctionMie + output.mExtinctionRayleigh + output.mExtinctionOzone;
+
+    output.mAlbedo = output.mScattering / max(0.001f, output.mExtinction);
+
+    return output;
+}
+
+////////////////////////////////////
+// Sun Luminance
+float3 GetAtmosphereTransmittance(float3 worldPosition, float3 worldDirection, uint transmittanceLutTextureDescriptorIndex)
+{
+	// If the worldDirection is occluded from this virtual planet, then return.
+	// We do this due to the low resolution LUT, where the stored zenith to horizon never reaches black, to prevent linear interpolation artefacts.
+	// At the most shadowed point of the LUT, pure black with earth shadow is never reached.
+	float2 sol = RayIntersectSphere(worldPosition, worldDirection, float4(0.0f, 0.0f, 0.0f, SR_ScatteringConstants.mPlanetRadiusKm));
+	if (sol.x > 0.0f || sol.y > 0.0f)
+	{
+		return 0.0f;
+	}
+	
+	float pHeight = length(worldPosition);
+	const float3 UpVector = worldPosition / pHeight;
+	float SunZenithCosAngle = dot(worldDirection, UpVector);
+    
+	float2 uv;
+	LUTTransmittanceParamsToUV(pHeight, SunZenithCosAngle, uv);
+    
+    Texture2D<float3> transmittanceLUT = GetTexture2D<float3>(transmittanceLutTextureDescriptorIndex);
+	float3 TransmittanceToSun = transmittanceLUT.SampleLevel(gBilinearClamp, uv, 0);
+	return TransmittanceToSun;
+}
+
+float3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDirection, float3 sunIlluminance, uint transmittanceLutTextureDescriptorIndex)
+{
+	//float sunApexAngleDegree = 0.545; // Angular diameter of sun to earth from sea level, see https://en.wikipedia.org/wiki/Solid_angle
+	float sunApexAngleDegree = 2.4; // Modified sun size
+	float sunHalfApexAngleRadian = 0.5 * sunApexAngleDegree * PI / 180.0;
+	float sunCosHalfApexAngle = cos(sunHalfApexAngleRadian);
+
+	float VdotL = dot(worldDirection, normalize(sunDirection)); // weird... the sun disc shrinks near the horizon if we don't normalize sun direction
+	
+	float3 retval = 0;
+	if (VdotL > sunCosHalfApexAngle)
+	{
+		float t = RaySphereIntersectNearest(worldPosition, worldDirection, float3(0.0f, 0.0f, 0.0f), SR_ScatteringConstants.mPlanetRadiusKm);
+		if (t < 0.0f) // no intersection
+		{
+			const float3 atmosphereTransmittance = GetAtmosphereTransmittance(worldPosition, worldDirection, transmittanceLutTextureDescriptorIndex);
+
+            // Edge fade
+			const float halfCosHalfApex = sunCosHalfApexAngle + (1.0f - sunCosHalfApexAngle) * 0.25; // Start fading when at 75% distance from light disk center
+			const float weight = 1.0 - saturate((halfCosHalfApex - VdotL) / (halfCosHalfApex - sunCosHalfApexAngle));
+            
+			retval = atmosphereTransmittance * weight * sunIlluminance;
+		}
+	}
+    
+	return retval;
+}
+
+struct SingleScatteringResult
+{
+    float3 mScatteredLuminance;
+    float3 mOpticalDepth;
+    float3 mTransmittance;
+    float3 mMultiScatteringAsSingle;
+};
+
+struct ScatteringSamplingParams
+{
+	bool mEnableVariableSampleCount;
+	float mInitialSampleCount;
+	float mSampleCountMin;
+	float mSampleCountMax;
+	float mDistanceToSampleCountMaxRcp;
+};
+
+SingleScatteringResult IntegrateScatteredLuminance(in float3 aWorldPosition, in float3 aWorldDirection, in float3 aLightDirection, in float3 aLightIlluminance, in bool aUseMieRayPhase, in bool aIsGround, ScatteringSamplingParams aSamplingParams, in uint aTransmittanceLUTDescriptorIndex)
+{
+    SingleScatteringResult result;
+	result.mScatteredLuminance = 0;
+	result.mOpticalDepth = 0;
+	result.mTransmittance = 1.0f;
+	result.mMultiScatteringAsSingle = 0;
+
+	if (dot(aWorldPosition, aWorldPosition) <= SR_ScatteringConstants.mPlanetRadiusKm * SR_ScatteringConstants.mPlanetRadiusKm)
+	{
+		return result;	// Camera is inside the planet ground
+	}
+
+    float3 planetCenter = float3(0.0f, 0.0f, 0.0f);
+
+    float tPlanet = RaySphereIntersectNearest(aWorldPosition, aWorldDirection, planetCenter, SR_ScatteringConstants.mPlanetRadiusKm);
+	float tAtmosphere = RaySphereIntersectNearest(aWorldPosition, aWorldDirection, planetCenter, SR_ScatteringConstants.mPlanetAtmosphereRadiusKm);
+	float tMax = 0.0f;
+	if (tPlanet < 0.0f)
+	{
+		if (tAtmosphere < 0.0f)
+		{
+			tMax = 0.0f; // No intersection with planet nor its atmosphere: stop right away  
+			return result;
+		}
+		else
+		{
+			tMax = tAtmosphere;
+		}
+	}
+	else
+	{
+		if (tAtmosphere > 0.0f)
+		{
+			tMax = min(tAtmosphere, tPlanet);
+		}
+	}
+
+    float sampleCount = aSamplingParams.mInitialSampleCount;
+    float sampleCountFloor = sampleCount;
+    float tMaxFloor = tMax;
+    if (aSamplingParams.mEnableVariableSampleCount)
+    {
+		sampleCount = lerp(aSamplingParams.mSampleCountMin, aSamplingParams.mSampleCountMax, saturate(tMax*aSamplingParams.mDistanceToSampleCountMaxRcp));
+		sampleCountFloor = floor(sampleCount);
+		tMaxFloor = tMax * sampleCountFloor / sampleCount;	// rescale tMax to map to the last entire step segment.
+    }
+	float tDelta = tMax / sampleCount;
+
+    const float uniformPhase = 1.0f / (4.0f * PI);
+    const float3 wi = aLightDirection;
+    const float3 wo = aWorldDirection;
+    float cosTheta = dot(wi, wo);
+    float miePhaseValue = HenyeyGreensteinPhase(SR_ScatteringConstants.mMiePhaseG, -cosTheta);
+    float rayleighPhaseValue = RayleighPhase(cosTheta);
+
+	float3 globalLuminance = aLightIlluminance;
+    float3 accumulatedScattering = (float3)0.0f;
+    float3 throughput = (float3)1.0f;
+    float3 opticalDepth = (float3)0.0f;
+    float t = 0.0f;
+    float tPrev = 0.0f;
+
+    float noise = DEFAULT_SAMPLE_OFFSET;
+
+    for (float sampleI = 0; sampleI < sampleCount; sampleI += 1.0f)
+    {
+        if (aSamplingParams.mEnableVariableSampleCount)
+        {
+			float t0 = (sampleI) / sampleCountFloor;
+			float t1 = (sampleI + 1.0f) / sampleCountFloor;;
+			// Non linear distribution of samples within the range.
+			t0 = t0 * t0;
+			t1 = t1 * t1;
+			// Make t0 and t1 world space distances.
+			t0 = tMaxFloor * t0;
+			if (t1 > 1.0f)
+			{
+				t1 = tMax;
+				//t1 = tMaxFloor;	// this reveal depth slices
+			}
+			else
+			{
+				t1 = tMaxFloor * t1;
+			}
+			t = t0 + (t1 - t0) * noise;
+			tDelta = t1 - t0;
+        }
+        else
+        {
+            t = tMax * (sampleI + noise) / sampleCount;
+        }
+
+        float3 p = aWorldPosition + t * aWorldDirection;
+        float pHeight = length(p);
+
+		MediumProperties mediumProps = SampleMedium(p);
+		const float3 sampleOpticalDepth = mediumProps.mExtinction * tDelta /** AerialPespectiveViewDistanceScale*/;
+		const float3 sampleTransmittance = exp(-sampleOpticalDepth);
+		opticalDepth += sampleOpticalDepth;
+
+        const float3 upVector = p / pHeight;
+        float lightZenithCosAngle = dot(aLightDirection, upVector);
+        float3 transmittanceToLight = GetTransmittance(lightZenithCosAngle, pHeight, aTransmittanceLUTDescriptorIndex);
+        float3 phaseTimesScattering;
+        if (aUseMieRayPhase)
+		{
+			phaseTimesScattering = mediumProps.mScatteringMie * miePhaseValue + mediumProps.mScatteringRayleigh * rayleighPhaseValue;
+		}
+		else
+		{
+			phaseTimesScattering = mediumProps.mScattering * uniformPhase;
+		}
+
+		float3 multiScatteredLuminance = 0.0f;
+        //if (multiScatteringApprox)
+		//{
+        //}
+
+        float tPlanet = RaySphereIntersectNearest(p, aLightDirection, planetCenter + PLANET_RADIUS_OFFSET * upVector, SR_ScatteringConstants.mPlanetRadiusKm);
+		float planetShadow = tPlanet >= 0.0f ? 0.0f : 1.0f;
+
+        float3 scattering = globalLuminance * (planetShadow * transmittanceToLight * phaseTimesScattering + multiScatteredLuminance * mediumProps.mScattering);
+        
+#define MULTI_SCATTERING_POWER_SERIE 0
+#if MULTI_SCATTERING_POWER_SERIE==0
+		// 1 is the integration of luminance over the 4pi of a sphere, and assuming an isotropic phase function of 1.0/(4*PI)
+		result.mMultiScatteringAsSingle += throughput * mediumProps.mScattering * 1 * tDelta;
+#else
+		float3 mediumScattering = mediumProps.mScattering * 1;
+		float3 mediumScatteringInt = (mediumScattering - mediumScattering * sampleTransmittance) / mediumProps.mExtinction;
+		result.mMultiScatteringAsSingle += throughput * mediumScatteringInt;
+#endif
+
+        // See slide 28 at http://www.frostbite.com/2015/08/physically-based-unified-volumetric-rendering-in-frostbite/ 
+		float3 scatteringIntegration = (scattering - scattering * sampleTransmittance) / mediumProps.mExtinction;	// integrate along the current step segment 
+		accumulatedScattering += throughput * scatteringIntegration;												// accumulate and also take into account the transmittance from previous steps
+		throughput *= sampleTransmittance;
+        tPrev = t;
+    }
+
+    if (aIsGround && (tMax == tPlanet))
+	{
+		// Account for bounced light off the planet
+		float3 p = aWorldPosition + tPlanet * aWorldDirection;
+		float pHeight = length(p);
+		const float3 upVector = p / pHeight;
+		float lightZenithCosAngle = dot(aLightDirection, upVector);
+        float3 transmittanceToLight = GetTransmittance(lightZenithCosAngle, pHeight, aTransmittanceLUTDescriptorIndex);
+		const float nDotL = saturate(dot(upVector, aLightDirection));
+		accumulatedScattering += aLightIlluminance * transmittanceToLight * throughput * nDotL * ((float3)0.5f) / PI;
+	}
+
+    result.mScatteredLuminance = accumulatedScattering;
+	result.mOpticalDepth = opticalDepth;
+	result.mTransmittance = throughput;
+
+	return result;
+}
+
+#endif //SCATTERING_COMMON_HEADER

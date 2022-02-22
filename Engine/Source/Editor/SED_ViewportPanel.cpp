@@ -4,7 +4,7 @@
 #include "Graphics/Renderer/SGfx_Renderer.h"
 #include "SED_TransformationGizmo.h"
 
-SED_ViewportToolbar::SED_ViewportToolbar(const SED_ViewportPanel& aViewportPanel, SED_TransformationGizmo* aGizmo)
+SED_ViewportToolbar::SED_ViewportToolbar(SED_ViewportPanel& aViewportPanel, SED_TransformationGizmo* aGizmo)
 	: mViewportParent(aViewportPanel)
 	, mGizmo(aGizmo)
 {
@@ -32,7 +32,7 @@ void SED_ViewportToolbar::DrawGizmoOptions()
 	bool isLocal = mGizmo->GetManipulationSpace() == SED_GizmoSpace::Local;
 
 	const SC_Vector4& viewportBounds = mViewportParent.GetViewportBounds();
-	ImVec2 gizmoSpaceButtonPos = { viewportBounds.z - buttonSize.x - 150.f, viewportBounds.y + 10.f };
+	ImVec2 gizmoSpaceButtonPos = { viewportBounds.z - buttonSize.x - 200.f, viewportBounds.y + 10.f };
 	ImGui::SetCursorScreenPos(gizmoSpaceButtonPos);
 
 	// World/Local space selector
@@ -45,7 +45,7 @@ void SED_ViewportToolbar::DrawGizmoOptions()
 	if (!isLocal)
 		ImGui::PopStyleColor();
 
-	ImGui::SameLine(0.0f, 1.0f);
+	ImGui::SameLine(0.0f, 2.0f);
 
 	if (isLocal)
 		ImGui::PushStyleColor(ImGuiCol_Button, selectedButtonColor);
@@ -58,7 +58,15 @@ void SED_ViewportToolbar::DrawGizmoOptions()
 
 	ImGui::SameLine(0.0f, 4.0f);
 
-	if (ImGui::BeginCombo("V", "Translate", ImGuiComboFlags_NoArrowButton))
+	if (ImGui::BeginCombo("Camera", "Camera"))
+	{
+		ImGui::DragFloat("Speed", &mViewportParent.mCameraSpeed, 1.0f, 1.0f, 128.0f);
+		ImGui::EndCombo();
+	}
+
+	ImGui::SameLine(0.0f, 4.0f);
+
+	if (ImGui::BeginCombo("Mode", "Translate"))
 	{
 		ImGui::Selectable("Translate");
 		ImGui::Selectable("Rotate");
@@ -72,11 +80,13 @@ SED_ViewportPanel::SED_ViewportPanel(SGfx_World* aGfxWorld, SED_TransformationGi
 	: mToolbar(*this, aGizmo)
 	, mGfxWorld(aGfxWorld)
 	, mId(aId)
+	, mCameraSpeed(2.0f)
+	, mBoostSpeed(4.0f)
 {
 	mView = mGfxWorld->CreateView();
 	mView->SetMainView(true);
 
-	mEditorCamera.SetPerspectiveProjection({ 1920.f, 1080.f }, 0.01f, 1000.f);
+	mEditorCamera.SetPerspectiveProjection({ 1920.f, 1080.f }, 0.01f, 1000.f, 90.0f);
 	mEditorCamera.SetPosition({ 8.0f, 2.0f, 0.f });
 	mEditorCamera.LookAt({ 0.f, 0.f, 0.f });
 	mActiveCamera = &mEditorCamera;
@@ -106,14 +116,14 @@ void SED_ViewportPanel::Update()
 {
 	if (mIsFocused && mActiveCamera == &mEditorCamera)
 	{
-		float delta = 2.0f * SC_Time::gDeltaTime;
+		float delta = mCameraSpeed * SC_Time::gDeltaTime;
 
 		// if mouse is inside viewport and mousekey is held down: activate controller
 		// choose between: arcball, freelook and middle mouse dragging
 
 		if (GetKeyState(VK_LSHIFT) & 0x8000)
 		{
-			delta *= 4.f;
+			delta *= mBoostSpeed;
 		}
 
 		// FORWARD / BACKWARD
@@ -148,19 +158,19 @@ void SED_ViewportPanel::Update()
 
 		if (GetKeyState('Q') & 0x8000)
 		{
-			mEditorCamera.Rotate(SC_Vector::UpVector(), delta * 0.25f);
+			mEditorCamera.Rotate(SC_Vector::UpVector(), 4.0f * SC_Time::gDeltaTime * 0.25f);
 		}
 		if (GetKeyState('E') & 0x8000)
 		{
-			mEditorCamera.Rotate(SC_Vector::UpVector(), -delta * 0.25f);
+			mEditorCamera.Rotate(SC_Vector::UpVector(), -4.0f * SC_Time::gDeltaTime * 0.25f);
 		}
 		if (GetKeyState('Z') & 0x8000)
 		{
-			mEditorCamera.Rotate(mEditorCamera.GetRight(), delta * 0.25f);
+			mEditorCamera.Rotate(mEditorCamera.GetRight(), 4.0f * SC_Time::gDeltaTime * 0.25f);
 		}
 		if (GetKeyState('X') & 0x8000)
 		{
-			mEditorCamera.Rotate(mEditorCamera.GetRight(), -delta * 0.25f);
+			mEditorCamera.Rotate(mEditorCamera.GetRight(), -4.0f * SC_Time::gDeltaTime * 0.25f);
 		}
 	}
 
@@ -212,4 +222,13 @@ void SED_ViewportPanel::SetCamera(SGfx_Camera* aCamera)
 SGfx_Camera* SED_ViewportPanel::GetEditorCamera()
 {
 	return &mEditorCamera;
+}
+
+void SED_ViewportPanel::RecieveMessage(const SC_Message& aMsg)
+{
+	if (mIsFocused && aMsg.mType == SC_MessageType::Scroll)
+	{
+		mBoostSpeed += aMsg.Get<float>() * 10.f;
+		mBoostSpeed = SC_Clamp(mBoostSpeed, 4.0f, 32000.f);
+	}
 }

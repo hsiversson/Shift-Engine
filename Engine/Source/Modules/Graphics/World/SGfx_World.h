@@ -52,6 +52,7 @@ public:
 
 	SGfx_SceneGraph* GetSceneGraph() const;
 	SGfx_Renderer* GetRenderer() const;
+	SGfx_Environment* GetEnvironment() const;
 
 private:
 	SC_Array<SC_Ref<SGfx_View>> mViews;

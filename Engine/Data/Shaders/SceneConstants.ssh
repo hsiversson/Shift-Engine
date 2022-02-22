@@ -35,6 +35,38 @@ struct ViewConstants
 	float mFov;
 };
 
+struct ScatteringConstants
+{
+    float mPlanetRadiusKm; // in Kilometers
+    float mPlanetAtmosphereRadiusKm;  // in Kilometers
+	float2 _unused0;
+
+	float3 mRayleighScattering;
+	float mRayleighDensityExpScale;
+
+	float3 mMieScattering;
+	float _unused1;
+
+	float3 mMieAbsorption;
+	float mMiePhaseG;
+
+	float3 mMieExtinction;
+	float mMieDensityExpScale;
+
+	float3 mAbsorptionExtinction;
+	float mAbsorptionDensity0LayerWidth;
+
+	float mAbsorptionDensity0ConstantTerm;
+	float mAbsorptionDensity0LinearTerm;
+	float mAbsorptionDensity1ConstantTerm;
+	float mAbsorptionDensity1LinearTerm;
+
+	float4 mPlanetCenterAndViewHeight;
+
+	float3 mVirtualSkyCameraPosition;
+	uint mTransmittanceLUTDescriptorIndex;
+};
+
 // Must reflect SGfx_EnvrionmentConstants in SGfx_Environment.h
 struct EnvironmentConstants
 {
@@ -48,6 +80,8 @@ struct EnvironmentConstants
 	uint mEnvironmentBrdfLUTDescriptorIndex;
 	uint mPreFilteredEnvironmentMapMips;
     uint _pad;
+
+	ScatteringConstants mScatteringConstants;
 };
 
 // Must reflect SGfx_ShadowConstants in SGfx_ShadowConstants.h
@@ -75,6 +109,11 @@ struct SceneConstants
 };
 
 ConstantBuffer<SceneConstants> gSceneConstants : register(b1);
+
+#define SR_ViewConstants		gSceneConstants.mViewConstants
+#define SR_ScatteringConstants  gSceneConstants.mEnvironmentConstants.mScatteringConstants
+#define SR_EnvironmentConstants gSceneConstants.mEnvironmentConstants
+#define SR_ShadowConstants		gSceneConstants.mShadowConstants
 
 float2 SR_PixelToClip(float2 aPixelCoord)
 {

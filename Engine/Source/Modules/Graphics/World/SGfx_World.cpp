@@ -12,7 +12,7 @@ SGfx_World::SGfx_World()
 	mEnvironment = SC_MakeUnique<SGfx_Environment>();
 
 	mRenderer = SC_MakeUnique<SGfx_Renderer>();
-	if (!mRenderer->Init())
+	if (!mRenderer->Init(mEnvironment.get()))
 	{
 		assert(false);
 		return;
@@ -75,6 +75,7 @@ void SGfx_World::PrepareView(SGfx_View* aView)
 	prepareData.mSceneConstants.mViewConstants.mPrevCameraToClip = prevViewConstants.mCameraToClip;
 	prepareData.mSceneConstants.mViewConstants.mPrevClipToCamera = prevViewConstants.mClipToCamera;
 
+	mEnvironment->UpdateConstants(aView->GetCamera());
 	prepareData.mSceneConstants.mEnvironmentConstants = mEnvironment->GetConstants();
 
 	mRenderer->GetShadowMapSystem()->GetCSM()->UpdateViews(aView);
@@ -150,4 +151,9 @@ SGfx_SceneGraph* SGfx_World::GetSceneGraph() const
 SGfx_Renderer* SGfx_World::GetRenderer() const
 {
 	return mRenderer.get();
+}
+
+SGfx_Environment* SGfx_World::GetEnvironment() const
+{
+	return mEnvironment.get();
 }
