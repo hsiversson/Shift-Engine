@@ -1,6 +1,6 @@
 #include "Common.ssh"
 #include "SceneConstants.ssh"
-#include "SkyCommon.ssh"
+#include "AtmosphereCommon.ssh"
 
 struct VertexInput
 {
@@ -49,5 +49,5 @@ float4 MainPS(PixelInput aInput) : SV_TARGET0
     //const float3 sun           = sunLightColor * 35.0f * sunPow;
     //const float3 combinedSun   = lerp( sunHalo, sun, sunPow );
 
-    return float4(SampleSkyColor(aInput.mViewDirection), 1.0f);
+    return float4(SampleAtmosphereColor(aInput.mViewDirection), 1.0f);
 }

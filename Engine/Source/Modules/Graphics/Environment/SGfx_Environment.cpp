@@ -211,19 +211,23 @@ void SGfx_Environment::UpdateConstants(const SGfx_Camera& aWorldCamera)
 
 void SGfx_Environment::ComputeScatteringLUTs(SR_CommandList* aCmdList)
 {
+	struct Constants
+	{
+		SC_Vector4 mTargetSizeAndInvSize;
+		uint32 mTransmittanceLUTDescriptorIndex;
+		uint32 mMultiScatteringLUTDescriptorIndex;
+		uint32 mOutputTextureDescriptorIndex;
+	};
+
 	{
 		aCmdList->BeginEvent("Transmittance LUT");
 
 		SC_IntVector targetSize = mTransmittanceLUT.GetResourceProperties().mSize;
 
-		struct Constants
-		{
-			SC_Vector4 mTargetSizeAndInvSize;
-			uint32 mTransmittanceLUTDescriptorIndex;
-			uint32 mOutputTextureDescriptorIndex;
-		} constants;
+		Constants constants;
 		constants.mTargetSizeAndInvSize = SC_Vector4((float)targetSize.x, (float)targetSize.y, 1.0f / targetSize.x, 1.0f / targetSize.y);
 		constants.mTransmittanceLUTDescriptorIndex = SGfx_DefaultTextures::GetWhite1x1()->GetDescriptorHeapIndex();
+		constants.mMultiScatteringLUTDescriptorIndex = SGfx_DefaultTextures::GetBlack1x1()->GetDescriptorHeapIndex();
 		constants.mOutputTextureDescriptorIndex = mTransmittanceLUT.mTextureRW->GetDescriptorHeapIndex();
 
 		if (!mTransmittanceLUTConstantBuffer)
@@ -250,14 +254,10 @@ void SGfx_Environment::ComputeScatteringLUTs(SR_CommandList* aCmdList)
 
 		SC_IntVector targetSize = mSkyViewLUT.GetResourceProperties().mSize;
 
-		struct Constants
-		{
-			SC_Vector4 mTargetSizeAndInvSize;
-			uint32 mTransmittanceLUTDescriptorIndex;
-			uint32 mOutputTextureDescriptorIndex;
-		} constants;
+		Constants constants;
 		constants.mTargetSizeAndInvSize = SC_Vector4((float)targetSize.x, (float)targetSize.y, 1.0f / targetSize.x, 1.0f / targetSize.y);
 		constants.mTransmittanceLUTDescriptorIndex = SGfx_DefaultTextures::GetBlack1x1()->GetDescriptorHeapIndex();
+		constants.mMultiScatteringLUTDescriptorIndex = SGfx_DefaultTextures::GetBlack1x1()->GetDescriptorHeapIndex();
 		constants.mOutputTextureDescriptorIndex = mSkyViewLUT.mTextureRW->GetDescriptorHeapIndex();
 
 		if (!mSkyViewLUTConstantBuffer)

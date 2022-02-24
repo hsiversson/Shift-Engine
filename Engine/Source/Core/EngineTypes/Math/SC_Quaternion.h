@@ -33,6 +33,9 @@ public:
 	SC_Vector AsEulerAngles(bool aAsDegrees = true) const;
 	static SC_Quaternion FromEulerAngles(const SC_Vector& aAngles, bool aIsDegrees = true);
 
+	// Rotation
+	static SC_Quaternion CreateRotation(const SC_Vector& aAxis, float aAngle);
+
 	// Operators
 	SC_Quaternion operator*(const SC_Quaternion& aOther) const;
 	SC_Quaternion operator*=(const SC_Quaternion& aOther);

@@ -60,7 +60,14 @@ void SED_ViewportToolbar::DrawGizmoOptions()
 
 	if (ImGui::BeginCombo("Camera", "Camera"))
 	{
-		ImGui::DragFloat("Speed", &mViewportParent.mCameraSpeed, 1.0f, 1.0f, 128.0f);
+		float speed = mViewportParent.mEditorCamera.GetMovementSpeed();
+		if (ImGui::DragFloat("Speed", &speed, 1.0f, 1.0f, 128.0f))
+			mViewportParent.mEditorCamera.SetMovementSpeed(speed);
+
+		float boost = mViewportParent.mEditorCamera.GetBoostMultiplier();
+		if (ImGui::DragFloat("Boost", &boost, 1.0f, 1.0f, 1024.0f))
+			mViewportParent.mEditorCamera.SetBoostMultiplier(boost);
+
 		ImGui::EndCombo();
 	}
 
@@ -78,6 +85,7 @@ void SED_ViewportToolbar::DrawGizmoOptions()
 
 SED_ViewportPanel::SED_ViewportPanel(SGfx_World* aGfxWorld, SED_TransformationGizmo* aGizmo, const char* aId)
 	: mToolbar(*this, aGizmo)
+	, mEditorCamera(this)
 	, mGfxWorld(aGfxWorld)
 	, mId(aId)
 	, mCameraSpeed(2.0f)
@@ -116,62 +124,7 @@ void SED_ViewportPanel::Update()
 {
 	if (mIsFocused && mActiveCamera == &mEditorCamera)
 	{
-		float delta = mCameraSpeed * SC_Time::gDeltaTime;
-
-		// if mouse is inside viewport and mousekey is held down: activate controller
-		// choose between: arcball, freelook and middle mouse dragging
-
-		if (GetKeyState(VK_LSHIFT) & 0x8000)
-		{
-			delta *= mBoostSpeed;
-		}
-
-		// FORWARD / BACKWARD
-		if (GetKeyState('W') & 0x8000)
-		{
-			mEditorCamera.Move(mEditorCamera.GetForward(), delta);
-		}
-		if (GetKeyState('S') & 0x8000)
-		{
-			mEditorCamera.Move(mEditorCamera.GetForward(), -delta);
-		}
-
-		// LEFT / RIGHT
-		if (GetKeyState('A') & 0x8000)
-		{
-			mEditorCamera.Move(mEditorCamera.GetRight(), -delta);
-		}
-		if (GetKeyState('D') & 0x8000)
-		{
-			mEditorCamera.Move(mEditorCamera.GetRight(), delta);
-		}
-
-		// UP / DOWN
-		if (GetKeyState(VK_LCONTROL) & 0x8000)
-		{
-			mEditorCamera.Move(mEditorCamera.GetUp(), -delta);
-		}
-		if (GetKeyState(VK_SPACE) & 0x8000)
-		{
-			mEditorCamera.Move(mEditorCamera.GetUp(), delta);
-		}
-
-		if (GetKeyState('Q') & 0x8000)
-		{
-			mEditorCamera.Rotate(SC_Vector::UpVector(), 4.0f * SC_Time::gDeltaTime * 0.25f);
-		}
-		if (GetKeyState('E') & 0x8000)
-		{
-			mEditorCamera.Rotate(SC_Vector::UpVector(), -4.0f * SC_Time::gDeltaTime * 0.25f);
-		}
-		if (GetKeyState('Z') & 0x8000)
-		{
-			mEditorCamera.Rotate(mEditorCamera.GetRight(), 4.0f * SC_Time::gDeltaTime * 0.25f);
-		}
-		if (GetKeyState('X') & 0x8000)
-		{
-			mEditorCamera.Rotate(mEditorCamera.GetRight(), -4.0f * SC_Time::gDeltaTime * 0.25f);
-		}
+		mEditorCamera.Update();
 	}
 
 	if (mActiveCamera)

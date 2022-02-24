@@ -75,6 +75,7 @@ public:
 	void SetViewportOffset(const SC_IntVector2& aOffset);
 
 	void Move(const SC_Vector& aDirection, float aLength);
+	void Rotate(const SC_Vector& aRotationAngles);
 	void Rotate(const SC_Vector& aAxis, float aValue);
 
 	void SetPosition(const SC_Vector& aPos);

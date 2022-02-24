@@ -1,10 +1,11 @@
 #include "BindlessResources.ssh"
-#include "SkyCommon.ssh"
+#include "AtmosphereCommon.ssh"
 
 struct ConstantsStruct
 {
     float4 mTargetSizeAndInvSize;
     uint mTransmittanceLUTDescriptorIndex;
+    uint mMultiScatteringLUTDescriptorIndex;
     uint mOutputTextureDescriptorIndex;
 };
 ConstantBuffer<ConstantsStruct> Constants : register(b0);
@@ -48,6 +49,7 @@ void ComputeSkyViewLUT(uint3 aDispatchThreadId : SV_DispatchThreadId)
     float3 sunIlluminance = SR_EnvironmentConstants.mSunLightIntensity * SR_EnvironmentConstants.mSunLightColor;
     
     const bool mieRayPhase = true;
+    const bool multiScattering = false;
     const bool isGround = false;
 
     ScatteringSamplingParams samplingParams;
@@ -57,7 +59,17 @@ void ComputeSkyViewLUT(uint3 aDispatchThreadId : SV_DispatchThreadId)
     samplingParams.mSampleCountMax = 14.0f;
     samplingParams.mDistanceToSampleCountMaxRcp = 0.01f;
 
-    SingleScatteringResult result = IntegrateScatteredLuminance(worldPosition, worldDirection, sunDirection, sunIlluminance, mieRayPhase, isGround, samplingParams, SR_ScatteringConstants.mTransmittanceLUTDescriptorIndex);
+    SingleScatteringResult result = IntegrateScatteredLuminance(
+        samplingParams, 
+        worldPosition, 
+        worldDirection, 
+        sunDirection, 
+        sunIlluminance, 
+        mieRayPhase, 
+        multiScattering, 
+        isGround, 
+        SR_ScatteringConstants.mTransmittanceLUTDescriptorIndex, 
+        SR_ScatteringConstants.mMultiScatteringLUTDescriptorIndex);
 
     outTexture[aDispatchThreadId.xy] = result.mScatteredLuminance;
 }
@@ -92,13 +104,25 @@ void ComputeTransmittanceLUT(uint3 aDispatchThreadId : SV_DispatchThreadId)
 	const float3 nullSunIlluminance = float3(0.0f, 0.0f, 0.0f);
 
     const bool useMieRayPhase = false;
+    const bool multiScattering = false;
     const bool isGround = false;
     
     ScatteringSamplingParams samplingParams;
     samplingParams.mEnableVariableSampleCount = false;
     samplingParams.mInitialSampleCount = 40.0f;
 
-    SingleScatteringResult result = IntegrateScatteredLuminance(worldPosition, worldDirection, nullSunDirection, nullSunIlluminance, useMieRayPhase, isGround, samplingParams, Constants.mTransmittanceLUTDescriptorIndex);
+    SingleScatteringResult result = IntegrateScatteredLuminance(
+        samplingParams, 
+        worldPosition, 
+        worldDirection, 
+        nullSunDirection, 
+        nullSunIlluminance, 
+        useMieRayPhase, 
+        multiScattering, 
+        isGround, 
+        Constants.mTransmittanceLUTDescriptorIndex, 
+        Constants.mMultiScatteringLUTDescriptorIndex);
+
     float3 transmittance = exp(-result.mOpticalDepth);
 
     outTexture[aDispatchThreadId.xy] = transmittance;

@@ -1,7 +1,7 @@
 #pragma once
 #include "SED_Panel.h"
-#include "Graphics/View/SGfx_Camera.h"
 #include "Common/MessageQueue/SC_MessageListener.h"
+#include "SED_Camera.h"
 
 class SR_Texture;
 class SGfx_View;
@@ -51,7 +51,7 @@ private:
 
 	SC_Vector4 mViewportBounds;
 	SC_Vector2 mViewportSize;
-	SGfx_Camera mEditorCamera;
+	SED_Camera mEditorCamera;
 
 	SGfx_World* mGfxWorld;
 	SC_Ref<SGfx_View> mView;

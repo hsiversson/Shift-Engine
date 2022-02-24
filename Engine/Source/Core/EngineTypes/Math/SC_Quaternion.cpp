@@ -135,6 +135,15 @@ SC_Quaternion SC_Quaternion::FromEulerAngles(const SC_Vector& aAngles, bool aIsD
 	return q;
 }
 
+SC_Quaternion SC_Quaternion::CreateRotation(const SC_Vector& aAxis, float aAngle)
+{
+	float sinAngle = 0.0f;
+	float cosAngle = 0.0f;
+	SC_Math::SinCos(&sinAngle, &cosAngle, aAngle * 0.5f);
+
+	return SC_Quaternion(SC_Vector4(aAxis * sinAngle, cosAngle));
+}
+
 SC_Quaternion SC_Quaternion::operator*(const SC_Quaternion& aOther) const
 {
 	SC_Quaternion q;

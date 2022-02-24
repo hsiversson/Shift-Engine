@@ -159,6 +159,24 @@ void SGfx_Camera::Move(const SC_Vector& aDirection, float aLength)
 	SetPosition(target);
 }
 
+void SGfx_Camera::Rotate(const SC_Vector& aRotationAngles)
+{
+	SC_Quaternion rotationQ(mTransform);
+
+	SC_Quaternion pitch = SC_Quaternion::CreateRotation(GetRight(), SC_Math::DegreesToRadians(aRotationAngles.x));
+	rotationQ *= pitch;
+
+	SC_Quaternion yaw = SC_Quaternion::CreateRotation(SC_Vector::UpVector(), SC_Math::DegreesToRadians(aRotationAngles.y));
+	rotationQ *= yaw;
+
+	SC_Quaternion roll = SC_Quaternion::CreateRotation(GetForward(), SC_Math::DegreesToRadians(aRotationAngles.z));
+	rotationQ *= roll;
+
+	SC_Vector position = GetPosition();
+	mTransform = rotationQ.AsMatrix();
+	SetPosition(position);
+}
+
 void SGfx_Camera::Rotate(const SC_Vector& aAxis, float aValue)
 {
 	SC_Matrix rotation = SC_Matrix::CreateRotation(aAxis, aValue);

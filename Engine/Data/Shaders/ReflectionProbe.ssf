@@ -1,4 +1,4 @@
-#include "SkyCommon.ssh"
+#include "AtmosphereCommon.ssh"
 
 struct ReflectionProbeConstantsStruct
 {

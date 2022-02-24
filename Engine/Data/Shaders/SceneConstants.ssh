@@ -39,13 +39,14 @@ struct ScatteringConstants
 {
     float mPlanetRadiusKm; // in Kilometers
     float mPlanetAtmosphereRadiusKm;  // in Kilometers
-	float2 _unused0;
+	uint mTransmittanceLUTDescriptorIndex;
+	uint mMultiScatteringLUTDescriptorIndex;
 
 	float3 mRayleighScattering;
 	float mRayleighDensityExpScale;
 
 	float3 mMieScattering;
-	float _unused1;
+	float _unused0;
 
 	float3 mMieAbsorption;
 	float mMiePhaseG;
@@ -64,7 +65,7 @@ struct ScatteringConstants
 	float4 mPlanetCenterAndViewHeight;
 
 	float3 mVirtualSkyCameraPosition;
-	uint mTransmittanceLUTDescriptorIndex;
+	float _unused1;
 };
 
 // Must reflect SGfx_EnvrionmentConstants in SGfx_Environment.h

@@ -5,6 +5,8 @@
 #include "ShadingModels.ssh"
 #include "Shadows.ssh"
 
+#define DEBUG_CASCADE_COLOR (0)
+
 float3 CalculateDirectionalLightContribution(in const MaterialData aMaterialData, in const float3 aWorldPosition, in const float3 aViewDirection, in float aPixelDepth)
 {
     const EnvironmentConstants environmentConstants = gSceneConstants.mEnvironmentConstants;
@@ -12,13 +14,23 @@ float3 CalculateDirectionalLightContribution(in const MaterialData aMaterialData
     float3 lightColor = environmentConstants.mSunLightColor;
     float lightRadiance = environmentConstants.mSunLightIntensity;
 
+    float3 lighting = (float3)0.0f;
+
+#if DEBUG_CASCADE_COLOR
+    float3 debugColor = (float3)0.0f;
+    float shadowFactor = CalculateCascadedShadowFactor(aWorldPosition, aPixelDepth, debugColor);
+    lighting = debugColor;
+#else
     float shadowFactor = CalculateCascadedShadowFactor(aWorldPosition, aPixelDepth);
-    float3 shading = (float3)0.0f;
+#endif
 
-    if (shadowFactor > 0.0f)
-        shading = DefaultShading(aMaterialData, lightDirection, aViewDirection);
+    if (shadowFactor <= 0.0f)
+        return lighting;
 
-    return shading * lightColor * lightRadiance * shadowFactor;
+    float3 shading = DefaultShading(aMaterialData, lightDirection, aViewDirection);
+    lighting += (shading * lightColor * lightRadiance * shadowFactor);
+
+    return lighting;
 }
 
 float3 CalculateSpotLightContribution()

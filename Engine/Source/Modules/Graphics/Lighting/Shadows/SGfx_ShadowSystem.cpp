@@ -101,8 +101,8 @@ void SGfx_CascadedShadowMap::UpdateViews(SGfx_View* aMainView)
 		const float pushBackDistance = lastRadius + lastSplitPoint;
 
 		float radius = mCascades[i].mMBSCache.mRadius;
-		float size = mCascades[i].mMBSCache.mRadius * 2.0f;
-		cascade.mCamera.SetOrthogonalProjection({ size, size }, -pushBackDistance, radius + 50);
+		float size = mCascades[i].mMBSCache.mRadius * 2.4f;
+		cascade.mCamera.SetOrthogonalProjection({ size, size }, -pushBackDistance, radius + 100.0f);
 
 		const SC_Vector center(
 			camera.GetPosition() +

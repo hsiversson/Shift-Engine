@@ -4,6 +4,9 @@
 #include "Common.ssh"
 #include "SceneConstants.ssh"
 
+/////////////////////////////////////
+// GENERIC
+/////////////////////////////////////
 #define M_TO_SKY_UNIT 0.001f // Engine units are in meters
 #define SKY_UNIT_TO_M (1.0 / M_TO_SKY_UNIT)
 #define PLANET_RADIUS_OFFSET 0.001f // Float accuracy offset in Sky unit (km, so this is 1m)
@@ -13,20 +16,6 @@
 float3 GetPlanetCenter()
 {
     return SR_ScatteringConstants.mPlanetCenterAndViewHeight.xyz;
-}
-
-float HenyeyGreensteinPhase(float aG, float aCosT)
-{
-	// Reference implementation http://www.pbr-book.org/3ed-2018/Volume_Scattering/Phase_Functions.html
-	float numer = 1.0f - aG * aG;
-	float denom = 1.0f + aG * aG + 2.0f * aG * aCosT;
-	return numer / (4.0f * PI * denom * sqrt(denom));
-}
-
-float RayleighPhase(float aCosT)
-{
-	float factor = 3.0f / (16.0f * PI);
-	return factor * (1.0f + aCosT * aCosT);
 }
 
 // Returns nearest and farthest intersections of a single sphere with a single ray
@@ -73,6 +62,26 @@ float RaySphereIntersectNearest(float3 aRayOrigin, float3 aRayDir, float3 aSpher
 	return max(0.0f, min(sol.x, sol.y));
 }
 
+/////////////////////////////////////
+// PHASE FUNCTIONS
+/////////////////////////////////////
+float HenyeyGreensteinPhase(float aG, float aCosT)
+{
+	// Reference implementation http://www.pbr-book.org/3ed-2018/Volume_Scattering/Phase_Functions.html
+	float numer = 1.0f - aG * aG;
+	float denom = 1.0f + aG * aG + 2.0f * aG * aCosT;
+	return numer / (4.0f * PI * denom * sqrt(denom));
+}
+
+float RayleighPhase(float aCosT)
+{
+	float factor = 3.0f / (16.0f * PI);
+	return factor * (1.0f + aCosT * aCosT);
+}
+
+/////////////////////////////////////
+// TRANSMITTANCE
+/////////////////////////////////////
 void UVToLUTTransmittanceParams(out float aViewHeight, out float aViewZenithCosAngle, in float2 aUV)
 {
 	float Xmu = aUV.x;
@@ -113,6 +122,42 @@ float3 GetTransmittance(in float aLightZenithCosAngle, in float aPHeight, in uin
     return transmittanceLUT.SampleLevel(gBilinearClamp, uv, 0);
 }
 
+float3 GetAtmosphereTransmittance(float3 worldPosition, float3 worldDirection, uint transmittanceLutTextureDescriptorIndex)
+{
+	// If the worldDirection is occluded from this virtual planet, then return.
+	// We do this due to the low resolution LUT, where the stored zenith to horizon never reaches black, to prevent linear interpolation artefacts.
+	// At the most shadowed point of the LUT, pure black with earth shadow is never reached.
+	float2 sol = RayIntersectSphere(worldPosition, worldDirection, float4(0.0f, 0.0f, 0.0f, SR_ScatteringConstants.mPlanetRadiusKm));
+	if (sol.x > 0.0f || sol.y > 0.0f)
+	{
+		return 0.0f;
+	}
+	
+	float pHeight = length(worldPosition);
+	const float3 UpVector = worldPosition / pHeight;
+	float SunZenithCosAngle = dot(worldDirection, UpVector);
+    
+	float2 uv;
+	LUTTransmittanceParamsToUV(pHeight, SunZenithCosAngle, uv);
+    
+    Texture2D<float3> transmittanceLUT = GetTexture2D<float3>(transmittanceLutTextureDescriptorIndex);
+	return transmittanceLUT.SampleLevel(gBilinearClamp, uv, 0);
+}
+
+/////////////////////////////////////
+// MULTI SCATTERING
+/////////////////////////////////////
+float3 GetMultiScattering(float3 aWorldPosition, float aViewZenithCosAngle, uint aMultiScatteringLUTDescriptorIndex)
+{
+	float2 uv = saturate(float2(aViewZenithCosAngle * 0.5f + 0.5f, (length(aWorldPosition) - SR_ScatteringConstants.mPlanetRadiusKm) / (SR_ScatteringConstants.mPlanetAtmosphereRadiusKm - SR_ScatteringConstants.mPlanetRadiusKm)));
+	// We do no apply UV transform to sub range here as it has minimal impact.
+    Texture2D<float3> multiScatteringLUT = GetTexture2D<float3>(aMultiScatteringLUTDescriptorIndex);
+	return multiScatteringLUT.SampleLevel(gBilinearClamp, uv, 0);
+}
+
+/////////////////////////////////////
+// SKY VIEW
+/////////////////////////////////////
 float FromUnitToSubUVs(float u, float resolution)
 {
 	return (u + 0.5f / resolution) * (resolution / (resolution + 1.0f));
@@ -183,7 +228,9 @@ void SkyViewLUTParamsToUV(in bool aIntersectGround, in float aViewZenithCosAngle
 	aUV = float2(FromUnitToSubUVs(aUV.x, 192.0f), FromUnitToSubUVs(aUV.y, 104.0f));
 }
 
-
+/////////////////////////////////////
+// MEDIUM
+/////////////////////////////////////
 struct MediumProperties
 {
     float3 mScattering;
@@ -237,32 +284,10 @@ MediumProperties SampleMedium(in float3 aWorldPosition)
     return output;
 }
 
-////////////////////////////////////
-// Sun Luminance
-float3 GetAtmosphereTransmittance(float3 worldPosition, float3 worldDirection, uint transmittanceLutTextureDescriptorIndex)
-{
-	// If the worldDirection is occluded from this virtual planet, then return.
-	// We do this due to the low resolution LUT, where the stored zenith to horizon never reaches black, to prevent linear interpolation artefacts.
-	// At the most shadowed point of the LUT, pure black with earth shadow is never reached.
-	float2 sol = RayIntersectSphere(worldPosition, worldDirection, float4(0.0f, 0.0f, 0.0f, SR_ScatteringConstants.mPlanetRadiusKm));
-	if (sol.x > 0.0f || sol.y > 0.0f)
-	{
-		return 0.0f;
-	}
-	
-	float pHeight = length(worldPosition);
-	const float3 UpVector = worldPosition / pHeight;
-	float SunZenithCosAngle = dot(worldDirection, UpVector);
-    
-	float2 uv;
-	LUTTransmittanceParamsToUV(pHeight, SunZenithCosAngle, uv);
-    
-    Texture2D<float3> transmittanceLUT = GetTexture2D<float3>(transmittanceLutTextureDescriptorIndex);
-	float3 TransmittanceToSun = transmittanceLUT.SampleLevel(gBilinearClamp, uv, 0);
-	return TransmittanceToSun;
-}
-
-float3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDirection, float3 sunIlluminance, uint transmittanceLutTextureDescriptorIndex)
+/////////////////////////////////////
+// LIGHT DISK
+/////////////////////////////////////
+float3 GetLightDiskLuminance(float3 worldPosition, float3 worldDirection, float3 sunDirection, float3 sunIlluminance, uint transmittanceLutTextureDescriptorIndex)
 {
 	//float sunApexAngleDegree = 0.545; // Angular diameter of sun to earth from sea level, see https://en.wikipedia.org/wiki/Solid_angle
 	float sunApexAngleDegree = 2.4; // Modified sun size
@@ -290,6 +315,9 @@ float3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDi
 	return retval;
 }
 
+/////////////////////////////////////
+// SCATTERING
+/////////////////////////////////////
 struct SingleScatteringResult
 {
     float3 mScatteredLuminance;
@@ -307,7 +335,17 @@ struct ScatteringSamplingParams
 	float mDistanceToSampleCountMaxRcp;
 };
 
-SingleScatteringResult IntegrateScatteredLuminance(in float3 aWorldPosition, in float3 aWorldDirection, in float3 aLightDirection, in float3 aLightIlluminance, in bool aUseMieRayPhase, in bool aIsGround, ScatteringSamplingParams aSamplingParams, in uint aTransmittanceLUTDescriptorIndex)
+SingleScatteringResult IntegrateScatteredLuminance(
+	ScatteringSamplingParams aSamplingParams, 
+	in float3 aWorldPosition, 
+	in float3 aWorldDirection, 
+	in float3 aLightDirection, 
+	in float3 aLightIlluminance, 
+	in bool aUseMieRayPhase, 
+	in bool aEnableMultiScattering, 
+	in bool aIsGround, 
+	in uint aTransmittanceLUTDescriptorIndex,
+	in uint aMultiScatteringLUTDescriptorIndex)
 {
     SingleScatteringResult result;
 	result.mScatteredLuminance = 0;
@@ -421,10 +459,7 @@ SingleScatteringResult IntegrateScatteredLuminance(in float3 aWorldPosition, in 
 			phaseTimesScattering = mediumProps.mScattering * uniformPhase;
 		}
 
-		float3 multiScatteredLuminance = 0.0f;
-        //if (multiScatteringApprox)
-		//{
-        //}
+		float3 multiScatteredLuminance = (aEnableMultiScattering) ? GetMultiScattering(p, lightZenithCosAngle, aMultiScatteringLUTDescriptorIndex) : 0.0f;
 
         float tPlanet = RaySphereIntersectNearest(p, aLightDirection, planetCenter + PLANET_RADIUS_OFFSET * upVector, SR_ScatteringConstants.mPlanetRadiusKm);
 		float planetShadow = tPlanet >= 0.0f ? 0.0f : 1.0f;

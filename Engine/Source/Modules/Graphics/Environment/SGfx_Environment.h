@@ -11,13 +11,14 @@ struct alignas(16) SGfx_ScatteringConstants
 {
 	float mPlanetRadiusKm; // in Kilometers
 	float mPlanetAtmosphereRadiusKm;  // in Kilometers
-	float _unused0[2];
+	uint32 mTransmittanceLUTDescriptorIndex;
+	uint32 mMultiScatteringLUTDescriptorIndex;
 
 	SC_Vector mRayleighScattering;
 	float mRayleighDensityExpScale;
 
 	SC_Vector mMieScattering;
-	float _unused1;
+	float _unused0;
 
 	SC_Vector mMieAbsorption;
 	float mMiePhaseG;
@@ -36,7 +37,7 @@ struct alignas(16) SGfx_ScatteringConstants
 	SC_Vector4 mPlanetCenterAndViewHeight;
 
 	SC_Vector mVirtualSkyCameraPosition;
-	uint32 mTransmittanceLUTDescriptorIndex;
+	float _unused1;
 };
 
 struct alignas(16) SGfx_EnvironmentConstants

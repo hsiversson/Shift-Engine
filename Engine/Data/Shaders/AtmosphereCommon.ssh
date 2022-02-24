@@ -34,7 +34,7 @@ bool MoveToTopAtmosphere(inout float3 aWorldPosition, in float3 aWorldDirection)
 	return true; // ok to start tracing
 }
 
-float3 SampleSkyColor(in float3 aViewDirection)
+float3 SampleAtmosphereColor(in float3 aViewDirection)
 {
     float3 color = (float3)0;
 
@@ -45,7 +45,7 @@ float3 SampleSkyColor(in float3 aViewDirection)
 
     //if (enableSun)
     //{
-        color += GetSunLuminance(worldPosition, worldDirection, lightDirection, sunIlluminance, SR_ScatteringConstants.mTransmittanceLUTDescriptorIndex);
+        color += GetLightDiskLuminance(worldPosition, worldDirection, lightDirection, sunIlluminance, SR_ScatteringConstants.mTransmittanceLUTDescriptorIndex);
     //}
 
     if (!MoveToTopAtmosphere(worldPosition, worldDirection))
@@ -58,6 +58,7 @@ float3 SampleSkyColor(in float3 aViewDirection)
     worldPosition += worldDirection * startOffsetKm;
 
     const bool mieRayPhase = true;
+    const bool multiScattering = false;
     const bool isGround = false;
 
     ScatteringSamplingParams samplingParams = (ScatteringSamplingParams)0;
@@ -66,7 +67,18 @@ float3 SampleSkyColor(in float3 aViewDirection)
     samplingParams.mSampleCountMax = 14.0f;
     samplingParams.mDistanceToSampleCountMaxRcp = 0.01f;
 
-    SingleScatteringResult result = IntegrateScatteredLuminance(worldPosition, worldDirection, lightDirection, sunIlluminance, mieRayPhase, isGround, samplingParams, SR_ScatteringConstants.mTransmittanceLUTDescriptorIndex);
+    SingleScatteringResult result = IntegrateScatteredLuminance(
+        samplingParams, 
+        worldPosition, 
+        worldDirection, 
+        lightDirection, 
+        sunIlluminance, 
+        mieRayPhase, 
+        multiScattering, 
+        isGround, 
+        SR_ScatteringConstants.mTransmittanceLUTDescriptorIndex, 
+        SR_ScatteringConstants.mMultiScatteringLUTDescriptorIndex);
+
     color += result.mScatteredLuminance;
 
     return color;
