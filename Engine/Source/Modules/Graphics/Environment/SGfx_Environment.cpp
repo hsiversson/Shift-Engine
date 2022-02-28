@@ -49,6 +49,7 @@ bool SGfx_Skybox::Init()
 	cubeShaderProps.mVertexLayout.SetAttribute(SR_VertexAttribute::Position, SR_Format::RGB32_FLOAT);
 	cubeShaderProps.mRTVFormats.mNumColorFormats = 1;
 	cubeShaderProps.mRTVFormats.mColorFormats[0] = SR_Format::RG11B10_FLOAT;
+
 	cubeShaderProps.mPrimitiveTopology = SR_PrimitiveTopology::TriangleList;
 
 	cubeShaderProps.mDepthStencilProperties.mDepthComparisonFunc = SR_ComparisonFunc::GreaterEqual;
@@ -95,7 +96,7 @@ SGfx_Environment::SGfx_Environment()
 
 	// Scattering constants
 	SGfx_ScatteringConstants& scatteringConstants = mConstants.mScatteringConstants;
-	scatteringConstants.mPlanetRadiusKm = 6360.0f;
+	scatteringConstants.mPlanetRadiusKm = 1000.0f;
 	constexpr float atmosphereHeightKm = 100.0f;
 	scatteringConstants.mPlanetAtmosphereRadiusKm = scatteringConstants.mPlanetRadiusKm + SC_Max(0.1f, atmosphereHeightKm);
 
@@ -140,7 +141,9 @@ SGfx_Environment::SGfx_Environment()
 		mComputeSkyViewLUTShader = SR_RenderDevice::gInstance->CreateShaderState(computeLUTShaderProps);
 	}
 	mSkybox = SC_MakeUnique<SGfx_Skybox>();
-	mSkybox->Init();
+	if (!mSkybox->Init())
+		mSkybox = nullptr;
+		
 }
 
 SGfx_Environment::~SGfx_Environment()

@@ -94,6 +94,8 @@ public:
 	float GetNear() const;
 	float GetFar() const;
 
+	SC_Matrix GetProjectionNoInvZ() const;
+
 	void GetCornersOnPlane(float aZ, SC_Vector* aOutCorners) const;
 private:
 	void Update() const;

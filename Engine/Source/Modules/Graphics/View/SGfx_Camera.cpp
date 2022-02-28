@@ -257,6 +257,11 @@ float SGfx_Camera::GetFar() const
 	return mFar;
 }
 
+SC_Matrix SGfx_Camera::GetProjectionNoInvZ() const
+{
+	return SC_PerspectiveMatrix(SC_Math::DegreesToRadians(mFov * 0.5f), mSize.x, mSize.y, mNear, mFar);
+}
+
 void SGfx_Camera::GetCornersOnPlane(float aZ, SC_Vector* aOutCorners) const
 {
 	assert(aOutCorners != NULL);

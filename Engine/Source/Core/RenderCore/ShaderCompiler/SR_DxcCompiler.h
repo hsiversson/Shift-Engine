@@ -10,6 +10,37 @@ struct IDxcCompiler3;
 struct IDxcUtils;
 struct IDxcIncludeHandler;
 
+class SR_ShaderCompilerCache
+{
+public:
+	enum class QueryResult
+	{
+		Found,
+		Missing,
+		Error
+	};
+
+	struct ShaderCacheEntry
+	{
+		friend class SR_ShaderCompilerCache;
+	public:
+		bool ReadShaderData(SR_ShaderByteCode& aOutResult, SR_ShaderMetaData* aOutMetaData = nullptr);
+		bool WriteShaderData(const SR_ShaderByteCode& aResult, const SR_ShaderMetaData* aMetaData);
+
+	private:
+		std::string mFilePath;
+	};
+
+public:
+	SR_ShaderCompilerCache();
+	~SR_ShaderCompilerCache();
+
+	QueryResult QueryShaderEntry(const uint64 aHash, ShaderCacheEntry& aOutShaderCacheEntry);
+
+private:
+	static constexpr const char* gShaderCacheFolder = "Cache/ShaderCache";
+};
+
 class SR_DxcCompiler
 {
 public:
@@ -27,13 +58,11 @@ public:
 	bool CompileFromString(const std::string& aShadercode, const SR_ShaderCompileArgs& aArgs, SR_ShaderByteCode& aOutResult, SR_ShaderMetaData* aOutMetaData = nullptr);
 
 private:
-	bool CheckShaderCacheForEntry(const SC_FilePath& aFilePath, SR_ShaderByteCode& aOutResult, SR_ShaderMetaData* aOutMetaData) const;
-	bool WriteToCache(const SC_FilePath& aFilePath, const SR_ShaderByteCode& aResult, const SR_ShaderMetaData* aMetaData) const;
-
-private:
 	SR_ComPtr<IDxcCompiler3> mDxcCompiler;
 	SR_ComPtr<IDxcUtils> mDxcUtils;
 	SR_ComPtr<IDxcIncludeHandler> mDxcIncludeHandler;
+
+	SR_ShaderCompilerCache mShaderCache;
 
 	Type mCompilerType;
 	uint8 mShaderOptimizationLevel;

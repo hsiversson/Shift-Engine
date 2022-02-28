@@ -74,6 +74,84 @@ static std::wstring GetTargetProfile(const SR_ShaderType& aShaderType)
 	return shaderTarget;
 }
 
+bool SR_ShaderCompilerCache::ShaderCacheEntry::ReadShaderData(SR_ShaderByteCode& aOutResult, SR_ShaderMetaData* aOutMetaData)
+{
+	std::ifstream inStream(mFilePath, std::ios::binary);
+	if (!inStream.is_open())
+		return false;
+
+	uint64 entryPointSize = 0;
+	inStream.read((char*)&entryPointSize, sizeof(uint64));
+	aOutResult.mEntryPoint.resize(entryPointSize);
+	inStream.read(aOutResult.mEntryPoint.data(), entryPointSize);
+
+	uint64 size = 0;
+	inStream.read((char*)&size, sizeof(uint64));
+
+	aOutResult.mSize = size;
+	aOutResult.mByteCode = SC_MakeUnique<uint8[]>(size);
+	inStream.read((char*)aOutResult.mByteCode.get(), size);
+
+	bool hasMetaData = false;
+	inStream.read((char*)&hasMetaData, sizeof(bool));
+
+	if (hasMetaData)
+		inStream.read((char*)aOutMetaData, sizeof(SR_ShaderMetaData));
+
+	return true;
+}
+
+bool SR_ShaderCompilerCache::ShaderCacheEntry::WriteShaderData(const SR_ShaderByteCode& aOutResult, const SR_ShaderMetaData* aOutMetaData)
+{
+	SC_FilePath::CreateDirectory(gShaderCacheFolder);
+	std::ofstream outStream(mFilePath, std::ios::binary);
+	if (!outStream.is_open())
+		return false;
+
+	uint64 entryPointStrSize = aOutResult.mEntryPoint.length();
+	outStream.write((const char*)&entryPointStrSize, sizeof(uint64));
+	outStream.write(aOutResult.mEntryPoint.data(), entryPointStrSize);
+
+	outStream.write((const char*)&aOutResult.mSize, sizeof(uint64));
+	outStream.write((const char*)aOutResult.mByteCode.get(), aOutResult.mSize);
+
+	bool hasMetaData = (aOutMetaData != nullptr);
+	outStream.write((const char*)&hasMetaData, sizeof(bool));
+
+	if (hasMetaData)
+		outStream.write((const char*)aOutMetaData, sizeof(SR_ShaderMetaData));
+
+	return true;
+}
+
+SR_ShaderCompilerCache::SR_ShaderCompilerCache()
+{
+
+}
+
+SR_ShaderCompilerCache::~SR_ShaderCompilerCache()
+{
+
+}
+
+SR_ShaderCompilerCache::QueryResult SR_ShaderCompilerCache::QueryShaderEntry(const uint64 aHash, ShaderCacheEntry& aOutShaderCacheEntry)
+{
+	std::string hashedFileName;
+	{
+		std::stringstream ss;
+		ss << std::hex << aHash;
+		hashedFileName = ss.str();
+	}
+	hashedFileName += ".bytecode";
+
+	aOutShaderCacheEntry.mFilePath = SC_FormatStr("%s/%s", gShaderCacheFolder, hashedFileName.c_str());
+
+	if (SC_FilePath::Exists(aOutShaderCacheEntry.mFilePath.c_str()))
+		return QueryResult::Found;
+	else
+		return QueryResult::Missing;
+}
+
 SR_DxcCompiler::SR_DxcCompiler(const Type& aType)
 	: mCompilerType(aType)
 	, mShaderOptimizationLevel(3)
@@ -137,226 +215,163 @@ bool SR_DxcCompiler::CompileFromString(const std::string& aShadercode, const SR_
 		shaderCode += "Bytecode: DXIL";
 	shaderCode += "*/";
 
-	std::string hashedFileName;
+	uint64 shaderHash;
 	{
 		std::hash<std::string> hasher;
-		size_t hash = hasher(shaderCode);
-
-		std::stringstream ss;
-		ss << std::hex << hash;
-
-		hashedFileName = ss.str();
+		shaderHash = (uint64)hasher(shaderCode);
 	}
 
-	SC_FilePath shaderCachePath = SC_FilePath("Cache/ShaderCache/") + hashedFileName + ".bytecode";
-	if (CheckShaderCacheForEntry(shaderCachePath, aOutResult, aOutMetaData))
+	SR_ShaderCompilerCache::ShaderCacheEntry cacheEntry;
+	SR_ShaderCompilerCache::QueryResult queryResult = mShaderCache.QueryShaderEntry(shaderHash, cacheEntry);
+	if (queryResult == SR_ShaderCompilerCache::QueryResult::Found)
 	{
-		return true;
-	}
-
-	DxcBuffer sourceBuffer;
-	sourceBuffer.Ptr = shaderCode.data();
-	sourceBuffer.Size = shaderCode.size();
-	sourceBuffer.Encoding = DXC_CP_ACP;
-
-	SC_Array<LPCWSTR> compileArgs;
-	compileArgs.Reserve(64);
-
-	if (mCompilerType == Type::SPIRV)
-	{
-		compileArgs.Add(L"-spirv");
-		compileArgs.Add(L"-fvk-use-dx-layout");
-		compileArgs.Add(L"-fvk-use-dx-position-w");
-	}
-
-	compileArgs.Add(L"-HV 2021"); // TEMPORARY UNTIL HLSL 2021 BECOMES DEFAULT
-
-	compileArgs.Add(L"-E");
-	std::wstring entryPoint = SC_UTF8ToUTF16(aArgs.mEntryPoint);
-	compileArgs.Add(entryPoint.c_str());
-
-	compileArgs.Add(L"-T");
-	compileArgs.Add(targetProfile.c_str());
-
-	// Debug Info
-	if (mDebugShaders)
-	{
-		compileArgs.Add(L"-Zi");
-		compileArgs.Add(L"-Zss");
+		return cacheEntry.ReadShaderData(aOutResult, aOutMetaData);
 	}
 	else
-		compileArgs.Add(L"-Qstrip_debug");
-
-	if (mSkipOptimizations)
-		compileArgs.Add(L"-Od");
-	else
 	{
-		if (mShaderOptimizationLevel == 2)
-			compileArgs.Add(L"-O2");
-		else if (mShaderOptimizationLevel == 1)
-			compileArgs.Add(L"-O1");
-		else if (mShaderOptimizationLevel == 0)
-			compileArgs.Add(L"-O0");
-		else
-			compileArgs.Add(L"-O3");
-	}
+		DxcBuffer sourceBuffer;
+		sourceBuffer.Ptr = shaderCode.data();
+		sourceBuffer.Size = shaderCode.size();
+		sourceBuffer.Encoding = DXC_CP_ACP;
 
-	compileArgs.Add(L"-D");
-	if (mCompilerType == Type::SPIRV)
-		compileArgs.Add(L"IS_SPIRV=1");
-	else
-		compileArgs.Add(L"IS_DXIL=1");
+		SC_Array<LPCWSTR> compileArgs;
+		compileArgs.Reserve(64);
 
-	SC_Array<std::wstring> rawStrDefines;
-	for (uint32 i = 0; i < aArgs.mDefines.Count(); ++i)
-	{
-		compileArgs.Add(L"-D");
-
-		std::wstring& define = rawStrDefines.Add(SC_UTF8ToUTF16(aArgs.mDefines[i].mFirst.c_str()));
-		define += L"=";
-		define += SC_UTF8ToUTF16(aArgs.mDefines[i].mSecond.c_str());
-
-		compileArgs.Add(define.c_str());
-	}
-
-	compileArgs.Add(L"/I");
-
-	SC_FilePath includeDir = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders";
-	std::wstring includeDirStr = SC_UTF8ToUTF16(includeDir.GetStr());
-	compileArgs.Add(includeDirStr.c_str());
-
-	if (!aOutMetaData)
-		compileArgs.Add(L"-Qstrip_reflect");
-
-	compileArgs.Add(L"-flegacy-macro-expansion");
-	compileArgs.Add(L"-all_resources_bound");
-
-	SR_ComPtr<IDxcResult> compileResults;
-	HRESULT result = mDxcCompiler->Compile(&sourceBuffer, compileArgs.GetBuffer(), compileArgs.Count(), mDxcIncludeHandler.Get(), IID_PPV_ARGS(&compileResults));
-	if (compileResults->HasOutput(DXC_OUT_ERRORS))
-	{
-		SR_ComPtr<IDxcBlobUtf8> Errors;
-		SR_ComPtr<IDxcBlobUtf16> ErrorsOutputName;
-		result = compileResults->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&Errors), &ErrorsOutputName);
-		if (Errors != nullptr && Errors->GetStringLength() != 0)
+		if (mCompilerType == Type::SPIRV)
 		{
-			//LOG_ERROR("Shader compilation error: %s", Errors->GetStringPointer());
-			printf("%s", Errors->GetStringPointer());
-			OutputDebugStringA(Errors->GetStringPointer());
+			compileArgs.Add(L"-spirv");
+			compileArgs.Add(L"-fvk-use-dx-layout");
+			compileArgs.Add(L"-fvk-use-dx-position-w");
 		}
-	}
 
-	if (compileResults->HasOutput(DXC_OUT_OBJECT))
-	{
-		SR_ComPtr<IDxcBlob> shaderByteCode;
-		SR_ComPtr<IDxcBlobUtf16> outputName;
-		result = compileResults->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderByteCode), &outputName);
-		if (SUCCEEDED(result))
+		compileArgs.Add(L"-HV 2021"); // TEMPORARY UNTIL HLSL 2021 BECOMES DEFAULT
+
+		compileArgs.Add(L"-E");
+		std::wstring entryPoint = SC_UTF8ToUTF16(aArgs.mEntryPoint);
+		compileArgs.Add(entryPoint.c_str());
+
+		compileArgs.Add(L"-T");
+		compileArgs.Add(targetProfile.c_str());
+
+		// Debug Info
+		if (mDebugShaders)
 		{
-			aOutResult.mSize = static_cast<uint64>(shaderByteCode->GetBufferSize());
-			aOutResult.mByteCode = SC_MakeUnique<uint8[]>(aOutResult.mSize);
-			SC_Memcpy(aOutResult.mByteCode.get(), shaderByteCode->GetBufferPointer(), aOutResult.mSize);
+			compileArgs.Add(L"-Zi");
+			compileArgs.Add(L"-Zss");
+		}
+		else
+			compileArgs.Add(L"-Qstrip_debug");
+
+		if (mSkipOptimizations)
+			compileArgs.Add(L"-Od");
+		else
+		{
+			if (mShaderOptimizationLevel == 2)
+				compileArgs.Add(L"-O2");
+			else if (mShaderOptimizationLevel == 1)
+				compileArgs.Add(L"-O1");
+			else if (mShaderOptimizationLevel == 0)
+				compileArgs.Add(L"-O0");
+			else
+				compileArgs.Add(L"-O3");
+		}
+
+		compileArgs.Add(L"-D");
+		if (mCompilerType == Type::SPIRV)
+			compileArgs.Add(L"IS_SPIRV=1");
+		else
+			compileArgs.Add(L"IS_DXIL=1");
+
+		SC_Array<std::wstring> rawStrDefines;
+		for (uint32 i = 0; i < aArgs.mDefines.Count(); ++i)
+		{
+			compileArgs.Add(L"-D");
+
+			std::wstring& define = rawStrDefines.Add(SC_UTF8ToUTF16(aArgs.mDefines[i].mFirst.c_str()));
+			define += L"=";
+			define += SC_UTF8ToUTF16(aArgs.mDefines[i].mSecond.c_str());
+
+			compileArgs.Add(define.c_str());
+		}
+
+		compileArgs.Add(L"/I");
+
+		SC_FilePath includeDir = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders";
+		std::wstring includeDirStr = SC_UTF8ToUTF16(includeDir.GetStr());
+		compileArgs.Add(includeDirStr.c_str());
+
+		if (!aOutMetaData)
+			compileArgs.Add(L"-Qstrip_reflect");
+
+		compileArgs.Add(L"-flegacy-macro-expansion");
+		compileArgs.Add(L"-all_resources_bound");
+
+		SR_ComPtr<IDxcResult> compileResults;
+		HRESULT result = mDxcCompiler->Compile(&sourceBuffer, compileArgs.GetBuffer(), compileArgs.Count(), mDxcIncludeHandler.Get(), IID_PPV_ARGS(&compileResults));
+		if (compileResults->HasOutput(DXC_OUT_ERRORS))
+		{
+			SR_ComPtr<IDxcBlobUtf8> errors;
+			SR_ComPtr<IDxcBlobUtf16> errorsOutputName;
+			result = compileResults->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errors), &errorsOutputName);
+
+			if (errors && errors->GetStringLength() > 0)
+			{
+				SC_ERROR("Shader compilation error: %s", errors->GetStringPointer());
+				return false;
+			}
+		}
+
+		if (compileResults->HasOutput(DXC_OUT_OBJECT))
+		{
+			SR_ComPtr<IDxcBlob> shaderByteCode;
+			SR_ComPtr<IDxcBlobUtf16> outputName;
+			result = compileResults->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderByteCode), &outputName);
+			if (SUCCEEDED(result))
+			{
+				aOutResult.mSize = static_cast<uint64>(shaderByteCode->GetBufferSize());
+				aOutResult.mByteCode = SC_MakeUnique<uint8[]>(aOutResult.mSize);
+				SC_Memcpy(aOutResult.mByteCode.get(), shaderByteCode->GetBufferPointer(), aOutResult.mSize);
+			}
+			else
+				return false;
 		}
 		else
 			return false;
-	}
-	else
-		return false;
 
-	if (aOutMetaData && compileResults->HasOutput(DXC_OUT_REFLECTION))
-	{
-		SR_ComPtr<IDxcBlob> reflectionData;
-		SR_ComPtr<IDxcBlobUtf16> outputName;
-		result = compileResults->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&reflectionData), &outputName);
-		if (SUCCEEDED(result))
+		if (aOutMetaData && compileResults->HasOutput(DXC_OUT_REFLECTION))
 		{
-			DxcBuffer reflectionBuffer;
-			reflectionBuffer.Ptr = reflectionData->GetBufferPointer();
-			reflectionBuffer.Size = reflectionData->GetBufferSize();
-			reflectionBuffer.Encoding = 0;
+			SR_ComPtr<IDxcBlob> reflectionData;
+			SR_ComPtr<IDxcBlobUtf16> outputName;
+			result = compileResults->GetOutput(DXC_OUT_REFLECTION, IID_PPV_ARGS(&reflectionData), &outputName);
+			if (SUCCEEDED(result))
+			{
+				DxcBuffer reflectionBuffer;
+				reflectionBuffer.Ptr = reflectionData->GetBufferPointer();
+				reflectionBuffer.Size = reflectionData->GetBufferSize();
+				reflectionBuffer.Encoding = 0;
 
 #if ENABLE_DX12
-			SR_ComPtr<ID3D12ShaderReflection> reflection;
-			mDxcUtils->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&reflection));
-			if (reflection)
-			{
-				//D3D12_SHADER_DESC shaderDesc = {};
-				//result = reflection->GetDesc(&shaderDesc);
-				//if (FAILED(result))
-				//	return false;
+				SR_ComPtr<ID3D12ShaderReflection> reflection;
+				mDxcUtils->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&reflection));
+				if (reflection)
+				{
+					//D3D12_SHADER_DESC shaderDesc = {};
+					//result = reflection->GetDesc(&shaderDesc);
+					//if (FAILED(result))
+					//	return false;
 
-				//shaderDesc.
+					//shaderDesc.
 
-				uint32 threads[3];
-				reflection->GetThreadGroupSize(&threads[0], &threads[1], &threads[2]);
-				aOutMetaData->mNumThreads = SC_IntVector(threads[0], threads[1], threads[2]);
-			}
+					uint32 threads[3];
+					reflection->GetThreadGroupSize(&threads[0], &threads[1], &threads[2]);
+					aOutMetaData->mNumThreads = SC_IntVector(threads[0], threads[1], threads[2]);
+				}
 #endif
+			}
+			else
+				return false;
 		}
-		else
-			return false;
+
+		return cacheEntry.WriteShaderData(aOutResult, aOutMetaData);
 	}
-
-	// Output cache data
-	WriteToCache(shaderCachePath, aOutResult, aOutMetaData);
-
-	return true;
-}
-
-bool SR_DxcCompiler::CheckShaderCacheForEntry(const SC_FilePath& aFilePath, SR_ShaderByteCode& aOutResult, SR_ShaderMetaData* aOutMetaData) const
-{
-	if (SC_FilePath::Exists(aFilePath))
-	{
-		std::ifstream stream(aFilePath.GetStr(), std::ios::binary);
-		if (stream.is_open())
-		{
-			uint64 entryPointSize = 0;
-			stream.read((char*)&entryPointSize, sizeof(uint64));
-			aOutResult.mEntryPoint.resize(entryPointSize);
-			stream.read(aOutResult.mEntryPoint.data(), entryPointSize);
-
-			uint64 size = 0;
-			stream.read((char*)&size, sizeof(uint64));
-
-			aOutResult.mSize = size;
-			aOutResult.mByteCode = SC_MakeUnique<uint8[]>(size);
-			stream.read((char*)aOutResult.mByteCode.get(), size);
-
-			bool hasMetaData = false;
-			stream.read((char*)&hasMetaData, sizeof(bool));
-
-			if (hasMetaData)
-				stream.read((char*)aOutMetaData, sizeof(SR_ShaderMetaData));
-
-			return true;
-		}
-		assert(false);
-		return false;
-	}
-	return false;
-}
-
-bool SR_DxcCompiler::WriteToCache(const SC_FilePath& aFilePath, const SR_ShaderByteCode& aResult, const SR_ShaderMetaData* aMetaData) const
-{
-	SC_FilePath::CreateDirectory("Cache/ShaderCache/");
-	std::ofstream outStream(aFilePath.GetStr(), std::ios::binary);
-	if (outStream.is_open())
-	{
-		uint64 entryPointStrSize = aResult.mEntryPoint.length();
-		outStream.write((const char*)&entryPointStrSize, sizeof(uint64));
-		outStream.write(aResult.mEntryPoint.data(), entryPointStrSize);
-
-		outStream.write((const char*)&aResult.mSize, sizeof(uint64));
-		outStream.write((const char*)aResult.mByteCode.get(), aResult.mSize);
-
-		bool hasMetaData = (aMetaData != nullptr);
-		outStream.write((const char*)&hasMetaData, sizeof(bool));
-
-		if (hasMetaData)
-			outStream.write((const char*)aMetaData, sizeof(SR_ShaderMetaData));
-	}
-	else
-		return false;
-
-	return true;
 }

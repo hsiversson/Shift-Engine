@@ -1,24 +1,17 @@
-file(GLOB IMGUI_FILES "*.cpp" "*.h" "*.c")
-file(GLOB IMGUIZMO_FILES "./ImGuizmo/*.cpp" "./ImGuizmo/*.h")
+file(GLOB_RECURSE IMGUI_FILES CONFIGURE_DEPENDS "*.cpp" "*.h" "*.c")
 
 add_library(ImGui STATIC ${IMGUI_FILES} ${IMGUIZMO_FILES})
 set_property(TARGET ImGui PROPERTY FOLDER "0. External") 
 
-set(IMGUIZMOFILES 
-	./ImGuizmo/GraphEditor.cpp
-	./ImGuizmo/GraphEditor.h
-	./ImGuizmo/ImCurveEdit.cpp
-	./ImGuizmo/ImCurveEdit.h
-	./ImGuizmo/ImGradient.cpp
-	./ImGuizmo/ImGradient.h
-	./ImGuizmo/ImGuizmo.cpp
-	./ImGuizmo/ImGuizmo.h
-	./ImGuizmo/ImSequencer.cpp
-	./ImGuizmo/ImSequencer.h
-	./ImGuizmo/ImZoomSlider.h)
-source_group("ImGuizmo" FILES ${IMGUIZMOFILES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${IMGUI_FILES})
 
 target_include_directories(ImGui PRIVATE 
                             ${ENGINE_SOURCE_DIRECTORY}/Core
 							${ENGINE_EXTERNAL_DIRECTORY}/ImGui
                           )
+
+if(MSVC)
+  target_compile_options(ImGui PRIVATE /W3)
+else()
+  target_compile_options(ImGui PRIVATE -Wall -Wpedantic)
+endif()

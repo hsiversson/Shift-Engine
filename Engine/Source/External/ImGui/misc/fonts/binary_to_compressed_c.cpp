@@ -26,6 +26,9 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#pragma warning(push)
+#pragma warning(disable:4244)
+
 // stb_compress* from stb.h - declaration
 typedef unsigned int stb_uint;
 typedef unsigned char stb_uchar;
@@ -383,3 +386,5 @@ stb_uint stb_compress(stb_uchar *out, stb_uchar *input, stb_uint length)
 
     return stb__out - out;
 }
+
+#pragma warning(pop)

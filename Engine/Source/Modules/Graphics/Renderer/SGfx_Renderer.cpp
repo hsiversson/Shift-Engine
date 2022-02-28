@@ -408,7 +408,7 @@ void SGfx_Renderer::RenderOpaque()
 	SC_Array<SC_Pair<uint32, SR_Resource*>> barriers;
 	barriers.Add(SC_Pair(SR_ResourceState_RenderTarget, mSceneColor.mResource.get()));
 	cmdList->TransitionBarrier(barriers);
-	cmdList->ClearRenderTarget(mSceneColor.mRenderTarget.get(), SC_Vector4(1.f, 0.f, 1.f, 0.f));
+	cmdList->ClearRenderTarget(mSceneColor.mRenderTarget.get(), SC_Vector4(0.f, 0.f, 0.f, 0.f));
 	cmdList->SetRenderTarget(mSceneColor.mRenderTarget.get(), mDepthStencil.get());
 
 	SR_Rect rect =

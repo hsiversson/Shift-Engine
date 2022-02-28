@@ -76,6 +76,45 @@ struct SR_BlendStateProperties
 		: mNumRenderTargets(0)
 		, mAlphaToCoverage(false)
 	{}
+
+	static SR_RenderTargetBlendProperties AlphaBlendProperties()
+	{
+		SR_RenderTargetBlendProperties alphaBlendProps;
+		alphaBlendProps.mEnableBlend = true;
+		alphaBlendProps.mBlendFunc = SR_BlendFunc::Add;
+		alphaBlendProps.mSrcBlend = SR_BlendMode::SrcAlpha;
+		alphaBlendProps.mDstBlend = SR_BlendMode::OneMinusSrcAlpha;
+		alphaBlendProps.mBlendFuncAlpha = SR_BlendFunc::Add;
+		alphaBlendProps.mSrcBlendAlpha = SR_BlendMode::One;
+		alphaBlendProps.mDstBlendAlpha = SR_BlendMode::OneMinusSrcAlpha;
+		return alphaBlendProps;
+	}
+
+	static SR_RenderTargetBlendProperties PremultipliedAlphaBlendProperties()
+	{
+		SR_RenderTargetBlendProperties alphaBlendProps;
+		alphaBlendProps.mEnableBlend = true;
+		alphaBlendProps.mBlendFunc = SR_BlendFunc::Add;
+		alphaBlendProps.mSrcBlend = SR_BlendMode::One;
+		alphaBlendProps.mDstBlend = SR_BlendMode::OneMinusSrcAlpha;
+		alphaBlendProps.mBlendFuncAlpha = SR_BlendFunc::Add;
+		alphaBlendProps.mSrcBlendAlpha = SR_BlendMode::One;
+		alphaBlendProps.mDstBlendAlpha = SR_BlendMode::One;
+		return alphaBlendProps;
+	}
+
+	static SR_RenderTargetBlendProperties AdditiveProperties()
+	{
+		SR_RenderTargetBlendProperties additiveProps;
+		additiveProps.mEnableBlend = true;
+		additiveProps.mBlendFunc = SR_BlendFunc::Add;
+		additiveProps.mSrcBlend = SR_BlendMode::SrcAlpha;
+		additiveProps.mDstBlend = SR_BlendMode::One;
+		additiveProps.mBlendFuncAlpha = SR_BlendFunc::Add;
+		additiveProps.mSrcBlendAlpha = SR_BlendMode::Zero;
+		additiveProps.mDstBlendAlpha = SR_BlendMode::One;
+		return additiveProps;
+	}
 };
 
 struct SR_BlendState
