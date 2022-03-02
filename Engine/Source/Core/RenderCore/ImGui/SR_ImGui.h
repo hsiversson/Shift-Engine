@@ -53,6 +53,7 @@ private:
 #if IS_WINDOWS_PLATFORM
 	void NewFrameWin64();
 	bool InitPlatformWin64(void* aNativeWindowHandle);
+	bool InitPlatformInterfaceWin64();
 #endif
 
 	bool CreateRootSignature();

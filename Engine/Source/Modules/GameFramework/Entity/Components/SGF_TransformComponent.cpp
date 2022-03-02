@@ -4,7 +4,11 @@ SGF_TransformComponent::SGF_TransformComponent()
 	: mPosition(0.0f)
 	, mRotation(SC_Quaternion::Identity())
 	, mScale(1.0f)
+	, mIsStatic(true)
 {
+#if IS_EDITOR_BUILD
+	mScale.SetDefaultValue(1.0f);
+#endif
 }
 
 SGF_TransformComponent::~SGF_TransformComponent()

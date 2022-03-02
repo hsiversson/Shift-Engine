@@ -10,14 +10,11 @@ public:
 public:
 	inline void Normalize() 
 	{
-		float L2 = mNormal.Length2();
-		assert(L2 >= 0);
-		float normalLength = SC_Math::Sqrt(L2);
-		float T = normalLength > 0.f ? (1.0f / normalLength) : 0.f;
-		mNormal.x *= T;
-		mNormal.y *= T;
-		mNormal.z *= T;
-		mDistance *= T;
+		SC_Vector4 v(mNormal, mDistance);
+		v.Normalize();
+
+		mNormal = v.XYZ();
+		mDistance = v.w;
 	}
 
 	float DistanceToPlane(const SC_Vector& aPoint) const

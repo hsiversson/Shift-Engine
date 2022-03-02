@@ -11,8 +11,8 @@ enum class SED_GizmoMode
 
 enum class SED_GizmoSpace
 {
-	World,
-	Local
+	World,	// Transform around world axis
+	Local	// Transform around local axis
 };
 
 class SED_TransformationGizmo
@@ -56,6 +56,8 @@ private:
 	SC_Matrix mModelInv;
 	SC_Matrix mModelLocal;
 	SC_Matrix mMVP;
+
+	SC_Vector4 mRect;
 
 	SC_Vector4 mViewportPosAndSize;
 	SC_Vector mCameraForward;

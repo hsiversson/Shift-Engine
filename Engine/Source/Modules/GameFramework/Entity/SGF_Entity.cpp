@@ -32,6 +32,19 @@ SGF_World* SGF_Entity::GetWorld() const
 	return mWorld;
 }
 
+bool SGF_Entity::HasComponent(const SGF_ComponentId& aComponentId)
+{
+	return mComponents.find(aComponentId) != mComponents.end();
+}
+
+SGF_Component* SGF_Entity::GetComponent(const SGF_ComponentId& aComponentId)
+{
+	if (HasComponent(aComponentId))
+		return mComponents.at(aComponentId).get();
+
+	return nullptr;
+}
+
 void SGF_Entity::AddComponent(SC_Ref<SGF_Component> aComponent)
 {
 	mComponents[aComponent->GetId()] = aComponent;

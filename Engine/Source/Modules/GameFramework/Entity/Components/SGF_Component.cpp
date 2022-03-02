@@ -64,6 +64,11 @@ SGF_Entity* SGF_Component::GetParentEntity() const
 	return mParentEntity;
 }
 
+const SC_Array<SGF_PropertyBase*>& SGF_Component::GetProperties() const
+{
+	return mProperties;
+}
+
 void SGF_Component::SetParentEntity(SGF_Entity* aParentEntity)
 {
 	mParentEntity = aParentEntity;

@@ -1,0 +1,12 @@
+#ifndef INSTANCE_DATA_HEADER
+#define INSTANCE_DATA_HEADER
+
+#include "SceneConstants.ssh"
+
+template<typename T>
+T LoadInstanceData(uint aBufferOffset)
+{
+    return (T)0;
+}
+
+#endif //INSTANCE_DATA_HEADER

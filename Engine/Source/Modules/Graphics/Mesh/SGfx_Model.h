@@ -2,12 +2,19 @@
 
 class SC_FilePath;
 class SGfx_MeshInstance;
+class SGfx_MaterialInstance;
 
 /*
 *
 *	A collection of meshes that visually represents a object.
 * 
 */
+
+struct SGfx_ModelSubMesh
+{
+	SC_Ref<SGfx_MeshInstance> mMesh;
+	SC_Ref<SGfx_MaterialInstance> mMaterial;
+};
 
 class SGfx_Model
 {
@@ -17,15 +24,11 @@ public:
 
 	bool Init(const SC_FilePath& aModelFile);
 
-	const SC_Array<SC_Ref<SGfx_MeshInstance>>& GetMeshes() const;
+	uint32 GetNumMeshes() const;
+	const SC_Array<SGfx_ModelSubMesh>& GetMeshes() const;
 
 private:
 
-	bool InitFromInternalSource(const SC_FilePath& aModelFile);
-#if IS_EDITOR_BUILD
-	bool InitFromExternalSource(const SC_FilePath& aModelFile);
-#endif
-
-	SC_Array<SC_Ref<SGfx_MeshInstance>> mMeshes;
+	SC_Array<SGfx_ModelSubMesh> mMeshes;
 };
 

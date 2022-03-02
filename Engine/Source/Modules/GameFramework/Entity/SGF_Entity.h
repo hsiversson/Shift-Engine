@@ -18,8 +18,11 @@ public:
 
 	template<class ComponentType>
 	bool HasComponent() const;
+	bool HasComponent(const SGF_ComponentId& aComponentId);
+
 	template<class ComponentType>
 	ComponentType* GetComponent() const;
+	SGF_Component* GetComponent(const SGF_ComponentId& aComponentId);
 
 	template<class ComponentType>
 	ComponentType* AddComponent();

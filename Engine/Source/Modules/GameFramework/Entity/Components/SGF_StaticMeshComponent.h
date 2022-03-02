@@ -17,13 +17,16 @@ public:
 
 	void SetVisible(bool aValue);
 
+	SC_Ref<SGfx_MeshInstance>& GetMeshInstance();
+	SC_Ref<SGfx_MaterialInstance>& GetMaterialInstance();
+
 	bool Save(SC_Json& aOutSaveData) const override;
 	bool Load(const SC_Json& aSavedData) override;
 private:
 
 	// Support multiple meshes?
-	SC_Ref<SGfx_MeshInstance> mMeshInstance;
-	SC_Ref<SGfx_MaterialInstance> mMaterialInstance;
+	SGF_PROPERTY(SC_Ref<SGfx_MeshInstance>, mMeshInstance, "Mesh");
+	SGF_PROPERTY(SC_Ref<SGfx_MaterialInstance>, mMaterialInstance, "Material");
 
 	bool mIsVisible;
 };

@@ -75,6 +75,9 @@
 #define SC_STRINGIFY(aStr)					SC_STRINGIFY2(aStr)
 #define SC_UNUSED(aIdentifier)				(static_cast<void>(aIdentifier))
 
+#define SC_CONCAT2(a, b) a ## b
+#define SC_CONCAT(a, b) SC_CONCAT2(a, b)
+
 #define SC_STATIC_ASSERT(aCond, aMsg)		static_assert( aCond, #aMsg )
 
 #define SC_ARRAY_SIZE(aArray)				(sizeof(aArray) / sizeof(*aArray));

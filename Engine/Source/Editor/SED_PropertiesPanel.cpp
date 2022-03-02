@@ -4,24 +4,34 @@
 
 #include "GameFramework/GameWorld/SGF_World.h"
 #include "GameFramework/Entity/SGF_Entity.h"
-#include "GameFramework/Entity/Components/SGF_TransformComponent.h"
+#include "GameFramework/Entity/Components/SGF_EntityIdComponent.h"
 
-template<typename ComponentType, typename DrawFuncSig>
-static void DrawComponent(const char* aComponentName, SGF_Entity* aEntity, DrawFuncSig aDrawFunc)
+static void DrawComponent(const SGF_ComponentId& aComponentId, SGF_Entity* aEntity)
 {
-	if (aEntity->HasComponent<ComponentType>())
+	if (aComponentId == SGF_EntityIdComponent::Id())
+		return;
+
+	if (SGF_Component* component = aEntity->GetComponent(aComponentId))
 	{
 		static constexpr ImGuiTreeNodeFlags treeNodeFlags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_FramePadding;
 
-		ComponentType& component = *(aEntity->GetComponent<ComponentType>());
-
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2{ 4, 4 });
-		bool isOpen = ImGui::TreeNodeEx((void*)typeid(ComponentType).hash_code(), treeNodeFlags, aComponentName);
+		bool isOpen = ImGui::TreeNodeEx(&aComponentId, treeNodeFlags, component->GetName());
 		ImGui::PopStyleVar();
 
 		if (isOpen)
 		{
-			aDrawFunc(component);
+			ImGui::PushID(component->GetName());
+			ImGui::Columns(2);
+
+			const SC_Array<SGF_PropertyBase*>& properties = component->GetProperties();
+			for (SGF_PropertyBase* property : properties)
+			{
+				SED_DrawProperty(property->GetType(), property->GetData(), property->GetName());
+			}
+
+			ImGui::Columns(1);
+			ImGui::PopID();
 			ImGui::TreePop();
 		}
 	}
@@ -44,23 +54,32 @@ void SED_PropertiesPanel::OnRender()
 
 	if (mSelectedEntity != nullptr)
 	{
-		ImGui::Text("Name: %s", mSelectedEntity->GetName().c_str());
+		ImGui::BeginTable("##entityNameTable", 2); 
+		ImGui::TableSetupColumn("##0", ImGuiTableColumnFlags_WidthFixed, 64.0f);
+		ImGui::TableSetupColumn("##1", ImGuiTableColumnFlags_WidthStretch);
+		ImGui::TableNextColumn();
+		ImGui::Text("Name"); 
+		ImGui::TableNextColumn();
+
+		std::string name(mSelectedEntity->GetName());
+		name.reserve(256);
+
+		ImGui::PushItemWidth(ImGui::CalcItemWidth());
+		if (ImGui::InputText("##entityName", name.data(), 256, ImGuiInputTextFlags_EnterReturnsTrue))
+		{
+			mSelectedEntity->SetName(name);
+		}
+		ImGui::PopItemWidth();
+
+		ImGui::EndTable();
 		ImGui::Separator();
 
-		//const SGF_ComponentFactory::RegistryMap& componentRegistry = SGF_ComponentFactory::GetComponentRegistryMap();
+		const SGF_ComponentFactory::RegistryMap& componentRegistry = SGF_ComponentFactory::GetComponentRegistryMap();
 
-		//for (auto& pair : componentRegistry)
-		//{
-		//	DrawComponent(pair.second, pair.first.c_str(), ComponentDrawFunc);
-		//}
-
-
-		DrawComponent<SGF_TransformComponent>("Transform", mSelectedEntity, [](SGF_TransformComponent& aComponent)
-			{
-				DrawProperty("Position", aComponent.mPosition);
-				DrawProperty("Rotation", aComponent.mRotation);
-				DrawProperty("Scale", aComponent.mScale);
-			});
+		for (auto& pair : componentRegistry)
+		{
+			DrawComponent(pair.second, mSelectedEntity);
+		}
 	}
 
 	ImGui::End();

@@ -44,7 +44,7 @@ void SED_TransformationGizmo::BeginFrame(const SC_Vector4& aBounds)
 	ImGuizmo::BeginFrame();
 
 	SC_Vector2 vpSize = aBounds.ZW() - aBounds.XY();
-	ImGuizmo::SetRect(aBounds.x, aBounds.y, vpSize.x, vpSize.y);
+	mRect = { aBounds.x, aBounds.y, vpSize.x, vpSize.y };
 
 	//const ImU32 flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoBringToFrontOnFocus;
 	//
@@ -84,6 +84,9 @@ void SED_TransformationGizmo::SetViewportPositionAndSize(const SC_Vector4& /*aPo
 
 bool SED_TransformationGizmo::Manipulate(SC_Matrix& aTransform, bool /*aShouldSnap*/ /*= false*/, float /*aSnapValue*/ /*= 0.0f*/)
 {
+	ImGuizmo::SetOrthographic(false);
+	//ImGuizmo::SetDrawlist();
+	ImGuizmo::SetRect(mRect.x, mRect.y, mRect.z, mRect.w);
 	return ImGuizmo::Manipulate(mWorldToCamera.m, mCameraToClip.m, ImGuizmo::OPERATION::TRANSLATE, ImGuizmo::MODE::WORLD, aTransform.m);
 
 	//mModel = aTransform;

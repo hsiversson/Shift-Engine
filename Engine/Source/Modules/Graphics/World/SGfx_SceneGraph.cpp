@@ -64,21 +64,21 @@ void SGfx_SceneGraph::PrepareView(SGfx_View* aView)
 	//	task.Wait();
 }
 
-void SGfx_SceneGraph::AddModel(SC_Ref<SGfx_Model> aModel)
+void SGfx_SceneGraph::AddModel(SC_Ref<SGfx_Model> /*aModel*/)
 {
-	const SC_Array<SC_Ref<SGfx_MeshInstance>>& meshes = aModel->GetMeshes();
-
-	SC_MutexLock lock(mMeshesMutex);
-	mMeshes.Add(meshes);
+	//const SC_Array<SC_Ref<SGfx_MeshInstance>>& meshes = aModel->GetMeshes();
+	//
+	//SC_MutexLock lock(mMeshesMutex);
+	//mMeshes.Add(meshes);
 }
 
-void SGfx_SceneGraph::RemoveModel(SC_Ref<SGfx_Model> aModel)
+void SGfx_SceneGraph::RemoveModel(SC_Ref<SGfx_Model> /*aModel*/)
 {
-	const SC_Array<SC_Ref<SGfx_MeshInstance>>& meshes = aModel->GetMeshes();
-
-	SC_MutexLock lock(mMeshesMutex);
-	for (const SC_Ref<SGfx_MeshInstance>& mesh : meshes)
-		mMeshes.RemoveCyclic(mesh);
+	//const SC_Array<SC_Ref<SGfx_MeshInstance>>& meshes = aModel->GetMeshes();
+	//
+	//SC_MutexLock lock(mMeshesMutex);
+	//for (const SC_Ref<SGfx_MeshInstance>& mesh : meshes)
+	//	mMeshes.RemoveCyclic(mesh);
 }
 
 void SGfx_SceneGraph::AddMesh(SC_Ref<SGfx_MeshInstance> aMeshInstance)

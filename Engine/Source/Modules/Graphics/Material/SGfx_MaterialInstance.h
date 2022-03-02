@@ -47,9 +47,10 @@ public:
 	enum class Type
 	{
 		Constant,
-		Texture,
-		Sampler,
-		Buffer
+		Constant2,
+		Constant3,
+		Constant4,
+		Texture
 	};
 
 private:
@@ -85,3 +86,16 @@ private:
 	uint32 mMaterialIndex;
 };
 
+/*
+
+	MATERIAL INSTANCE JSON TEMPLATE
+	{
+		"MaterialTemplate": "../Materials/MaterialTemplate.smt,
+		"PropertyOverrides": 
+		[
+			"Texture_0": "../Textures/black.dds",
+			"Constant_0": 2.0f,
+			"Constant3_0": [1.0f, 0.0f, 1.0f]
+		],
+	}
+*/

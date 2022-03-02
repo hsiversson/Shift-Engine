@@ -1,5 +1,6 @@
 #pragma once
 #include "RenderCore/Defines/SR_RenderEnums.h"
+#include "RenderCore/Defines/SR_Format.h"
 
 ////////////////////////////////////////////////
 // Rasterizer State

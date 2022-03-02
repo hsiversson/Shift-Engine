@@ -187,16 +187,6 @@ bool SR_ImGui::Init(void* aNativeWindowHandle, float aDPIScale)
 	io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
 	io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;
 
-	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-	{
-		ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
-		platformIO.Renderer_CreateWindow = SR_ImGui_CreateWindow;
-		platformIO.Renderer_DestroyWindow = SR_ImGui_DestroyWindow;
-		platformIO.Renderer_SetWindowSize = SR_ImGui_SetWindowSize;
-		platformIO.Renderer_RenderWindow = SR_ImGui_RenderWindow;
-		platformIO.Renderer_SwapBuffers = SR_ImGui_SwapBuffers;
-	}
-
 	ImGuiViewport* mainViewport = ImGui::GetMainViewport();
 	mainViewport->RendererUserData = IM_NEW(SR_ImGuiViewportData)();
 
@@ -445,16 +435,38 @@ bool SR_ImGui::InitPlatformWin64(void* aNativeWindowHandle)
 	io.BackendPlatformName = "SR_ImGui_Win64";
 
 	mNativeWindowHandle = aNativeWindowHandle;
+
 	ImGuiViewport* mainViewport = ImGui::GetMainViewport();
 	mainViewport->PlatformHandle = mainViewport->PlatformHandleRaw = mNativeWindowHandle;
-	//if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-		//ImGui_ImplWin32_InitPlatformInterface();
-
+	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+		InitPlatformInterfaceWin64();
 
 	if (!mInputHandler.Init())
 		return false;
 
 	return true;
+}
+
+bool SR_ImGui::InitPlatformInterfaceWin64()
+{
+	ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
+	platformIO.Platform_CreateWindow = SR_ImGui_CreateWindow;
+	platformIO.Platform_DestroyWindow = SR_ImGui_DestroyWindow;
+	//platformIO.Platform_ShowWindow = SR_ImGui_ShowWindow;
+	//platformIO.Platform_SetWindowPos = SR_ImGui_SetWindowPos;
+	//platformIO.Platform_GetWindowPos = SR_ImGui_GetWindowPos;
+	platformIO.Platform_SetWindowSize = SR_ImGui_SetWindowSize;
+	//platformIO.Platform_GetWindowSize = SR_ImGui_GetWindowSize;
+	//platformIO.Platform_SetWindowFocus = SR_ImGui_SetWindowFocus;
+	//platformIO.Platform_GetWindowFocus = SR_ImGui_GetWindowFocus;
+	//platformIO.Platform_GetWindowMinimized = SR_ImGui_GetWindowMinimized;
+	//platformIO.Platform_SetWindowTitle = SR_ImGui_SetWindowTitle;
+	//platformIO.Platform_SetWindowAlpha = SR_ImGui_SetWindowAlpha;
+	//platformIO.Platform_UpdateWindow = SR_ImGui_UpdateWindow;
+	//platformIO.Platform_GetWindowDpiScale = SR_ImGui_GetWindowDpiScale; // FIXME-DPI
+	//platformIO.Platform_OnChangedViewport = SR_ImGui_OnChangedViewport; // FIXME-DPI
+
+	return false;
 }
 #endif
 
@@ -542,42 +554,46 @@ void SR_ImGui::UpdateMousePos()
 	ImGuiIO& io = ImGui::GetIO(); 
 	HWND hwnd = (HWND)mNativeWindowHandle;
 
+	const ImVec2 mousePosPrev = io.MousePos;
+	io.MousePos = ImVec2(SC_FLT_LOWEST, SC_FLT_LOWEST);
+	io.MouseHoveredViewport = 0;
+
+	HWND focusedHwnd = ::GetForegroundWindow();
+	HWND hoveredHwnd = focusedHwnd;
+	HWND mouseHwnd = NULL;
+	if (hoveredHwnd && (hoveredHwnd == hwnd || ::IsChild(hoveredHwnd, hwnd) || ImGui::FindViewportByPlatformHandle((void*)hoveredHwnd)))
+		mouseHwnd = hoveredHwnd;
+	else if (focusedHwnd && (focusedHwnd == hwnd || ::IsChild(focusedHwnd, hwnd) || ImGui::FindViewportByPlatformHandle((void*)focusedHwnd)))
+		mouseHwnd = focusedHwnd;
+	if (mouseHwnd == NULL)
+		return;
+
 	if (io.WantSetMousePos)
 	{
-		POINT pos = { (int)io.MousePos.x, (int)io.MousePos.y };
-		if ((io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) != 0 || ::ClientToScreen(hwnd, &pos))
+		POINT pos = { (int)mousePosPrev.x, (int)mousePosPrev.y };
+		if ((io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0)
 		{
-			::ClientToScreen(hwnd, &pos);
+			::ClientToScreen(mouseHwnd, &pos);
 		}
 		::SetCursorPos(pos.x, pos.y);
 	}
 
-	io.MousePos = ImVec2(SC_FLT_LOWEST, SC_FLT_LOWEST);
-	io.MouseHoveredViewport = 0;
-
 	POINT mouseScreenPos;
 	if (!::GetCursorPos(&mouseScreenPos))
 		return;
-
-	if (HWND focusedHwnd = ::GetForegroundWindow())
+	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
 	{
-		if (::IsChild(focusedHwnd, hwnd))
-			focusedHwnd = hwnd;
-
-		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-		{
-			if (ImGui::FindViewportByPlatformHandle((void*)focusedHwnd) != NULL)
-				io.MousePos = ImVec2((float)mouseScreenPos.x, (float)mouseScreenPos.y);
-		}
-		else if (focusedHwnd == hwnd)
-		{
-			POINT mouseClientPos = mouseScreenPos;
-			::ScreenToClient(focusedHwnd, &mouseClientPos);
-			io.MousePos = ImVec2((float)mouseClientPos.x, (float)mouseClientPos.y);
-		}
+		io.MousePos = ImVec2((float)mouseScreenPos.x, (float)mouseScreenPos.y);
+	}
+	else
+	{
+		POINT mouseClientPos = mouseScreenPos;
+		::ScreenToClient(hwnd, &mouseClientPos);
+		io.MousePos = ImVec2((float)mouseClientPos.x, (float)mouseClientPos.y);
 	}
 
-	if (HWND hoveredHwnd = ::WindowFromPoint(mouseScreenPos))
+	hoveredHwnd = ::WindowFromPoint(mouseScreenPos);
+	if (hoveredHwnd)
 	{
 		if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)hoveredHwnd))
 		{
@@ -622,7 +638,8 @@ bool SR_ImGui::CreateFontTexture()
 
 void SR_ImGui::SetStyle()
 {
-	ImVec4* colors = ImGui::GetStyle().Colors;
+	ImGuiStyle& style = ImGui::GetStyle();
+	ImVec4* colors = style.Colors;
 	colors[ImGuiCol_Text] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
 	colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
 	colors[ImGuiCol_WindowBg] = ImVec4(0.14f, 0.14f, 0.16f, 1.00f);
@@ -678,6 +695,9 @@ void SR_ImGui::SetStyle()
 	colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
 	colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
 	colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
+
+	style.ChildRounding = 2.0f;
+	style.FrameRounding = 4.0f;
 
 }
 

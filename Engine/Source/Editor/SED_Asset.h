@@ -12,6 +12,7 @@ enum class SED_AssetType
 	DataTable,
 	Level,
 	Project,
+	COUNT
 };
 
 class SED_Asset
