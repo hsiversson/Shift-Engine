@@ -56,7 +56,7 @@ bool SR_Heap_DX12::Init()
 		heapDesc.Flags |= D3D12_HEAP_FLAG_CREATE_NOT_ZEROED;
 
 	HRESULT hr = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateHeap(&heapDesc, IID_PPV_ARGS(&mD3D12Heap));
-	if (FAILED(hr))
+	if (!VerifyHRESULT(hr))
 	{
 		SC_ASSERT(false, "Could not create heap.");
 		return false;

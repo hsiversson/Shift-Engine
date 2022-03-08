@@ -1,0 +1,146 @@
+#include "LightsCommon.ssh"
+#include "LightCullingCommon.ssh"
+
+struct ConstantsStruct
+{
+    uint mDepthBufferDescriptorIndex;
+    uint mTileGridRWDescriptorIndex;
+};
+ConstantBuffer<ConstantsStruct> Constants : register(b0);
+
+float GetSignedDistanceFromPlane(float3 aPoint, SR_Plane aPlane)
+{
+    return dot(aPlane.mNormal, aPoint);
+}
+bool IntersectTileVsLight(in const SR_TileFrustum aFrustum, in const SR_LocalLight aLight, in float aMinDepth, in float aMaxDepth)
+{
+    if(-aLight.mPosition.z + aMinDepth < aLight.mRange && aLight.mPosition.z - aMaxDepth < aLight.mRange)
+    {
+        if((GetSignedDistanceFromPlane(aLight.mPosition, aFrustum.mPlanes[0]) < aLight.mRange) &&
+           (GetSignedDistanceFromPlane(aLight.mPosition, aFrustum.mPlanes[1]) < aLight.mRange) &&
+           (GetSignedDistanceFromPlane(aLight.mPosition, aFrustum.mPlanes[2]) < aLight.mRange) &&
+           (GetSignedDistanceFromPlane(aLight.mPosition, aFrustum.mPlanes[3]) < aLight.mRange))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+float ConvertDepthToViewZ(float aDepth)
+{
+    float z = 1.f / (aDepth * SR_ViewConstants.mClipToCamera._43 + SR_ViewConstants.mClipToCamera._44);
+    return z;
+}
+
+groupshared SR_TileData ldsTileData;
+groupshared uint ldsLightIndexCounter;
+groupshared uint ldsMinDepth;
+groupshared uint ldsMaxDepth;
+groupshared SR_AABB ldsAABB;
+
+[numthreads(NUM_THREADS_X, NUM_THREADS_Y, 1)]
+void CullLights(uint3 aDispatchThreadId : SV_DispatchThreadId, uint3 aGroupThreadId : SV_GroupThreadId, uint3 aGroupId : SV_GroupId)
+{
+    uint flattenedLocalIndex = aGroupThreadId.x + aGroupThreadId.y * NUM_THREADS_X;
+    if(flattenedLocalIndex == 0)
+    {
+        ldsMinDepth = 0xffffffff;
+        ldsMaxDepth = 0.0;
+        ldsLightIndexCounter = 0;
+        ldsTileData.mNumLights = 0;
+    }
+    SR_GroupMemoryBarrierSynced();
+
+    Texture2D<float> depthBuffer = GetTexture2D<float>(Constants.mDepthBufferDescriptorIndex);
+    float depthSample = depthBuffer.Load(int3(aDispatchThreadId.xy, 0));
+    if (depthSample != 0.0f)
+    {
+        //depthSample = ConvertDepthToViewZ(depthSample);
+        uint2 old;
+        uint depthAsUint = asuint(depthSample);
+        SR_AtomicMin(ldsMinDepth, depthAsUint, old.x);
+        SR_AtomicMax(ldsMaxDepth, depthAsUint, old.y);
+    }
+    SR_GroupMemoryBarrierSynced();
+
+    float minDepth = asfloat(ldsMaxDepth);
+    float maxDepth = asfloat(ldsMinDepth);
+
+    if (flattenedLocalIndex == 0)
+	{
+		// I construct an AABB around the minmax depth bounds to perform tighter culling:
+		// The frustum is asymmetric so we must consider all corners!
+
+		float3 viewSpace[8];
+
+		// Top left point, near
+		viewSpace[0] = ConvertScreenPositionToViewPosition(float4(aDispatchThreadId.xy, minDepth, 1.0f)).xyz;
+		// Top right point, near
+		viewSpace[1] = ConvertScreenPositionToViewPosition(float4(float2(aDispatchThreadId.x + 1, aDispatchThreadId.y), minDepth, 1.0f)).xyz;
+		// Bottom left point, near
+		viewSpace[2] = ConvertScreenPositionToViewPosition(float4(float2(aDispatchThreadId.x, aDispatchThreadId.y + 1), minDepth, 1.0f)).xyz;
+		// Bottom right point, near
+		viewSpace[3] = ConvertScreenPositionToViewPosition(float4(float2(aDispatchThreadId.x + 1, aDispatchThreadId.y + 1), minDepth, 1.0f)).xyz;
+
+		// Top left point, far
+		viewSpace[4] = ConvertScreenPositionToViewPosition(float4(aDispatchThreadId.xy * TILE_SIZE, maxDepth, 1.0f)).xyz;
+		// Top right point, far
+		viewSpace[5] = ConvertScreenPositionToViewPosition(float4(float2(aDispatchThreadId.x + 1, aDispatchThreadId.y), maxDepth, 1.0f)).xyz;
+		// Bottom left point, far
+		viewSpace[6] = ConvertScreenPositionToViewPosition(float4(float2(aDispatchThreadId.x, aDispatchThreadId.y + 1), maxDepth, 1.0f)).xyz;
+		// Bottom right point, far
+		viewSpace[7] = ConvertScreenPositionToViewPosition(float4(float2(aDispatchThreadId.x + 1, aDispatchThreadId.y + 1), maxDepth, 1.0f)).xyz;
+
+		float3 minAABB = (float3)10000000;
+		float3 maxAABB = (float3)-10000000;
+		[unroll]
+		for (uint i = 0; i < 8; ++i)
+		{
+			minAABB = min(minAABB, viewSpace[i]);
+			maxAABB = max(maxAABB, viewSpace[i]);
+		}
+
+		ConstructAABBFromMinMax(ldsAABB, minAABB, maxAABB);
+    }
+    
+    minDepth = ConvertDepthToViewZ(minDepth);
+    maxDepth = ConvertDepthToViewZ(maxDepth);
+    float nearZ = ConvertDepthToViewZ(1.0f);
+    SR_GroupMemoryBarrierSynced();
+
+    StructuredBuffer<SR_LocalLight> lightBuffer = GetLightBuffer();
+    SR_TileFrustum frustum = ConstructTileFrustum(aGroupId.xy);
+    for (uint i = flattenedLocalIndex; i < SR_LightCullingConstants.mTotalNumLights; i += NUM_THREADS_PER_TILE)
+    {
+        uint localLightIndex = i;
+        if (localLightIndex < SR_LightCullingConstants.mTotalNumLights)
+        {
+            SR_LocalLight light = lightBuffer[localLightIndex];
+            light.mPosition = mul(SR_ViewConstants.mWorldToCamera, float4(light.mPosition, 1.0f)).xyz;
+            SR_Sphere lightSphere = { light.mPosition, light.mRange };
+            if (IntersectTileVsLight(frustum, light, nearZ, maxDepth))
+            {
+                if (IntersectSphereVsAABB(lightSphere, ldsAABB))
+                {
+                    uint dstIndex = 0;
+                    SR_AtomicAdd(ldsLightIndexCounter, 1, dstIndex);
+                    if (dstIndex >= NUM_LIGHTS_PER_TILE)
+                       break;
+
+                    ldsTileData.mLightIndices[dstIndex] = localLightIndex;
+                }
+            }
+        }
+    }
+    SR_GroupMemoryBarrierSynced();
+
+    if (flattenedLocalIndex == 0)
+    {
+        uint tileIndex = GetTileIndex(aGroupId.xy);
+        RWStructuredBuffer<SR_TileData> outTileData = GetRWStructuredBuffer<SR_TileData>(Constants.mTileGridRWDescriptorIndex);
+        ldsTileData.mNumLights = ldsLightIndexCounter;
+        outTileData[tileIndex] = ldsTileData;
+    }
+}

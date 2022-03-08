@@ -29,15 +29,17 @@ extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8"./"; }
 #endif
 
 #if IS_DESKTOP_PLATFORM
-	#if ENABLE_NVIDIA_AFTERMATH
+	#if ENABLE_NVAPI
 		#include "nvapi.h"
 	#endif
-	#if ENABLE_NVIDIA_AFTERMATH
+	#if ENABLE_AGS
 		#include "amd_ags.h"
 	#endif
 
 	#if ENABLE_NVIDIA_AFTERMATH
 		#include "GFSDK_Aftermath.h"
+		#include "GFSDK_Aftermath_GpuCrashDump.h"
+		#include "GFSDK_Aftermath_GpuCrashDumpDecoding.h"
 	#endif
 #endif
 
@@ -45,15 +47,19 @@ SR_RenderDevice_DX12* SR_RenderDevice_DX12::gD3D12Instance = nullptr;
 
 SR_RenderDevice_DX12::SR_RenderDevice_DX12()
 	: SR_RenderDevice(SR_API::D3D12)
+#if ENABLE_DRED
 	, mEnableDRED(false)
+#endif
 {
 	if (gD3D12Instance != nullptr)
 		SC_ASSERT(false, "Already created RenderDevice.");
 	else
 		gD3D12Instance = this;
 
+#if ENABLE_DRED
 	if (SC_CommandLine::HasCommand("dred"))
 		mEnableDRED = true;
+#endif
 
 	SC_Fill(mD3D12RootSignatures, static_cast<uint32>(SR_RootSignatureType::COUNT), nullptr);
 }
@@ -234,17 +240,166 @@ ID3D12Device6* SR_RenderDevice_DX12::GetD3D12Device6() const
 	return mD3D12Device6.Get();
 }
 
+#if ENABLE_DRED
+const char* DREDGetBreadcrumbOp(const D3D12_AUTO_BREADCRUMB_OP& aOP)
+{
+	switch (aOP)
+	{
+	case D3D12_AUTO_BREADCRUMB_OP_SETMARKER: return "SetMarker";
+	case D3D12_AUTO_BREADCRUMB_OP_BEGINEVENT: return "BeginEvent";
+	case D3D12_AUTO_BREADCRUMB_OP_ENDEVENT: return "EndEvent";
+	case D3D12_AUTO_BREADCRUMB_OP_DRAWINSTANCED: return "DrawInstanced";
+	case D3D12_AUTO_BREADCRUMB_OP_DRAWINDEXEDINSTANCED: return "DrawIndexedInstanced";
+	case D3D12_AUTO_BREADCRUMB_OP_EXECUTEINDIRECT: return "ExecuteIndirect";
+	case D3D12_AUTO_BREADCRUMB_OP_DISPATCH: return "Dispatch";
+	case D3D12_AUTO_BREADCRUMB_OP_COPYBUFFERREGION: return "CopyBufferRegion";
+	case D3D12_AUTO_BREADCRUMB_OP_COPYTEXTUREREGION: return "CopyTextureRegion";
+	case D3D12_AUTO_BREADCRUMB_OP_COPYRESOURCE: return "CopySource";
+	case D3D12_AUTO_BREADCRUMB_OP_COPYTILES: return "CopyTiles";
+	case D3D12_AUTO_BREADCRUMB_OP_RESOLVESUBRESOURCE: return "ResolveSubresource";
+	case D3D12_AUTO_BREADCRUMB_OP_CLEARRENDERTARGETVIEW: return "ClearRTV";
+	case D3D12_AUTO_BREADCRUMB_OP_CLEARUNORDEREDACCESSVIEW: return "ClearUAV";
+	case D3D12_AUTO_BREADCRUMB_OP_CLEARDEPTHSTENCILVIEW: return "ClearDSV";
+	case D3D12_AUTO_BREADCRUMB_OP_RESOURCEBARRIER: return "ResourceBarrier";
+	case D3D12_AUTO_BREADCRUMB_OP_EXECUTEBUNDLE: return "ExecuteBundle";
+	case D3D12_AUTO_BREADCRUMB_OP_PRESENT: return "Present";
+	case D3D12_AUTO_BREADCRUMB_OP_RESOLVEQUERYDATA: return "ResolveQueryData";
+	case D3D12_AUTO_BREADCRUMB_OP_BEGINSUBMISSION: return "BeginSubmission";
+	case D3D12_AUTO_BREADCRUMB_OP_ENDSUBMISSION: return "EndSubmission";
+	case D3D12_AUTO_BREADCRUMB_OP_DECODEFRAME: return "DecodeFrame";
+	case D3D12_AUTO_BREADCRUMB_OP_PROCESSFRAMES: return "ProcessFrames";
+	case D3D12_AUTO_BREADCRUMB_OP_ATOMICCOPYBUFFERUINT: return "AtomicCopyBufferUint";
+	case D3D12_AUTO_BREADCRUMB_OP_ATOMICCOPYBUFFERUINT64: return "AtomicCopyBufferUint64";
+	case D3D12_AUTO_BREADCRUMB_OP_RESOLVESUBRESOURCEREGION: return "ResolveSubresourceRegion";
+	case D3D12_AUTO_BREADCRUMB_OP_WRITEBUFFERIMMEDIATE: return "WriteBufferImmediate";
+	case D3D12_AUTO_BREADCRUMB_OP_DECODEFRAME1: return "DecodeFrame1";
+	case D3D12_AUTO_BREADCRUMB_OP_SETPROTECTEDRESOURCESESSION: return "SetProtectedResourceSession";
+	case D3D12_AUTO_BREADCRUMB_OP_DECODEFRAME2: return "DecodeFrame2";
+	case D3D12_AUTO_BREADCRUMB_OP_PROCESSFRAMES1: return "ProcessFrames1";
+	case D3D12_AUTO_BREADCRUMB_OP_BUILDRAYTRACINGACCELERATIONSTRUCTURE: return "BuildRaytracingAccelerationStructure";
+	case D3D12_AUTO_BREADCRUMB_OP_EMITRAYTRACINGACCELERATIONSTRUCTUREPOSTBUILDINFO: return "EmitRaytracingAccelerationStructurePostBuildInfo";
+	case D3D12_AUTO_BREADCRUMB_OP_COPYRAYTRACINGACCELERATIONSTRUCTURE: return "CopyRaytracingAccelerationStructure";
+	case D3D12_AUTO_BREADCRUMB_OP_DISPATCHRAYS: return "DispatchRays";
+	case D3D12_AUTO_BREADCRUMB_OP_INITIALIZEMETACOMMAND: return "InitializeMetaCommand";
+	case D3D12_AUTO_BREADCRUMB_OP_EXECUTEMETACOMMAND: return "ExecuteMetaCommand";
+	case D3D12_AUTO_BREADCRUMB_OP_ESTIMATEMOTION: return "EstimateMotion";
+	case D3D12_AUTO_BREADCRUMB_OP_RESOLVEMOTIONVECTORHEAP: return "ResolveMotionVectorHeap";
+	case D3D12_AUTO_BREADCRUMB_OP_SETPIPELINESTATE1: return "SetPipelineState1";
+	case D3D12_AUTO_BREADCRUMB_OP_INITIALIZEEXTENSIONCOMMAND: return "InitializeExtensionCommand";
+	case D3D12_AUTO_BREADCRUMB_OP_EXECUTEEXTENSIONCOMMAND: return "ExecuteExtensionCommand";
+	case D3D12_AUTO_BREADCRUMB_OP_DISPATCHMESH: return "DispatchMesh";
+	case D3D12_AUTO_BREADCRUMB_OP_ENCODEFRAME: return "EncodeFrame";
+	case D3D12_AUTO_BREADCRUMB_OP_RESOLVEENCODEROUTPUTMETADATA: return "ResolveEncoderOutputMetaData";
+	default: return "<Unknown>";
+	}
+}
+
+static const char* DREDGetAllocationType(const D3D12_DRED_ALLOCATION_TYPE& aType)
+{
+	switch (aType)
+	{
+	case D3D12_DRED_ALLOCATION_TYPE_COMMAND_QUEUE: return "CommandQueue";
+	case D3D12_DRED_ALLOCATION_TYPE_COMMAND_ALLOCATOR: return "CommandAllocator";
+	case D3D12_DRED_ALLOCATION_TYPE_PIPELINE_STATE: return "PipelineState";
+	case D3D12_DRED_ALLOCATION_TYPE_COMMAND_LIST: return "CommandList";
+	case D3D12_DRED_ALLOCATION_TYPE_FENCE: return "Fence";
+	case D3D12_DRED_ALLOCATION_TYPE_DESCRIPTOR_HEAP: return "DescriptorHeap";
+	case D3D12_DRED_ALLOCATION_TYPE_HEAP: return "Heap";
+	case D3D12_DRED_ALLOCATION_TYPE_QUERY_HEAP: return "QueryHeap";
+	case D3D12_DRED_ALLOCATION_TYPE_COMMAND_SIGNATURE: return "CommandSignature";
+	case D3D12_DRED_ALLOCATION_TYPE_PIPELINE_LIBRARY: return "PipelineLibrary";
+	case D3D12_DRED_ALLOCATION_TYPE_VIDEO_DECODER: return "VideoDecoder";
+	case D3D12_DRED_ALLOCATION_TYPE_VIDEO_PROCESSOR: return "VideoProcessor";
+	case D3D12_DRED_ALLOCATION_TYPE_RESOURCE: return "Resource";
+	case D3D12_DRED_ALLOCATION_TYPE_PASS: return "Pass";
+	case D3D12_DRED_ALLOCATION_TYPE_CRYPTOSESSION: return "CryptoSession";
+	case D3D12_DRED_ALLOCATION_TYPE_CRYPTOSESSIONPOLICY: return "CryptoSessionPolicy";
+	case D3D12_DRED_ALLOCATION_TYPE_PROTECTEDRESOURCESESSION: return "ProtectedResourceSession";
+	case D3D12_DRED_ALLOCATION_TYPE_VIDEO_DECODER_HEAP: return "VideoDecoderHeap";
+	case D3D12_DRED_ALLOCATION_TYPE_COMMAND_POOL: return "CommandPool";
+	case D3D12_DRED_ALLOCATION_TYPE_COMMAND_RECORDER: return "CommandRecorder";
+	case D3D12_DRED_ALLOCATION_TYPE_STATE_OBJECT: return "StateObject";
+	case D3D12_DRED_ALLOCATION_TYPE_METACOMMAND: return "MetaCommand";
+	case D3D12_DRED_ALLOCATION_TYPE_SCHEDULINGGROUP: return "SchedulingGroup";
+	case D3D12_DRED_ALLOCATION_TYPE_VIDEO_MOTION_ESTIMATOR: return "VideoMotionEstimator";
+	case D3D12_DRED_ALLOCATION_TYPE_VIDEO_MOTION_VECTOR_HEAP: return "VideoMotionVectorHeap";
+	case D3D12_DRED_ALLOCATION_TYPE_VIDEO_EXTENSION_COMMAND: return "VideoExtensionCommand";
+	case D3D12_DRED_ALLOCATION_TYPE_VIDEO_ENCODER: return "VideoEncoder";
+	case D3D12_DRED_ALLOCATION_TYPE_VIDEO_ENCODER_HEAP: return "VideoEncoderHeap";
+	default: return "<Unknown>";
+	};
+}
+
 void SR_RenderDevice_DX12::OutputDredDebugData()
 {
+	if (!mEnableDRED)
+		return;
+
+	SC_MutexLock lock(mDREDMutex);
+
+	static constexpr uint32 AutoBreadcrumbsBufferSizeInBytes = 65536;
+	static constexpr uint32 AutoBreadcrumbsCommandHistoryOffset = 4096;
+	static constexpr uint32 AutoBreadcrumbsCommandHistoryMax = (AutoBreadcrumbsBufferSizeInBytes - AutoBreadcrumbsCommandHistoryOffset) / 4;
+
 	SR_ComPtr<ID3D12DeviceRemovedExtendedData1> dred;
-	VerifyHRESULT(mD3D12Device->QueryInterface(IID_PPV_ARGS(&dred)));
+	if(FAILED(mD3D12Device->QueryInterface(IID_PPV_ARGS(&dred)))) 
+		return;
 
 	D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1 dredAutoBreadcrumbsOutput;
-	VerifyHRESULT(dred->GetAutoBreadcrumbsOutput1(&dredAutoBreadcrumbsOutput));
+	if (FAILED(dred->GetAutoBreadcrumbsOutput1(&dredAutoBreadcrumbsOutput))) 
+		return;
 
 	D3D12_DRED_PAGE_FAULT_OUTPUT dredPageFaultOutput;
-	VerifyHRESULT(dred->GetPageFaultAllocationOutput(&dredPageFaultOutput));
+	if (FAILED(dred->GetPageFaultAllocationOutput(&dredPageFaultOutput))) 
+		return;
+
+	SC_ERROR("GPU Page Fault: VA: 0x%p", dredPageFaultOutput.PageFaultVA);
+	SC_ERROR("<----- RECENTLY FREED RESOURCES BEGIN ----->");
+	const D3D12_DRED_ALLOCATION_NODE* resourcePage = dredPageFaultOutput.pHeadRecentFreedAllocationNode;
+	while (resourcePage)
+	{
+		SC_ERROR("\t>>[Type: %s] - %s", DREDGetAllocationType(resourcePage->AllocationType), SC_UTF16ToUTF8(resourcePage->ObjectNameW).c_str());
+		resourcePage = resourcePage->pNext;
+	}
+	SC_ERROR("<----- RECENTLY FREED RESOURCES BEGIN ----->");
+
+	SC_ERROR("<----- BREADCRUMBS BEGIN ----->");
+	uint32 nodeIdx = 0;
+	const D3D12_AUTO_BREADCRUMB_NODE1* node = dredAutoBreadcrumbsOutput.pHeadAutoBreadcrumbNode;
+	while (node)
+	{
+		SC_ERROR("\t---- BREADCRUMB NODE %i BEGIN ----", nodeIdx);
+
+		const uint32 completedOp = *node->pLastBreadcrumbValue;
+
+		int32 contextIndex = 0;
+		while (contextIndex < (int32)node->BreadcrumbContextsCount && node->pBreadcrumbContexts[contextIndex].BreadcrumbIndex < completedOp)
+			++contextIndex;
+		--contextIndex;
+
+		uint32 count = 0;
+		while (count < completedOp && count < AutoBreadcrumbsCommandHistoryMax)
+		{
+			std::string contextString("None");
+			uint32 index = completedOp - count - 1;
+			if (contextIndex >= 0 && node->pBreadcrumbContexts[contextIndex].BreadcrumbIndex == index)
+			{
+				contextString = SC_UTF16ToUTF8(node->pBreadcrumbContexts[contextIndex].pContextString);
+				--contextIndex;
+			}
+
+			++count;
+			SC_ERROR("\t\t>>[Context: %s] - Command: %s", contextString.c_str(), DREDGetBreadcrumbOp(node->pCommandHistory[index]));
+		}
+
+		SC_ERROR("---- BREADCRUMB NODE %i END ----", nodeIdx);
+		++nodeIdx;
+		node = node->pNext;
+	}
+	SC_ERROR("<----- BREADCRUMBS END ----->");
+
 }
+#endif //ENABLE_DRED
 
 bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 {
@@ -335,6 +490,7 @@ bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 		debugger->EnableDebugLayer();
 	}
 
+#if ENABLE_DRED
 	if (mEnableDRED)
 	{
 		SC_LOG("D3D12 DRED: Enabled");
@@ -343,6 +499,7 @@ bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 		dredSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
 		dredSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
 	}
+#endif
 
 	SC_LOG("Creating D3D12Device.");
 	hr = D3D12CreateDevice(dxgiAdapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&mD3D12Device));
@@ -355,10 +512,21 @@ bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 		const uint32 aftermathFlags =
 			GFSDK_Aftermath_FeatureFlags_EnableMarkers |           // Enable event marker tracking.
 			GFSDK_Aftermath_FeatureFlags_EnableResourceTracking |  // Enable tracking of resources.
-			GFSDK_Aftermath_FeatureFlags_CallStackCapturing |      // Capture call stacks for all draw calls, compute dispatches, and resource copies.
-			GFSDK_Aftermath_FeatureFlags_GenerateShaderDebugInfo;  // Generate debug information for shaders.
+			GFSDK_Aftermath_FeatureFlags_CallStackCapturing;// |      // Capture call stacks for all draw calls, compute dispatches, and resource copies.
+			//GFSDK_Aftermath_FeatureFlags_GenerateShaderDebugInfo;  // Generate debug information for shaders.
 
 		GFSDK_Aftermath_DX12_Initialize(GFSDK_Aftermath_Version_API, aftermathFlags, mD3D12Device.Get());
+
+		if (GFSDK_Aftermath_EnableGpuCrashDumps(
+			GFSDK_Aftermath_Version_API,
+			GFSDK_Aftermath_GpuCrashDumpWatchedApiFlags_DX,
+			GFSDK_Aftermath_GpuCrashDumpFeatureFlags_DeferDebugInfoCallbacks,
+			GpuCrashDumpCallback,												// Register callback for GPU crash dumps.
+			nullptr,															// Register callback for shader debug information. (Optional)
+			nullptr,															// Register callback for GPU crash dump description. (Optional)
+			this)																// Set the GpuCrashTracker object as user data for the above callbacks.
+			!= GFSDK_Aftermath_Result_Success)
+			return false;
 	}
 
 #endif //ENABLE_NVIDIA_AFTERMATH
@@ -590,7 +758,7 @@ bool SR_RenderDevice_DX12::InitTempStorage()
 
 	desc.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES;
 	HRESULT hr = mD3D12Device->CreateHeap(&desc, IID_PPV_ARGS(&mTempRenderTargetsHeap));
-	if (FAILED(hr))
+	if (!VerifyHRESULT(hr))
 		return false;
 
 	desc.SizeInBytes = MB(256);
@@ -648,7 +816,7 @@ void SR_RenderDevice_DX12::GatherSupportCaps()
 
 	D3D12_FEATURE_DATA_D3D12_OPTIONS dx12Options = {};
 	hr = mD3D12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &dx12Options, sizeof(dx12Options));
-	if (FAILED(hr))
+	if (!VerifyHRESULT(hr))
 	{
 		SC_ERROR("Could not check options from device");
 		return;
@@ -659,7 +827,7 @@ void SR_RenderDevice_DX12::GatherSupportCaps()
 
 	D3D12_FEATURE_DATA_D3D12_OPTIONS5 dx12Options5 = {};
 	hr = mD3D12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &dx12Options5, sizeof(dx12Options5));
-	if (FAILED(hr))
+	if (!VerifyHRESULT(hr))
 	{
 		SC_ERROR("Could not check Options5 from device");
 		return;
@@ -670,7 +838,7 @@ void SR_RenderDevice_DX12::GatherSupportCaps()
 
 	D3D12_FEATURE_DATA_D3D12_OPTIONS6 dx12Options6 = {};
 	hr = mD3D12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS6, &dx12Options6, sizeof(dx12Options6));
-	if (FAILED(hr))
+	if (!VerifyHRESULT(hr))
 	{
 		SC_ERROR("Could not check Options6 from device");
 		return;
@@ -681,7 +849,7 @@ void SR_RenderDevice_DX12::GatherSupportCaps()
 
 	D3D12_FEATURE_DATA_D3D12_OPTIONS7 dx12Options7 = {};
 	hr = mD3D12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &dx12Options7, sizeof(dx12Options7));
-	if (FAILED(hr))
+	if (!VerifyHRESULT(hr))
 	{
 		SC_ERROR("Could not check Options7 from device");
 		return;
@@ -693,6 +861,99 @@ void SR_RenderDevice_DX12::GatherSupportCaps()
 	SC_LOG("Mesh Shaders: %s", mSupportCaps.mEnableMeshShaders ? "true" : "false");
 	SC_LOG("Sampler Feedback: %s", mSupportCaps.mEnableSamplerFeedback ? "true" : "false");
 }
+
+#if ENABLE_NVIDIA_AFTERMATH
+void SR_RenderDevice_DX12::GpuCrashDumpCallback(const void* aGpuCrashDump, const uint32 aGpuCrashDumpSize, void* aUserData)
+{
+	SR_RenderDevice_DX12* renderDevice = reinterpret_cast<SR_RenderDevice_DX12*>(aUserData);
+	renderDevice->OnGpuCrashDump(aGpuCrashDump, aGpuCrashDumpSize);
+}
+void SR_RenderDevice_DX12::OnGpuCrashDump(const void* aGpuCrashDump, const uint32 aGpuCrashDumpSize)
+{
+	// Create a GPU crash dump decoder object for the GPU crash dump.
+	GFSDK_Aftermath_GpuCrashDump_Decoder decoder = {};
+	GFSDK_Aftermath_GpuCrashDump_CreateDecoder(
+		GFSDK_Aftermath_Version_API,
+		aGpuCrashDump,
+		aGpuCrashDumpSize,
+		&decoder);
+
+	// Use the decoder object to read basic information, like application
+	// name, PID, etc. from the GPU crash dump.
+	GFSDK_Aftermath_GpuCrashDump_BaseInfo baseInfo = {};
+	GFSDK_Aftermath_GpuCrashDump_GetBaseInfo(decoder, &baseInfo);
+
+	// Use the decoder object to query the application name that was set
+	// in the GPU crash dump description.
+	uint32 applicationNameLength = 0;
+	GFSDK_Aftermath_GpuCrashDump_GetDescriptionSize(
+		decoder,
+		GFSDK_Aftermath_GpuCrashDumpDescriptionKey_ApplicationName,
+		&applicationNameLength);
+
+	std::vector<char> applicationName(applicationNameLength, '\0');
+
+	GFSDK_Aftermath_GpuCrashDump_GetDescription(
+		decoder,
+		GFSDK_Aftermath_GpuCrashDumpDescriptionKey_ApplicationName,
+		uint32(applicationName.size()),
+		applicationName.data());
+
+	// Create a unique file name for writing the crash dump data to a file.
+	// Note: due to an Nsight Aftermath bug (will be fixed in an upcoming
+	// driver release) we may see redundant crash dumps. As a workaround,
+	// attach a unique count to each generated file name.
+	static int count = 0;
+	const std::string baseFileName =
+		std::string(applicationName.data())
+		+ "-"
+		+ std::to_string(baseInfo.pid)
+		+ "-"
+		+ std::to_string(++count);
+
+	// Write the the crash dump data to a file using the .nv-gpudmp extension
+	// registered with Nsight Graphics.
+	const std::string crashDumpFileName = baseFileName + ".nv-gpudmp";
+	std::ofstream dumpFile(crashDumpFileName, std::ios::out | std::ios::binary);
+	if (dumpFile)
+	{
+		dumpFile.write((const char*)aGpuCrashDump, aGpuCrashDumpSize);
+		dumpFile.close();
+	}
+
+	// Decode the crash dump to a JSON string.
+	// Step 1: Generate the JSON and get the size.
+	uint32 jsonSize = 0;
+	GFSDK_Aftermath_GpuCrashDump_GenerateJSON(
+		decoder,
+		GFSDK_Aftermath_GpuCrashDumpDecoderFlags_ALL_INFO,
+		GFSDK_Aftermath_GpuCrashDumpFormatterFlags_NONE,
+		nullptr,
+		nullptr,
+		nullptr,
+		nullptr,
+		this,
+		&jsonSize);
+	// Step 2: Allocate a buffer and fetch the generated JSON.
+	std::vector<char> json(jsonSize);
+	GFSDK_Aftermath_GpuCrashDump_GetJSON(
+		decoder,
+		uint32(json.size()),
+		json.data());
+
+	// Write the the crash dump data as JSON to a file.
+	const std::string jsonFileName = crashDumpFileName + ".json";
+	std::ofstream jsonFile(jsonFileName, std::ios::out | std::ios::binary);
+	if (jsonFile)
+	{
+		jsonFile.write(json.data(), json.size());
+		jsonFile.close();
+	}
+
+	// Destroy the GPU crash dump decoder object.
+	GFSDK_Aftermath_GpuCrashDump_DestroyDecoder(decoder);
+}
+#endif
 
 SC_Ref<SR_Texture> SR_RenderDevice_DX12::LoadTextureInternal(const SC_FilePath& aTextureFilePath)
 {

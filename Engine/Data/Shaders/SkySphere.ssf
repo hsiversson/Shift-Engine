@@ -26,28 +26,7 @@ PixelInput MainVS(VertexInput aInput)
     return output;
 }
 
-struct DrawInfoStruct
-{
-    uint mSkyCubeMapDescriptorIndex;
-};
-ConstantBuffer<DrawInfoStruct> DrawInfo : register(b0);
-
 float4 MainPS(PixelInput aInput) : SV_TARGET0
 {
-    //TextureCube skyCubeMap = GetTextureCube(DrawInfo.mSkyCubeMapDescriptorIndex);
-    //color.rgb = skyCubeMap.SampleLevel(gBilinearWrap, aInput.mViewDirection, 0).rgb;
-
-    //const float3 sunLightDirection = gSceneConstants.mEnvironmentConstants.mSunLightDirection;
-    //const float sunLightIntensity = gSceneConstants.mEnvironmentConstants.mSunLightIntensity;
-    //const float3 sunLightColor = gSceneConstants.mEnvironmentConstants.mSunLightColor;
-
-    //const float dirScalar      = saturate( dot( aInput.mViewDirection, sunLightDirection ) );    
-    //const float3 sunHaloPow    = pow( dirScalar, 0.8f );
-    //const float3 sunHalo       = float3(1.0f, 0.0f, 1.0f) * 2.0f * sunHaloPow * 1.0f;
-
-    //const float3 sunPow        = pow( dirScalar, max(1e-8f, 35.0f) );
-    //const float3 sun           = sunLightColor * 35.0f * sunPow;
-    //const float3 combinedSun   = lerp( sunHalo, sun, sunPow );
-
     return float4(SampleAtmosphereColor(aInput.mViewDirection), 1.0f);
 }

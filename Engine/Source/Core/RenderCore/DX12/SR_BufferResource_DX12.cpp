@@ -57,11 +57,11 @@ bool SR_BufferResource_DX12::Init(const void* aInitialData)
 	if (mProperties.mBindFlags & SR_BufferBindFlag_RaytracingBuffer)
 		initialState = D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
 
-	if (mProperties.mBindFlags == SR_BufferBindFlag_Buffer && mProperties.mWritable)
-		initialState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-
-	if (aInitialData)
-		initialState = D3D12_RESOURCE_STATE_COPY_DEST;
+	//if (mProperties.mBindFlags == SR_BufferBindFlag_Buffer && mProperties.mWritable)
+	//	initialState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+	//
+	//if (aInitialData)
+	//	initialState = D3D12_RESOURCE_STATE_COPY_DEST;
 
 	if (mProperties.mIsUploadBuffer)
 	{
@@ -70,7 +70,7 @@ bool SR_BufferResource_DX12::Init(const void* aInitialData)
 	}
 
 	HRESULT hr = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, initialState, nullptr, IID_PPV_ARGS(&mD3D12Resource));
-	if (FAILED(hr))
+	if (!VerifyHRESULT(hr))
 	{
 		//LOG_ERROR("Could not create buffer with id: %ls \n", aDebugName);
 		return false;

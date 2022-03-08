@@ -35,7 +35,7 @@ SR_DescriptorHeap_DX12::SR_DescriptorHeap_DX12(uint32 aNumDescriptors, const SR_
 	ID3D12Device* device = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device();
 	HRESULT hr = device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&mD3D12DescriptorHeap));
 
-	if (FAILED(hr))
+	if (!VerifyHRESULT(hr))
 	{
 		assert(false);
 		return;

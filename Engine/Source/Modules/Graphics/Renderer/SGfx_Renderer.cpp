@@ -101,6 +101,10 @@ bool SGfx_Renderer::Init(SGfx_Environment* aEnvironment)
 
 	mPostEffectCBuffers.Respace(4);
 
+	mLightCulling = SC_MakeUnique<SGfx_LightCulling>();
+	if (!mLightCulling->Init())
+		return false;
+
 	mShadowMapSystem = SC_MakeUnique<SGfx_ShadowSystem>();
 	SGfx_CascadedShadowMap::Settings csmSettings;
 	mShadowMapSystem->GetCSM()->Init(csmSettings);
@@ -142,6 +146,8 @@ void SGfx_Renderer::RenderView(SGfx_View* aView)
 	SubmitGraphicsTask(std::bind(&SGfx_Renderer::PreRenderUpdates, this), prepareData.mPreRenderUpdatesEvent);
 
 	SubmitGraphicsTask(std::bind(&SGfx_Renderer::RenderPrePass, this), prepareData.mPrePassEvent);
+
+	SubmitComputeTask(std::bind(&SGfx_Renderer::ComputeLightCulling, this), prepareData.mLightCullingEvent);
 
 	SubmitComputeTask(std::bind(&SGfx_Renderer::ComputeAmbientOcclusion, this), prepareData.mAmbientOcclusionEvent);
 
@@ -185,6 +191,11 @@ SC_Vector2 SGfx_Renderer::GetJitter(const SC_IntVector2& aTargetResolution) cons
 	float jitterY = (haltonY / aTargetResolution.y);
 
 	return SC_Vector2(jitterX, jitterY);
+}
+
+SGfx_LightCulling* SGfx_Renderer::GetLightCulling() const
+{
+	return mLightCulling.get();
 }
 
 SGfx_ShadowSystem* SGfx_Renderer::GetShadowMapSystem() const
@@ -374,6 +385,16 @@ void SGfx_Renderer::RenderPrePass()
 	transitions.Add(SC_Pair(SR_ResourceState_Read, mMotionVectors.mResource.get()));
 	cmdList->TransitionBarrier(transitions);
 	cmdList->EndEvent(); // Render PrePass
+}
+
+void SGfx_Renderer::ComputeLightCulling()
+{
+	SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
+	const SGfx_ViewData& renderData = mCurrentView->GetRenderData();
+
+	cmdList->WaitFor(renderData.mPrePassEvent);
+	cmdList->SetRootConstantBuffer(mViewConstantsBuffer.get(), 1);
+	mLightCulling->CullLights(cmdList.get(), renderData, mDepthStencilSRV.get());
 }
 
 void SGfx_Renderer::ComputeAmbientOcclusion()

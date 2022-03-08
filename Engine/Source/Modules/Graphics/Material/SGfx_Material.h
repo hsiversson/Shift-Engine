@@ -21,7 +21,9 @@ enum class SGfx_MaterialShadingModel
 	ClearCoat,
 	Hair,
 	Eye,
-	Cloth
+	Cloth,
+
+	COUNT
 };
 
 enum class SGfx_MaterialAttributes
@@ -35,7 +37,7 @@ enum class SGfx_MaterialAttributes
 	Opacity,
 	ShadingModel,
 
-	COUNT,
+	COUNT
 };
 
 enum class SGfx_MaterialType
@@ -45,7 +47,7 @@ enum class SGfx_MaterialType
 	Volume,
 	PostProcess,
 
-	COUNT,
+	COUNT
 };
 
 enum class SGfx_MaterialBlendMode
@@ -121,6 +123,7 @@ public:
 
 	const SC_FilePath& GetSourceFile() const { return mSourceFile; }
 private:
+
 	void AddTexture(SC_Ref<SR_Texture> aTexture);
 	SC_Array<SC_Ref<SR_Texture>> mTextures;
 
@@ -146,5 +149,23 @@ private:
 	SGfx_MaterialInput mSpecular;
 	SGfx_MaterialInput mOpacity;
 	SGfx_MaterialInput mAlphaMask;
+
+	bool mEnableGeometricSpecularAA;
+	bool mEnableTangentSpaceNormals;
 };
 
+
+/*
+	MATERIAL JSON TEMPLATE
+	{
+		"MainShader": "Shaders/DefaultMeshShader.ssf",
+		"Properties": 
+		[
+			"MaterialType": 0,
+			"ShadingModel": 1,
+			"BlendMode": 0,
+			"AlphaRef": 0.5f,
+			"OutputVelocity": true
+		]
+	}
+*/

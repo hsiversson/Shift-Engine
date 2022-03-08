@@ -9,7 +9,11 @@ target_include_directories(RenderCore PRIVATE
 							${ENGINE_SOURCE_DIRECTORY}/Core
 							${D3D12_INCLUDE_PATH}
 							${DXC_INCLUDE_PATH}
-							${IMGUI_INCLUDE_PATH})
+							${WINPIXEVENTRUNTIME_INCLUDE_PATH}
+							${IMGUI_INCLUDE_PATH}
+							${NVAPI_INCLUDE_PATH}
+							${AGS_INCLUDE_PATH}
+							${AFTERMATH_INCLUDE_PATH})
 							
 target_precompile_headers(RenderCore PRIVATE 
 							${ENGINE_SOURCE_DIRECTORY}/Core/Common/SC_Base.h

@@ -80,7 +80,7 @@ private:
 
 	SC_FilePath mSourceFile;
 
-	SC_UniquePtr<aiScene> mImportedScene;
+	aiScene* mImportedScene;
 };
 
 class SED_AssimpImporter

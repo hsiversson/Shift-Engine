@@ -19,7 +19,7 @@ void SC_Logger::Destroy()
 	gInstance = nullptr;
 }
 
-void SC_Logger::LogMessage(const SC_LogType& aType, const std::string& aMsg, const char* aFunc /*= nullptr*/)
+void SC_Logger::LogMessage(const SC_LogType& aType, const std::string& aMsg, const char* aFunc /*= nullptr*/, bool aFlush /*= false*/)
 {
 	SC_LogMessage msg;
 	msg.mMessage = aMsg;
@@ -28,6 +28,12 @@ void SC_Logger::LogMessage(const SC_LogType& aType, const std::string& aMsg, con
 	msg.mTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 
 	gInstance->mThread.QueueMessage(msg);
+
+	if (aFlush)
+	{
+		while (!gInstance->mThread.mQueue.empty())
+			SC_Thread::Yield();
+	}
 }
 
 SC_Logger::SC_Logger()

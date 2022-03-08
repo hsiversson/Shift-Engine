@@ -5,6 +5,7 @@
 #include "Graphics/Environment/SGfx_Environment.h"
 #include "Platform/Async/SC_Future.h"
 #include "RenderCore/RenderTasks/SR_TaskEvent.h"
+#include "../Lighting/SGfx_LightCulling.h"
 
 class SGfx_MaterialInstance;
 class SR_Buffer;
@@ -35,12 +36,9 @@ struct SGfx_RenderObject
 
 struct SGfx_LightRenderData
 {
-	SC_Array<SGfx_RenderObject> mVisibleShadowCasters;
-
-	SGfx_Light::GPUData mGPUData;
-
-	SGfx_LightType mType;
+	SGfx_Light::LocalLightShaderData mGPUData;
 	bool mCastShadow;
+	SC_Array<SGfx_RenderObject> mVisibleShadowCasters;
 };
 
 struct alignas(16) SGfx_SceneConstants
@@ -53,6 +51,7 @@ struct alignas(16) SGfx_SceneConstants
 	SGfx_ViewConstants mViewConstants;
 	SGfx_EnvironmentConstants mEnvironmentConstants;
 	SGfx_ShadowConstants mShadowConstants;
+	SGfx_LightCullingConstants mLightCullingConstants;
 
 	uint32 mInstanceDataBufferIndex;
 	uint32 mMaterialInfoBufferIndex;
@@ -84,6 +83,7 @@ public:
 		mBuildRaytracingSceneEvent = SC_MakeUnique<SR_TaskEvent>();
 		mPreRenderUpdatesEvent = SC_MakeUnique<SR_TaskEvent>();
 		mPrePassEvent = SC_MakeUnique<SR_TaskEvent>();
+		mLightCullingEvent = SC_MakeUnique<SR_TaskEvent>();
 		mShadowsEvent = SC_MakeUnique<SR_TaskEvent>();
 		mAmbientOcclusionEvent = SC_MakeUnique<SR_TaskEvent>();
 		mRenderOpaqueEvent = SC_MakeUnique<SR_TaskEvent>();
@@ -109,6 +109,7 @@ public:
 		mBuildRaytracingSceneEvent->Reset();
 		mPreRenderUpdatesEvent->Reset();
 		mPrePassEvent->Reset();
+		mLightCullingEvent->Reset();
 		mShadowsEvent->Reset();
 		mAmbientOcclusionEvent->Reset();
 		mRenderOpaqueEvent->Reset();
@@ -136,6 +137,7 @@ public:
 	SC_UniquePtr<SR_TaskEvent> mBuildRaytracingSceneEvent;
 	SC_UniquePtr<SR_TaskEvent> mPreRenderUpdatesEvent;
 	SC_UniquePtr<SR_TaskEvent> mPrePassEvent;
+	SC_UniquePtr<SR_TaskEvent> mLightCullingEvent;
 	SC_UniquePtr<SR_TaskEvent> mShadowsEvent;
 	SC_UniquePtr<SR_TaskEvent> mAmbientOcclusionEvent;
 	SC_UniquePtr<SR_TaskEvent> mRenderOpaqueEvent;

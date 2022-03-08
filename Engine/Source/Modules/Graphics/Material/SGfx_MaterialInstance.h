@@ -87,7 +87,6 @@ private:
 };
 
 /*
-
 	MATERIAL INSTANCE JSON TEMPLATE
 	{
 		"MaterialTemplate": "../Materials/MaterialTemplate.smt,

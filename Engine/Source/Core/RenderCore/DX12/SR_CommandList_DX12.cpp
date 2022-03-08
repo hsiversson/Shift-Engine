@@ -39,14 +39,14 @@ bool SR_CommandList_DX12::Init(const char* aDebugName)
 	}
 
 	HRESULT result = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateCommandAllocator(cmdListType, IID_PPV_ARGS(&mD3D12CommandAllocator));
-	if (FAILED(result))
+	if (!VerifyHRESULT(result))
 	{
 		assert(false);
 		return false;
 	}
 	
 	result = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateCommandList(0, cmdListType, mD3D12CommandAllocator.Get(), nullptr, IID_PPV_ARGS(&mD3D12CommandList));
-	if (FAILED(result))
+	if (!VerifyHRESULT(result))
 	{
 		assert(false);
 		return false;
@@ -79,7 +79,7 @@ void SR_CommandList_DX12::End()
 
 void SR_CommandList_DX12::BeginEvent(const char* aName)
 {
-#if USE_PIX
+#if ENABLE_PIX
 	PIXBeginEvent(mD3D12CommandList.Get(), 0, "%s", aName);
 #else
 	(void)aName;
@@ -88,7 +88,7 @@ void SR_CommandList_DX12::BeginEvent(const char* aName)
 
 void SR_CommandList_DX12::EndEvent()
 {
-#if USE_PIX
+#if ENABLE_PIX
 	PIXEndEvent(mD3D12CommandList.Get());
 #endif
 }

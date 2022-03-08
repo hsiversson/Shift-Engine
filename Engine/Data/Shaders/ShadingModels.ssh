@@ -4,31 +4,77 @@
 
 #include "BRDF.ssh"
 #include "MaterialData.ssh"
+#include "LightsCommon.ssh"
 
-float3 DefaultShading(in const MaterialData aMaterialData, in const float3 aLightDirection, in const float3 aViewDirection)
+float New_a2(float a2, float aSinAlpha, float vDotH)
 {
-    float3 n = aMaterialData.mWorldNormal;
-
-    float3 h = normalize(aViewDirection + aLightDirection);
-    float nDotL = dot(n, aLightDirection);
-    float nDotV = dot(n, aViewDirection);
-    float vDotL = dot(aViewDirection, aLightDirection);
-	float nDotH = saturate(dot(n, h));
-	float vDotH = saturate(dot(aViewDirection, h));
-
-    nDotV = saturate(abs(nDotV) + 1e-5f);
-
-    float a2 = Pow4(aMaterialData.mRoughness);
-    float energy = 1.0f;
-
-    float D = D_GGX(a2, nDotH) * energy;
-    float G = G_SmithJointApprox(a2, nDotV, nDotL);
-    float3 F = F_Schlick(aMaterialData.mSpecularColor, vDotH);
-
-    float3 diffuseBRDF = aMaterialData.mDiffuseColor * (1/PI);
-    float3 specularBRDF = (D*G*F);
-
-    return (diffuseBRDF + specularBRDF) * saturate(nDotL);
+	return a2 + 0.25f * aSinAlpha * (3.0f * fastSqrtNR0(a2) + aSinAlpha) / ( vDotH + 0.001f );
 }
 
+float EnergyNormalization( inout float a2, float vDotH, SR_AreaLight aLight )
+{
+	if(aLight.mSphereSinAlphaSoft > 0.0f)
+	{
+		// Modify Roughness
+		a2 = saturate(a2 + Pow2(aLight.mSphereSinAlphaSoft) / (vDotH * 3.6f + 0.4f));
+	}
+
+	float sphere_a2 = a2;
+	float energy = 1.0f;
+	if(aLight.mSphereSinAlpha > 0.0f)
+	{
+		sphere_a2 = New_a2(a2, aLight.mSphereSinAlpha, vDotH);
+		energy = a2 / sphere_a2;
+	}
+
+	return energy;
+}
+
+
+#if USE_SUBSURFACE_SHADING
+float3 CalculateShading(in MaterialData aMaterialData, in SR_AreaLight aAreaLight, in const float3 aLightDirection, in const float aNdotL, in const float aFalloff, in const float3 aViewDirection)
+{
+}
+
+#elif USE_CLEARCOAT_SHADING
+float3 CalculateShading(in MaterialData aMaterialData, in SR_AreaLight aAreaLight, in const float3 aLightDirection, in const float aNdotL, in const float aFalloff, in const float3 aViewDirection)
+{
+}
+
+#elif USE_HAIR_SHADING
+float3 CalculateShading(in MaterialData aMaterialData, in SR_AreaLight aAreaLight, in const float3 aLightDirection, in const float aNdotL, in const float aFalloff, in const float3 aViewDirection)
+{
+}
+
+#elif USE_EYE_SHADING
+float3 CalculateShading(in MaterialData aMaterialData, in SR_AreaLight aAreaLight, in const float3 aLightDirection, in const float aNdotL, in const float aFalloff, in const float3 aViewDirection)
+{
+}
+
+#elif USE_CLOTH_SHADING
+float3 CalculateShading(in MaterialData aMaterialData, in SR_AreaLight aAreaLight, in const float3 aLightDirection, in const float aNdotL, in const float aFalloff, in const float3 aViewDirection)
+{
+}
+
+#else //USE_DEFAULT_SHADING
+float3 CalculateShading(in MaterialData aMaterialData, in SR_AreaLight aAreaLight, in const float3 aLightDirection, in const float aNdotL, in const float aFalloff, in const float3 aViewDirection)
+{
+    SR_BxDFProperties bxdfProperties;
+    bxdfProperties.Init(aMaterialData.mWorldNormal, aViewDirection, aLightDirection);
+    bxdfProperties.SphereMaxNoH(aAreaLight.mSphereSinAlpha, true);
+    bxdfProperties.mNdotV = saturate(abs(bxdfProperties.mNdotV) + 1e-5f);
+
+    float a2 = Pow4(aMaterialData.mRoughness);
+	float energy = EnergyNormalization(a2, bxdfProperties.mVdotH, aAreaLight);
+
+    float D = D_GGX(a2, bxdfProperties.mNdotH) * energy;
+    float G = G_SmithJointApprox(a2, bxdfProperties.mNdotV, aNdotL);
+    float3 F = F_Schlick(aMaterialData.mSpecularColor, bxdfProperties.mVdotH);
+
+    float3 diffuseBRDF = Diffuse_Lambert(aMaterialData.mDiffuseColor) * (aFalloff * aNdotL);
+    float3 specularBRDF = ((D*G)*F) * (aFalloff * aNdotL);
+
+    return (diffuseBRDF + specularBRDF);
+}
+#endif
 #endif //SHADING_MODELS_HEADER

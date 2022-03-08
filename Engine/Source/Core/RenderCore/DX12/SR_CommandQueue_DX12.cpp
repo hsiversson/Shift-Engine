@@ -37,7 +37,7 @@ bool SR_CommandQueue_DX12::Init(const SR_CommandListType& aType, const char* aDe
 	}
 
 	HRESULT hr = mRenderDevice->GetD3D12Device()->CreateCommandQueue(&desc, IID_PPV_ARGS(&mD3D12CommandQueue));
-	if (FAILED(hr))
+	if (!VerifyHRESULT(hr))
 	{
 		SC_ASSERT(false, "Could not create command queue.");
 		return false;
@@ -130,7 +130,7 @@ void SR_CommandQueue_DX12::InsertWait(const SR_Fence& aFence)
 
 void SR_CommandQueue_DX12::BeginEvent(const char* aName)
 {
-#if USE_PIX
+#if ENABLE_PIX
 	PIXBeginEvent(mD3D12CommandQueue.Get(), 0, "%s", aName);
 #else
 	(void)aName;
@@ -139,7 +139,7 @@ void SR_CommandQueue_DX12::BeginEvent(const char* aName)
 
 void SR_CommandQueue_DX12::EndEvent()
 {
-#if USE_PIX
+#if ENABLE_PIX
 	PIXEndEvent(mD3D12CommandQueue.Get());
 #endif
 }

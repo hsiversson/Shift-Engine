@@ -47,7 +47,7 @@ bool SR_FenceResource_DX12::Wait(uint64 aValue, bool aBlock)
 		}
 
 		HRESULT hr = mD3D12Fence->SetEventOnCompletion(aValue, eventHandle);
-		if (SUCCEEDED(hr))
+		if (VerifyHRESULT(hr))
 		{
 			WaitForSingleObject(eventHandle, INFINITE);
 		}
@@ -65,7 +65,7 @@ ID3D12Fence* SR_FenceResource_DX12::GetD3D12Fence() const
 bool SR_FenceResource_DX12::Init(const SR_CommandListType& aType)
 {
 	HRESULT hr = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&mD3D12Fence));
-	if (FAILED(hr))
+	if (!VerifyHRESULT(hr))
 	{
 		SC_ASSERT(false, "Could not create fence.");
 		return false;

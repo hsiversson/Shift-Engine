@@ -274,12 +274,21 @@ bool SGfx_Material::SaveToFile(const SC_FilePath& aFilePath) const
 {
     SC_Json saveData;
 
-    saveData["Shader"] = (SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/DefaultMeshShader.ssf").GetStr();
+    saveData["MainShader"] = (SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/DefaultMeshShader.ssf").GetStr();
 
     for (const SC_Ref<SR_Texture>& tex : mTextures)
     {
         saveData["Textures"].push_back(tex->GetResource()->GetProperties().mSourceFile.GetStr());
     }
+
+	{
+		SC_Json& properties = saveData["Properties"];
+		properties["MaterialType"] = static_cast<uint32>(mMaterialType);
+		properties["ShadingModel"] = static_cast<uint32>(mShadingModel);
+		properties["BlendMode"] = static_cast<uint32>(mMaterialBlendMode);
+		properties["AlphaRef"] = mAlphaRef;
+		properties["OutputVelocity"] = mOutputVelocity;
+	}
 
 	mSourceFile = aFilePath.GetStr();
     return SC_SaveJson(aFilePath, saveData);
@@ -287,10 +296,20 @@ bool SGfx_Material::SaveToFile(const SC_FilePath& aFilePath) const
 
 bool SGfx_Material::LoadFromFile(const SC_FilePath& aFilePath)
 {
-
 	SC_Json savedData;
     if (!SC_LoadJson(aFilePath, savedData))
         return false;
+
+	if (savedData.contains("Properties"))
+	{
+		const SC_Json& properties = savedData["Properties"];
+
+		mMaterialType = static_cast<SGfx_MaterialType>(properties["MaterialType"].get<uint32>());
+		mShadingModel = static_cast<SGfx_MaterialShadingModel>(properties["ShadingModel"].get<uint32>());
+		mMaterialBlendMode = static_cast<SGfx_MaterialBlendMode>(properties["BlendMode"].get<uint32>());
+		mAlphaRef = properties["AlphaRef"].get<float>();
+		mOutputVelocity = properties["OutputVelocity"].get<bool>();
+	}
 
     mSourceFile = aFilePath.GetStr();
     return true;

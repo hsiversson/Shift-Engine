@@ -181,7 +181,7 @@ bool SR_RootSignature_DX12::Init()
 	SR_ComPtr<ID3DBlob> signatureBlob;
 	SR_ComPtr<ID3DBlob> signatureError;
 	HRESULT hr = D3D12SerializeVersionedRootSignature(&desc, &signatureBlob, &signatureError);
-	if (FAILED(hr))
+	if (!VerifyHRESULT(hr))
 	{
 		//if (signatureError)
 		//{
@@ -191,13 +191,13 @@ bool SR_RootSignature_DX12::Init()
 	}
 
 	hr = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&mD3D12RootSignature));
-	if (FAILED(hr))
+	if (!VerifyHRESULT(hr))
 		return false;
 
 	if (mProperties.mDebugName)
 	{
 		hr = mD3D12RootSignature->SetName(SC_UTF8ToUTF16(mProperties.mDebugName).c_str());
-		if (FAILED(hr))
+		if (!VerifyHRESULT(hr))
 			return false;
 	}
 	return true;

@@ -250,3 +250,4 @@ bool SC_TVector2<T>::operator!=(const SC_TVector2& aVector) const
 using SC_Vector2 = SC_TVector2<float>;
 using SC_Vector2f = SC_TVector2<float>;
 using SC_IntVector2 = SC_TVector2<int>;
+using SC_Vector2u = SC_TVector2<unsigned int>;

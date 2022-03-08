@@ -116,7 +116,7 @@ float4 MainPS(in PixelShaderInput aInput) : SV_TARGET0
     float3 lightDirection = environmentConstants.mSunLightDirection;
     float3 lightColor = environmentConstants.mSunLightColor;
 
-    float3 viewDirection = normalize(aInput.mWorldPosition - gSceneConstants.mViewConstants.mCameraPosition);
+    float3 viewDirection = normalize(gSceneConstants.mViewConstants.mCameraPosition - aInput.mWorldPosition);
 
     SR_MaterialInfo materialInfo = SR_GetMaterialInfo(aInput.mMaterialIndex);
     Texture2D<float4> baseColorMap = GetTexture2D<float4>(materialInfo.mTextureIndices[0]);
@@ -144,7 +144,7 @@ float4 MainPS(in PixelShaderInput aInput) : SV_TARGET0
         );
     float3 normal = mul(tangentToWorld, normalSample);
 
-    MaterialData materialData = BuildMaterialData(float4(baseColorSample.rgb, 1.0f), normal, float4(roughnessSample, metallicSample, aoSample, 1.0f));
+    MaterialData materialData = BuildMaterialData(aInput.mClipPosition, float4(baseColorSample.rgb, 1.0f), normal, float4(roughnessSample, metallicSample, aoSample, 1.0f));
     float3 color = CalculateLighting(materialData, aInput.mWorldPosition, viewDirection, aInput.mViewPosition.z);
 
     return float4(color, 1.0f);

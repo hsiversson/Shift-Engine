@@ -1,0 +1,94 @@
+#ifndef LIGHT_CULLING_COMMON
+#define LIGHT_CULLING_COMMON
+#include "Common.ssh"
+#include "SceneConstants.ssh"
+#include "BindlessResources.ssh"
+
+#define TILE_SIZE (16)
+#define NUM_LIGHTS_PER_TILE (31)
+
+#define NUM_THREADS_X TILE_SIZE
+#define NUM_THREADS_Y TILE_SIZE
+#define NUM_THREADS_PER_TILE (NUM_THREADS_X*NUM_THREADS_Y)
+
+struct SR_TileFrustum
+{
+    SR_Plane mPlanes[4]; // Left, Top, Right, Bottom
+};
+
+struct SR_TileData
+{
+    uint mLightIndices[NUM_LIGHTS_PER_TILE];
+    uint mNumLights;
+};
+
+uint GetTileIndex(uint2 aGroupId)
+{
+    return aGroupId.x + aGroupId.y * SR_LightCullingConstants.mNumTiles.x;
+}
+
+uint GetTileIndex(float2 aScreenPosition)
+{
+    float2 tilePosition = floor(aScreenPosition / (float)TILE_SIZE);
+    return tilePosition.x + tilePosition.y * SR_LightCullingConstants.mNumTiles.x;
+}
+
+SR_TileData GetTileData(uint aTileIndex)
+{
+    StructuredBuffer<SR_TileData> tileGrid = GetStructuredBuffer<SR_TileData>(SR_LightCullingConstants.mTileGridDescriptorIndex);
+    return tileGrid[aTileIndex];
+}
+
+SR_TileData GetTileData(float2 aScreenPosition)
+{
+    return GetTileData(GetTileIndex(aScreenPosition));
+}
+
+float4 ConvertClipPositionToViewPosition(float4 aPosition)
+{
+    float4 p = mul(SR_ViewConstants.mClipToCamera, aPosition);
+    p /= p.w;
+    return p;
+}
+
+float4 ConvertScreenPositionToViewPosition(float4 aPosition)
+{
+	float2 texCoord = aPosition.xy * SR_ViewConstants.mViewportPosAndInvSize.zw;
+	float4 clip = float4(float2(texCoord.x, 1.0f - texCoord.y) * 2.0f - 1.0f, aPosition.z, aPosition.w);
+	return ConvertClipPositionToViewPosition(clip);
+}
+
+SR_Plane CreateFrustumPlane(float4 b, float4 c)
+{
+    SR_Plane n;
+    n.mNormal = normalize(cross( b.xyz, c.xyz )); // normalize(cross( b.xyz-a.xyz, c.xyz-a.xyz )), except we know "a" is the origin
+    n.mDistance = 0; // -(n dot a), except we know "a" is the origin
+    return n;
+}
+
+SR_TileFrustum ConstructTileFrustum(uint2 aTileIndex)
+{
+    SR_TileFrustum tileFrustum;	
+
+    const uint2 numTiles = SR_LightCullingConstants.mNumTiles;
+    const uint bufferWidthEvenlyDivisibleByTileSize  = TILE_SIZE * numTiles.x;
+    const uint bufferHeightEvenlyDivisibleByTileSize = TILE_SIZE * numTiles.y;
+
+    uint pxm = TILE_SIZE * aTileIndex.x;
+    uint pym = TILE_SIZE * aTileIndex.y;
+    uint pxp = TILE_SIZE * (aTileIndex.x + 1);
+    uint pyp = TILE_SIZE * (aTileIndex.y + 1);
+
+    float4 frustum[4];
+    frustum[0] = ConvertClipPositionToViewPosition( float4( pxm/(float)bufferWidthEvenlyDivisibleByTileSize*2.f-1.f, (bufferHeightEvenlyDivisibleByTileSize-pym)/(float)bufferHeightEvenlyDivisibleByTileSize*2.f-1.f,1.f,1.f) );
+    frustum[1] = ConvertClipPositionToViewPosition( float4( pxp/(float)bufferWidthEvenlyDivisibleByTileSize*2.f-1.f, (bufferHeightEvenlyDivisibleByTileSize-pym)/(float)bufferHeightEvenlyDivisibleByTileSize*2.f-1.f,1.f,1.f) );
+    frustum[2] = ConvertClipPositionToViewPosition( float4( pxp/(float)bufferWidthEvenlyDivisibleByTileSize*2.f-1.f, (bufferHeightEvenlyDivisibleByTileSize-pyp)/(float)bufferHeightEvenlyDivisibleByTileSize*2.f-1.f,1.f,1.f) );
+    frustum[3] = ConvertClipPositionToViewPosition( float4( pxm/(float)bufferWidthEvenlyDivisibleByTileSize*2.f-1.f, (bufferHeightEvenlyDivisibleByTileSize-pyp)/(float)bufferHeightEvenlyDivisibleByTileSize*2.f-1.f,1.f,1.f) );
+
+    for(uint i=0; i<4; i++)
+        tileFrustum.mPlanes[i] = CreateFrustumPlane( frustum[i], frustum[(i+1)&3] );
+
+    return tileFrustum;
+}
+
+#endif //LIGHT_CULLING_COMMON

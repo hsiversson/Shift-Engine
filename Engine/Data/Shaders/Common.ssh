@@ -82,6 +82,24 @@ float LumaRec709(in float3 aColor)
 	return RelativeLuminance(aColor);
 }
 
+// TEMP
+#define SR_AtomicAdd InterlockedAdd
+#define SR_AtomicExchange InterlockedExchange
+#define SR_AtomicMin InterlockedMin
+#define SR_AtomicMax InterlockedMax
+#define SR_AtomicAnd InterlockedAnd
+#define SR_AtomicOr InterlockedOr
+#define SR_AtomicXor InterlockedXor
+#define SR_MemoryBarrier AllMemoryBarrier
+#define SR_MemoryBarrierSynced AllMemoryBarrierWithGroupSync
+#define SR_SharedMemoryBarrier DeviceMemoryBarrier
+#define SR_SharedMemoryBarrierSynced DeviceMemoryBarrierWithGroupSync
+#define SR_GroupMemoryBarrier GroupMemoryBarrier
+#define SR_GroupMemoryBarrierSynced GroupMemoryBarrierWithGroupSync
+////// TEMP
+
+#include "FastMath.ssh"
 #include "BindlessResources.ssh"
 #include "StaticSamplers.ssh"
+#include "GeometryCommon.ssh"
 #endif //COMMON_HEADER

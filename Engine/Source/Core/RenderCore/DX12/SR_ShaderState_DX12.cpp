@@ -140,7 +140,7 @@ bool SR_ShaderState_DX12::InitDefault(const SR_ShaderStateProperties& aPropertie
 	HRESULT result = E_FAIL;
 	result = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device5()->CreatePipelineState(&desc, IID_PPV_ARGS(&mD3D12PipelineState));
 
-	return SUCCEEDED(result);
+	return VerifyHRESULT(result);
 }
 
 #if ENABLE_MESH_SHADERS
@@ -199,7 +199,7 @@ bool SR_ShaderState_DX12::InitAsMeshShader(const SR_ShaderStateProperties& aProp
 	}
 	mRootSignature = rootSignature;
 	mIsMeshShader = true;
-	return SUCCEEDED(result);
+	return VerifyHRESULT(result);
 }
 #endif //ENABLE_MESH_SHADERS
 
@@ -220,7 +220,7 @@ bool SR_ShaderState_DX12::InitAsComputeShader(const SR_ShaderStateProperties& aP
 	HRESULT result = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device5()->CreatePipelineState(&desc, IID_PPV_ARGS(&mD3D12PipelineState));
 	mRootSignature = rootSignature;
 	mIsComputeShader = true;
-	return SUCCEEDED(result);
+	return VerifyHRESULT(result);
 }
 
 #if ENABLE_RAYTRACING
@@ -295,7 +295,7 @@ bool SR_ShaderState_DX12::InitAsRaytracingShader(const SR_ShaderStateProperties&
 	mRootSignature = rootSignature;
 	mIsRaytracingShader = true;
 	CreateRaytracingShaderTable(aProperties);
-	return SUCCEEDED(result);
+	return VerifyHRESULT(result);
 }
 
 void SR_ShaderState_DX12::CreateRaytracingShaderTable(const SR_ShaderStateProperties& aProperties)

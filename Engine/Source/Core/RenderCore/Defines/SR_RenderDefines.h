@@ -13,7 +13,7 @@
 	#define ENABLE_RAYTRACING			(1)
 	#define ENABLE_MESH_SHADERS			(1)
 	#define ENABLE_VRS					(1)
-	#define USE_PIX						(0)
+	#define ENABLE_PIX					(1)
 
 	#if IS_DEBUG_BUILD
 		#define ENABLE_RENDERDOC_API	(0)

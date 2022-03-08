@@ -1,0 +1,57 @@
+#ifndef LIGHTS_COMMON_HEADER
+#define LIGHTS_COMMON_HEADER
+
+#include "BindlessResources.ssh"
+#include "SceneConstants.ssh"
+
+#define SR_LightType_Directional   (0)
+#define SR_LightType_Point         (1)
+#define SR_LightType_Spot          (2)
+
+struct SR_LocalLight
+{
+	float3 mDirection;
+	float mInvRange;
+
+	float3 mPosition;
+	float mRange;
+
+	float3 mColoredBrightness;
+	uint mType;
+
+	float2 mSpotAngles;
+	uint mShadowMapDescriptorIndex;
+	float mSoftSourceRadius;
+
+	float mSourceRadius;
+	float _unused0[3];
+};
+
+struct SR_AreaLight
+{
+    float mSphereSinAlpha;
+    float mSphereSinAlphaSoft;
+    float mNdotL;
+    float mFalloff;
+    float3 mLightVector;
+};
+
+struct SR_DirectionalLight
+{
+    float3 mToLightDirection;
+    float _unused0;
+    float3 mColoredBrightness;
+};
+
+StructuredBuffer<SR_LocalLight> GetLightBuffer()
+{
+    return GetStructuredBuffer<SR_LocalLight>(SR_LightCullingConstants.mLightBufferDescriptorIndex);
+}
+
+SR_LocalLight GetLocalLight(uint aLightIndex)
+{
+    StructuredBuffer<SR_LocalLight> localLights = GetStructuredBuffer<SR_LocalLight>(SR_LightCullingConstants.mLightBufferDescriptorIndex);
+    return localLights[aLightIndex];
+}
+
+#endif //LIGHTS_COMMON_HEADER

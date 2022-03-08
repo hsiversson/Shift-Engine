@@ -26,13 +26,14 @@ bool SGF_World::LoadLevel(const char* /*aLevel*/)
 	if (level->Load(SC_EnginePaths::Get().GetGameDataDirectory() + "/Levels/Sponza.slvl"))
 		mLevels.Add(level);
 
-	//SED_AssimpImporter importer;
 	//SED_AssimpScene scene;
-	//importer.ImportScene(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shapes/ShaderBall.fbx", scene);
+	//SED_AssimpImporter importer;
+	////importer.ImportScene(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shapes/ShaderBall.fbx", scene);
 	//importer.ImportScene(SC_EnginePaths::Get().GetGameDataDirectory() + "/Models/SponzaPBR/sponzaPBR.obj", scene, 0.01f);
-
+	//
 	//scene.ConvertToLevelAndSave(*level);
-	//level->Save(SC_EnginePaths::Get().GetGameDataDirectory() + "/Levels/Sponza.slvl");
+	////level->Save(SC_EnginePaths::Get().GetGameDataDirectory() + "/Levels/Sponza.slvl");
+	//mLevels.Add(level);
 
 	return true;
 }

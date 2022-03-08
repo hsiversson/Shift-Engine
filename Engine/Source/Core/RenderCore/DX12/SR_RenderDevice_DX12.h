@@ -5,8 +5,9 @@
 #include "SR_CommandQueue_DX12.h"
 
 #define ENABLE_NVIDIA_AFTERMATH (0)
-#define ENABLE_NVAPI			(0)
-#define ENABLE_AGS				(0)
+#define ENABLE_NVAPI			(1)
+#define ENABLE_AGS				(1)
+#define ENABLE_DRED				(0)
 
 struct ID3D12Device;
 struct ID3D12Device5;
@@ -62,7 +63,9 @@ public:
 	ID3D12Device5* GetD3D12Device5() const;
 	ID3D12Device6* GetD3D12Device6() const;
 
+#if ENABLE_DRED
 	void OutputDredDebugData();
+#endif
 
 	static SR_RenderDevice_DX12* gD3D12Instance;
 
@@ -73,6 +76,11 @@ private:
 	bool InitTempStorage();
 
 	void GatherSupportCaps();
+
+#if ENABLE_NVIDIA_AFTERMATH
+	static void GpuCrashDumpCallback(const void* aGpuCrashDump, const uint32 aGpuCrashDumpSize, void* aUserData);
+	void OnGpuCrashDump(const void* aGpuCrashDump, const uint32 aGpuCrashDumpSize);
+#endif
 
 	SC_Ref<SR_Texture> LoadTextureInternal(const SC_FilePath& aTextureFilePath) override;
 	SC_Ref<SR_Texture> LoadTextureFromFile(const char* aTextureFilePath);
@@ -97,25 +105,32 @@ private:
 
 	SC_UniquePtr<SR_DxcCompiler> mDxcCompiler;
 
+#if ENABLE_DRED
+	SC_Mutex mDREDMutex;
 	bool mEnableDRED : 1;
+#endif
 };
 
-inline void VerifyHRESULT(HRESULT aValue)
+inline bool VerifyHRESULT(HRESULT aValue)
 {
 	switch (aValue)
 	{
 	case E_INVALIDARG:
 		assert(false && "Invalid args passed to D3D12 runtime");
-		break;
+		return false;
 	case E_OUTOFMEMORY:
 		assert(false && "Out of Memory");
-		break;
+		return false;
 	case DXGI_ERROR_DEVICE_REMOVED:
+#if ENABLE_DRED
 		SR_RenderDevice_DX12::gD3D12Instance->OutputDredDebugData();
-		break;
+#endif
+		return false;
 	case S_OK:
+	case S_FALSE:
+		return true;
 	default:
-		break;
+		return false;
 	}
 }
 

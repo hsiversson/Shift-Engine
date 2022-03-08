@@ -52,6 +52,7 @@ public:
 
 	SC_Vector2 GetJitter(const SC_IntVector2& aTargetResolution) const;
 
+	SGfx_LightCulling* GetLightCulling() const;
 	SGfx_ShadowSystem* GetShadowMapSystem() const;
 	SGfx_AmbientOcclusion* GetAmbientOcclusion() const;
 

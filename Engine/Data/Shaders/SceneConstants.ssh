@@ -80,7 +80,7 @@ struct EnvironmentConstants
     uint mPreFilteredEnvironmentMapDescriptorIndex;
 	uint mEnvironmentBrdfLUTDescriptorIndex;
 	uint mPreFilteredEnvironmentMapMips;
-    uint _pad;
+    uint _unused0;
 
 	ScatteringConstants mScatteringConstants;
 };
@@ -92,7 +92,19 @@ struct ShadowConstants
     float4 mCSMSplitPoints;
 	int4 mCSMDescriptorIndices;
 	float2 mCSMResolutionAndInv;
-	float2 __pad;
+	float2 _unused0;
+};
+
+// Must reflect SGfx_LightCullingConstants in SGfx_LightCulling.h
+
+struct LightCullingConstants
+{
+	uint2 mNumTiles;
+	uint mTotalNumLights;
+
+	uint mTileGridDescriptorIndex;
+	uint mLightBufferDescriptorIndex;
+	uint3 _unused0;
 };
 
 struct SceneConstants
@@ -100,21 +112,23 @@ struct SceneConstants
     ViewConstants mViewConstants;
     EnvironmentConstants mEnvironmentConstants;
 	ShadowConstants mShadowConstants;
+	LightCullingConstants mLightCullingConstants;
 
 	uint mInstanceDataBufferIndex;
 	uint mMaterialInfoBufferIndex;
 	uint mRaytracingSceneDescriptorIndex;
 	uint mFrameIndex;
 	float mFrameTimeDelta;
-	uint3 _pad;
+	uint3 _unused0;
 };
 
 ConstantBuffer<SceneConstants> gSceneConstants : register(b1);
 
-#define SR_ViewConstants		gSceneConstants.mViewConstants
-#define SR_ScatteringConstants  gSceneConstants.mEnvironmentConstants.mScatteringConstants
-#define SR_EnvironmentConstants gSceneConstants.mEnvironmentConstants
-#define SR_ShadowConstants		gSceneConstants.mShadowConstants
+#define SR_ViewConstants			gSceneConstants.mViewConstants
+#define SR_ScatteringConstants  	gSceneConstants.mEnvironmentConstants.mScatteringConstants
+#define SR_EnvironmentConstants 	gSceneConstants.mEnvironmentConstants
+#define SR_ShadowConstants			gSceneConstants.mShadowConstants
+#define SR_LightCullingConstants	gSceneConstants.mLightCullingConstants
 
 float2 SR_PixelToClip(float2 aPixelCoord)
 {

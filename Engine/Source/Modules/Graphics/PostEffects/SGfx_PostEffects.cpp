@@ -47,7 +47,8 @@ void SGfx_PostEffects::Render(SGfx_View* aView, SR_Texture* aScreenColor)
 	mTempTextures.RemoveAll();
 	mTempConstantBuffers.RemoveAll();
 
-	RenderBloom(aView, aScreenColor);
+	if (mBloomData.mEnabled)
+		RenderBloom(aView, aScreenColor);
 
 	//RenderTonemap(aView);
 }

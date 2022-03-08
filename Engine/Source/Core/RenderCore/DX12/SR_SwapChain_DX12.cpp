@@ -29,15 +29,15 @@ SR_SwapChain_DX12::~SR_SwapChain_DX12()
 bool SR_SwapChain_DX12::Init(const SR_SwapChainProperties& aProperties, void* aWindowHandle)
 {
 	HRESULT hr = CreateDXGIFactory1(IID_PPV_ARGS(&mDXGIFactory));
-	if (FAILED(hr))
+	if (!VerifyHRESULT(hr))
 		return false;
 
 	hr = mDXGIFactory.As(&mDXGIFactory4);
-	if (FAILED(hr))
+	if (!VerifyHRESULT(hr))
 		return false;
 
 	hr = mDXGIFactory.As(&mDXGIFactory6);
-	if (FAILED(hr))
+	if (!VerifyHRESULT(hr))
 		return false;
 	
 	mProperties = aProperties;
@@ -124,15 +124,15 @@ bool SR_SwapChain_DX12::CreateSwapChain()
 
 	SR_CommandQueue_DX12* cmdQueue = static_cast<SR_CommandQueue_DX12*>(mRenderDevice->GetGraphicsCommandQueue());
 	hr = mDXGIFactory4->CreateSwapChainForHwnd(cmdQueue->GetD3D12CommandQueue(), HWND(mWindowHandle), &desc, &fullscreenDesc, nullptr, &mDXGISwapChain);
-	if (FAILED(hr))
+	if (!VerifyHRESULT(hr))
 		return false;
 
 	hr = mDXGIFactory6->MakeWindowAssociation(HWND(mWindowHandle), DXGI_MWA_NO_WINDOW_CHANGES);
-	if (FAILED(hr))
+	if (!VerifyHRESULT(hr))
 		return false;
 
 	hr = mDXGISwapChain.As(&mDXGISwapChain4);
-	if (FAILED(hr))
+	if (!VerifyHRESULT(hr))
 		return false;
 
 
@@ -156,7 +156,7 @@ bool SR_SwapChain_DX12::CreateResources()
 		{
 			ID3D12Resource* res;
 			HRESULT hr = mDXGISwapChain->GetBuffer(i, IID_PPV_ARGS(&res));
-			if (FAILED(hr))
+			if (!VerifyHRESULT(hr))
 			{
 				assert(false);
 				return false;
@@ -216,7 +216,7 @@ void SR_SwapChain_DX12::UpdateInternal()
 	if (mDXGISwapChain)
 	{
 		HRESULT hr = mDXGISwapChain->ResizeBuffers(mProperties.mTripleBuffer ? 3 : 2, mProperties.mSize.x, mProperties.mSize.y, SR_D3D12ConvertFormat(mProperties.mFormat), mSwapChainFlags); 
-		if (FAILED(hr))
+		if (!VerifyHRESULT(hr))
 		{
 			SC_ASSERT(false);
 			return;

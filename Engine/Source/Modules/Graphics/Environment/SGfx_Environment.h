@@ -67,11 +67,9 @@ public:
 	void Render(SR_CommandList* aCmdList);
 
 private:
-	SC_Ref<SR_Texture> mSkyCubeMap;
 	SC_Ref<SR_BufferResource> mCubeVertices;
 	SC_Ref<SR_BufferResource> mCubeIndices;
 	SC_Ref<SR_ShaderState> mCubeShader;
-	SC_Ref<SR_BufferResource> mDrawInfoBuffer;
 };
 
 class SGfx_Environment

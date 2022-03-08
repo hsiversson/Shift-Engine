@@ -5,9 +5,11 @@
 #include "MaterialCommon.ssh"
 
 #define TANGENT_SPACE_NORMAL (1)
+#define ENABLE_GEOMETRIC_ROUGHNESS_AA (1)
 
 struct MaterialData
 {
+    float4 mClipPosition;
     float3 mColor;
     float mAlpha;    
     float3 mWorldNormal;
@@ -31,9 +33,10 @@ float3 ComputeF0(float3 aBaseColor, float aMetallic, float aSpecular)
 	return lerp(DielectricSpecularToF0(aSpecular).xxx, aBaseColor, aMetallic.xxx);
 }
 
-MaterialData BuildMaterialData(float4 aBaseColor, float3 aWorldNormal, float4 aRMAS)
+MaterialData BuildMaterialData(float4 aClipPosition, float4 aBaseColor, float3 aWorldNormal, float4 aRMAS)
 {
     MaterialData materialData;
+    materialData.mClipPosition = aClipPosition;
     materialData.mColor = aBaseColor.rgb;
     materialData.mAlpha = aBaseColor.a;
     materialData.mWorldNormal = aWorldNormal;
@@ -44,6 +47,19 @@ MaterialData BuildMaterialData(float4 aBaseColor, float3 aWorldNormal, float4 aR
 
     materialData.mDiffuseColor = materialData.mColor - materialData.mColor * materialData.mMetallic;
     materialData.mSpecularColor = ComputeF0(materialData.mColor, materialData.mMetallic, materialData.mSpecular);
+
+#if ENABLE_GEOMETRIC_ROUGHNESS_AA
+    // Specular anti-aliasing from "Advanced VR Rendering - Alex Vlachos, Valve"
+    // Use partial derivatives of the normals to generate a geometric roughness term
+    // that approximates curvature.
+    {
+        const float3 normalDDX         = ddx(materialData.mWorldNormal);
+        const float3 normalDDY         = ddy(materialData.mWorldNormal);  
+        const float geometricRoughness = pow(saturate(max(dot(normalDDX, normalDDX), dot(normalDDY, normalDDY))), 0.333f); 
+        materialData.mRoughness        = max(materialData.mRoughness, geometricRoughness);
+    }
+#endif //ENABLE_GEOMETRIC_ROUGHNESS_AA
+
     return materialData;
 }
 

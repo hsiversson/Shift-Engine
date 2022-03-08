@@ -78,7 +78,7 @@ bool SR_TextureResource_DX12::Init(const SR_PixelData* aInitialData, uint32 aDat
 		);
 	}
 
-	if (FAILED(hr))
+	if (!VerifyHRESULT(hr))
 	{
 		SC_ASSERT(false, "Could not create texture.");
 		return false;

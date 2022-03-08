@@ -354,13 +354,16 @@ const SC_Vector& SED_AssimpMesh::GetWorldOriginOffset() const
 }
 
 SED_AssimpScene::SED_AssimpScene()
+	: mImportedScene(nullptr)
+
 {
 
 }
 
 SED_AssimpScene::~SED_AssimpScene()
 {
-
+	//delete mImportedScene;
+	mImportedScene = nullptr;
 }
 
 bool SED_AssimpScene::Init(const SC_FilePath& aSourceFile)
@@ -415,7 +418,7 @@ bool SED_AssimpScene::ConvertToLevelAndSave(SGF_Level& aOutLevel)
 	if (!mImportedScene || !mImportedScene->mRootNode)
 		return false;
 
-	SC_FilePath saveDir("ImportedMeshes");
+	SC_FilePath saveDir("/ImportedMeshes");
 
 	SC_Array<SC_Future<bool>> futures;
 	futures.Reserve(mMeshes.Count());
@@ -502,6 +505,6 @@ bool SED_AssimpImporter::ImportScene(const SC_FilePath& aFilePath, SED_AssimpSce
 	if (!importedScene)
 		return false;
 
-	aOutScene.mImportedScene.reset(mImporter->GetOrphanedScene());
+	aOutScene.mImportedScene = mImporter->GetOrphanedScene();
 	return aOutScene.Init(aFilePath);
 }

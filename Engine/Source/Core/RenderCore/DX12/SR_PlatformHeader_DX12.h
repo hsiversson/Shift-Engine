@@ -7,9 +7,9 @@
 #pragma comment(lib,"dxgi.lib")
 #pragma comment(lib,"dxguid.lib")
 
-//#ifdef USE_PIX
-//#include "WinPixEventRuntime/pix3.h"
-//#endif
+#if ENABLE_PIX
+#include "WinPixEventRuntime/pix3.h"
+#endif
 
 // For COM interface (ComPtr)
 #include <wrl.h>

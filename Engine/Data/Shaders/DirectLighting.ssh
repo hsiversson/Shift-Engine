@@ -3,6 +3,8 @@
 //#pragma once
 
 #include "ShadingModels.ssh"
+#include "LightsCommon.ssh"
+#include "LightCullingCommon.ssh"
 #include "Shadows.ssh"
 
 #define DEBUG_CASCADE_COLOR (0)
@@ -27,45 +29,121 @@ float3 CalculateDirectionalLightContribution(in const MaterialData aMaterialData
     if (shadowFactor <= 0.0f)
         return lighting;
 
-    float3 shading = DefaultShading(aMaterialData, lightDirection, aViewDirection);
+    float nDotL = saturate(dot(aMaterialData.mWorldNormal, lightDirection));
+    float3 shading = CalculateShading(aMaterialData, (SR_AreaLight)0, lightDirection, nDotL, 1.0f, aViewDirection);
     lighting += (shading * lightColor * lightRadiance * shadowFactor);
 
     return lighting;
 }
 
-float3 CalculateSpotLightContribution()
+float GetInverseSquareFalloff(float aDistanceSqr, float aRange)
 {
-    return (float3)0.0f;
+	return Squared(saturate(1.0f - Squared(aDistanceSqr * Squared(aRange))));
 }
 
-float3 CalculatePointLightContribution()
+/** 
+ * Calculates attenuation for a spot light.
+ * L normalize vector to light. 
+ * SpotDirection is the direction of the spot light.
+ * SpotAngles.x is CosOuterCone, SpotAngles.y is InvCosConeDifference. 
+ */
+float GetSpotAttenuationMask(float3 L, float3 aSpotDirection, float2 aSpotAngles)
 {
-    return (float3)0.0f;
+	return saturate((dot(L, -aSpotDirection) - aSpotAngles.x) * aSpotAngles.y);
+}
+float GetSpotAttenuation(float3 L, float3 aSpotDirection, float2 aSpotAngles)
+{
+	float ConeAngleFalloff = Squared(GetSpotAttenuationMask(L, aSpotDirection, aSpotAngles));
+	return ConeAngleFalloff;
 }
 
-float3 CalculateDirectLighting(in const MaterialData aMaterialData, in const float3 aWorldPosition, in const float3 aViewDirection, in float aPixelDepth)
+// Alpha is half of angle of spherical cap
+float SphereHorizonCosWrap(float nDotL, float aSinAlphaSqr)
+{
+	float sinAlpha = sqrt( aSinAlphaSqr );
+	if(nDotL < sinAlpha)
+	{
+		nDotL = max( nDotL, -sinAlpha );
+		// Hermite spline approximation
+		// Fairly accurate with SinAlpha < 0.8
+		// y=0 and dy/dx=0 at -SinAlpha
+		// y=SinAlpha and dy/dx=1 at SinAlpha
+		nDotL = Pow2(sinAlpha + nDotL) / (4.0f * sinAlpha);
+	}
+	return nDotL;
+}
+
+float GetLocalLightAttenuation(in const SR_LocalLight aLight, in const float3 aWorldPosition, in const float3 L, in const float aDistanceSqr)
+{
+    float attenuation = GetInverseSquareFalloff(aDistanceSqr, aLight.mInvRange);
+
+    if (aLight.mType == SR_LightType_Spot)
+    {
+        attenuation *= GetSpotAttenuation(L, aLight.mDirection, aLight.mSpotAngles);
+    }
+
+    return attenuation;
+}
+
+float3 CalculateLocalLightContribution(in const MaterialData aMaterialData, in const SR_LocalLight aLight, in const float3 aWorldPosition, in const float3 aViewDirection)
+{
+    float3 toLight = aLight.mPosition - aWorldPosition;
+    float distSqr = dot(toLight, toLight);
+    float invDistSqr = rsqrt(distSqr);
+    float3 L = toLight * invDistSqr;
+
+    float attenuation = GetLocalLightAttenuation(aLight, aWorldPosition, L, distSqr);
+
+    float3 contribution = (float3)0;
+    [branch]
+    if (attenuation > 0.0f)
+    {
+        // GetShadowFactor
+        // Branch if shadow is > 0
+
+        float3 lightColor = aLight.mColoredBrightness;
+
+	    SR_AreaLight areaLight;
+        {
+		    float falloff = rcp(distSqr /*+ distBiasSqr*/);
+
+		    float3 L1 = aLight.mPosition * invDistSqr;
+		    float nDotL = dot(aMaterialData.mWorldNormal, L1);
+
+		    float sinAlphaSqr = saturate(Pow2(aLight.mSourceRadius) * falloff);
+		    nDotL = SphereHorizonCosWrap(nDotL, sinAlphaSqr);
+	        nDotL = saturate(nDotL);
+
+	        L1 = L;
+	        float a = Pow2(aMaterialData.mRoughness);
+
+            areaLight.mSphereSinAlpha = saturate(aLight.mSourceRadius * invDistSqr * (1.0f - a));
+            areaLight.mSphereSinAlphaSoft = saturate(aLight.mSourceRadius * invDistSqr);
+            areaLight.mNdotL = nDotL;
+            areaLight.mFalloff = falloff;
+            areaLight.mLightVector = L1;
+        }
+
+        float3 shading = CalculateShading(aMaterialData, areaLight, areaLight.mLightVector, areaLight.mNdotL, areaLight.mFalloff, aViewDirection);
+        return shading * aLight.mColoredBrightness * attenuation;
+    }
+
+    return contribution;
+}
+
+float3 CalculateDirectLighting(in MaterialData aMaterialData, in const float3 aWorldPosition, in const float3 aViewDirection, in float aPixelDepth)
 {
     float3 lighting = (float3)0.0f;
 
     // Should we only support one directional light?
     lighting += CalculateDirectionalLightContribution(aMaterialData, aWorldPosition, aViewDirection, aPixelDepth);
 
-    // Get Tile Index
-    // Get Lights List
-    // Integrate Lights
-
-    //for (uint i = 0; i < NumSpotLights; ++i)
-    //{
-    //  switch(lightType)
-    //  {
-    //      case SR_LightType_Spot:
-    //      lighting += CalculateSpotLightContribution();
-    //      break;    
-    //      case SR_LightType_Point:
-    //      lighting += CalculatePointLightContribution();
-    //      break;    
-    //  }
-    //}
+    const SR_TileData tileData = GetTileData(aMaterialData.mClipPosition.xy);
+    for (uint i = 0; i < tileData.mNumLights; ++i)
+    {
+        const SR_LocalLight light = GetLocalLight(tileData.mLightIndices[i]);
+        lighting += CalculateLocalLightContribution(aMaterialData, light, aWorldPosition, aViewDirection);
+    }
 
     return lighting;
 }

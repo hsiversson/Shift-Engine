@@ -83,6 +83,25 @@ void SGfx_World::PrepareView(SGfx_View* aView)
 
 	mSceneGraph->PrepareView(aView);
 
+	SGfx_SpotLight gfxlight;
+	gfxlight.SetColor(SC_Vector(0.917f, 0.278f, 1.f));
+	gfxlight.SetPosition(SC_Vector(4.0f, 3.0f, 0.0f));
+	gfxlight.SetDirection(SC_Vector(0.f, -1.0f, 0.25f));
+	gfxlight.SetBrightness(120.f);
+	gfxlight.SetRange(10.f);
+	gfxlight.SetInnerAngle(0.0f);
+	gfxlight.SetOuterAngle(45.0f);
+	gfxlight.SetSourceRadius(0.1f);
+	gfxlight.SetSourceRadiusSoft(0.6f);
+	SGfx_Light::LocalLightShaderData localLightTest = gfxlight.GetShaderData();
+
+	SGfx_LightRenderData light;
+	light.mGPUData = localLightTest;
+	light.mCastShadow = false;
+	prepareData.mVisibleLights.Add(light);
+
+	mRenderer->GetLightCulling()->Prepare(prepareData);
+
 	prepareData.mSkybox = mEnvironment->GetSkybox();
 }
 

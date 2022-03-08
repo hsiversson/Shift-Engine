@@ -16,8 +16,6 @@ SGfx_Skybox::~SGfx_Skybox()
 
 bool SGfx_Skybox::Init()
 {
-	mSkyCubeMap = SR_RenderDevice::gInstance->LoadTexture(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Grey_Cube.dds");
-
 	SC_Array<SC_Vector> vertices;
 	SC_Array<uint32> indices;
 	SGfx_Shapes::GenerateSphere(vertices, indices, 2, 100);
@@ -56,15 +54,6 @@ bool SGfx_Skybox::Init()
 
 	mCubeShader = SR_RenderDevice::gInstance->CreateShaderState(cubeShaderProps);
 
-	SR_BufferResourceProperties cbDesc;
-	cbDesc.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
-	cbDesc.mElementCount = 1;
-	cbDesc.mElementSize = sizeof(uint32);
-	mDrawInfoBuffer = SR_RenderDevice::gInstance->CreateBufferResource(cbDesc);
-
-	uint32 cubemapDescriptorIndex = mSkyCubeMap->GetDescriptorHeapIndex();
-	mDrawInfoBuffer->UpdateData(0, &cubemapDescriptorIndex, sizeof(uint32));
-
 	return true;
 }
 
@@ -74,7 +63,6 @@ void SGfx_Skybox::Render(SR_CommandList* aCmdList)
 	aCmdList->SetIndexBuffer(mCubeIndices.get());
 	aCmdList->SetShaderState(mCubeShader.get());
 	aCmdList->SetPrimitiveTopology(SR_PrimitiveTopology::TriangleList);
-	aCmdList->SetRootConstantBuffer(mDrawInfoBuffer.get(), 0);
 	aCmdList->DrawIndexed(mCubeIndices->GetProperties().mElementCount);
 }
 
@@ -85,8 +73,8 @@ SGfx_Environment::SGfx_Environment()
 
 	mConstants.mSunLightColor = SC_Vector(0.99f, 0.84f, 0.55f);
 
-	mEnvironmentalIrradianceMap = SR_RenderDevice::gInstance->LoadTexture(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Grey_Cube.dds");
-	mPreFilteredEnvironmentMap = SR_RenderDevice::gInstance->LoadTexture(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Grey_Cube.dds");
+	mEnvironmentalIrradianceMap = SR_RenderDevice::gInstance->LoadTexture(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Black_1x1.dds");
+	mPreFilteredEnvironmentMap = SR_RenderDevice::gInstance->LoadTexture(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Black_1x1.dds");
 	mEnvironmentalBrdfLUT = SR_RenderDevice::gInstance->LoadTexture(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/EnvironmentBrdfLUT.dds");
 
 	mConstants.mEnvironmentalIrradianceMapDescriptorIndex = mEnvironmentalIrradianceMap->GetDescriptorHeapIndex();

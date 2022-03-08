@@ -23,13 +23,17 @@ void SED_ContentBrowserPanel::OnRender()
 
 	ImGui::Columns(columnCount, 0, false);
 
-	for (uint32 i = 0; i < 100; ++i)
+	for (uint32 i = 0; i < 10; ++i)
 	{
 		std::string n("TestFolder");
 		n += std::to_string(i);
 		DrawFolderEntry(n.c_str());
 		ImGui::NextColumn();
 	}
+	DrawAssetEntry("TestTexture0", SED_AssetType::Texture);
+	ImGui::NextColumn();
+	DrawAssetEntry("TestMaterial0", SED_AssetType::Material);
+
 	ImGui::Columns(1);
 	ImGui::End();
 }

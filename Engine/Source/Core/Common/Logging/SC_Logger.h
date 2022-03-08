@@ -23,7 +23,7 @@ public:
 	static void Destroy();
 	static SC_Logger* Get() { return gInstance; }
 
-	static void LogMessage(const SC_LogType& aType, const std::string& aMsg, const char* aFunc = nullptr);
+	static void LogMessage(const SC_LogType& aType, const std::string& aMsg, const char* aFunc = nullptr, bool aFlush = false);
 
 private:
 	SC_Logger();
@@ -40,6 +40,7 @@ private:
 
 	class SC_LoggerThread : public SC_Thread
 	{
+		friend class SC_Logger;
 	public:
 		SC_LoggerThread();
 		~SC_LoggerThread();
@@ -62,9 +63,8 @@ private:
 
 #define SC_LOG_CATEGORY(aType, aMsg, ...)	SC_Logger::Get()->LogMessage(aType,					SC_FormatStr(aMsg, __VA_ARGS__), __FUNCTION__)
 #define SC_LOG(aMsg, ...)					SC_Logger::Get()->LogMessage(SC_LogType::Info,		SC_FormatStr(aMsg, __VA_ARGS__), __FUNCTION__)
-#define SC_ERROR(aMsg, ...)					SC_Logger::Get()->LogMessage(SC_LogType::Error,		SC_FormatStr(aMsg, __VA_ARGS__), __FUNCTION__)
-#define SC_WARNING(aMsg, ...)				SC_Logger::Get()->LogMessage(SC_LogType::Warning,	SC_FormatStr(aMsg, __VA_ARGS__), __FUNCTION__)
-
+#define SC_ERROR(aMsg, ...)					SC_Logger::Get()->LogMessage(SC_LogType::Error,		SC_FormatStr(aMsg, __VA_ARGS__), __FUNCTION__, true)
+#define SC_WARNING(aMsg, ...)				SC_Logger::Get()->LogMessage(SC_LogType::Warning,	SC_FormatStr(aMsg, __VA_ARGS__), __FUNCTION__, true)
 #else //ENABLE_LOGGING
 
 #define SC_LOG_CATEGORY(aType, aMsg, ...)

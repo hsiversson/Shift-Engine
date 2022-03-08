@@ -5,6 +5,17 @@
 #include "Common.ssh"
 
 ////////////////////////////////////////////
+/*
+*	Diffuse model
+*/
+////////////////////////////////////////////
+
+float3 Diffuse_Lambert( float3 aDiffuseColor )
+{
+	return aDiffuseColor * (1.0f / PI);
+}
+
+////////////////////////////////////////////
 /* Specular BRDF microfacet model:
 *
 *            D(h)F(l,h)G(l,v,h)
@@ -13,6 +24,81 @@
 *
 */
 ////////////////////////////////////////////
+
+struct SR_BxDFProperties
+{
+	float mNdotV;
+	float mNdotL;
+	float mVdotL;
+	float mNdotH;
+	float mVdotH;
+
+	void Init(in const float3 N, in const float3 V, in const float3 L)
+	{
+		mNdotL = dot(N, L);
+		mNdotV = dot(N, V);
+		mVdotL = dot(V, L);
+		float invLenH = rsqrt(2.0f + 2.0f * mVdotL);
+		mNdotH = saturate((mNdotL + mNdotV) * invLenH);
+		mVdotH = saturate(invLenH + invLenH * mVdotL);
+	}
+
+	// [ de Carpentier 2017, "Decima Engine: Advances in Lighting and AA" ]
+	void SphereMaxNoH(in const float aSinAlpha, in const bool bNewtonIteration)
+	{
+		if(aSinAlpha > 0.0f)
+		{
+			float cosAlpha = sqrt(1.0f - Pow2(aSinAlpha));
+
+			float rdotL = 2.0f * mNdotL * mNdotV - mVdotL;
+			if( rdotL >= cosAlpha )
+			{
+				mNdotH = 1;
+				//aBxDF.XoH = 0;
+				//aBxDF.YoH = 0;
+				mVdotH = abs( mNdotV );
+			}
+			else
+			{
+				float rInvLengthT = aSinAlpha * rsqrt(1.0f - rdotL*rdotL);
+				float NoTr = rInvLengthT * (mNdotV - rdotL * mNdotL);
+				float VoTr = rInvLengthT * (2.0f * mNdotV*mNdotV - 1.0f - rdotL * mVdotL);
+
+				if (bNewtonIteration)
+				{
+					// dot( cross(N,L), V )
+					float NxLoV = sqrt(saturate(1.0f - Pow2(mNdotL) - Pow2(mNdotV) - Pow2(mVdotL) + 2.0f * mNdotL * mNdotV * mVdotL));
+
+					float NoBr = rInvLengthT * NxLoV;
+					float VoBr = rInvLengthT * NxLoV * 2.0f * mNdotV;
+
+					float NoLVTr = mNdotL * cosAlpha + mNdotV + NoTr;
+					float VoLVTr = mVdotL * cosAlpha + 1.0f   + VoTr;
+
+					float p = NoBr   * VoLVTr;
+					float q = NoLVTr * VoLVTr;
+					float s = VoBr   * NoLVTr;
+
+					float xNum = q * (-0.5f * p + 0.25f * VoBr * NoLVTr);
+					float xDenom = p*p + s * (s - 2.0f*p) + NoLVTr * ( (mNdotL * cosAlpha + mNdotV) * Pow2(VoLVTr) + q * (-0.5f * (VoLVTr + mVdotL * cosAlpha) - 0.5f));
+					float TwoX1 = 2.0f * xNum / (Pow2(xDenom) + Pow2(xNum));
+					float sinTheta = TwoX1 * xDenom;
+					float cosTheta = 1.0f - TwoX1 * xNum;
+					NoTr = cosTheta * NoTr + sinTheta * NoBr;
+					VoTr = cosTheta * VoTr + sinTheta * VoBr;
+				}
+
+				mNdotL = mNdotL * cosAlpha + NoTr; // dot( N, L * cosAlpha + T * aSinAlpha )
+				mVdotL = mVdotL * cosAlpha + VoTr;
+
+				float InvLenH = rsqrt(2.0f + 2.0f * mVdotL);
+				mNdotH = saturate((mNdotL + mNdotV ) * InvLenH);
+				mVdotH = saturate(InvLenH + InvLenH * mVdotL);
+			}
+		}
+	}
+
+};
 
 
 ////////////////////////////////////////////
@@ -23,7 +109,7 @@
 float D_GGX(float a2, float nDotH)
 {
 	float denom = (nDotH * a2 - nDotH) * nDotH + 1;	// 2 mad
-	return a2 / (PI*denom*denom);				        // 4 mul, 1 rcp
+	return a2 / (PI*denom*denom);				    // 4 mul, 1 rcp
 }
 
 // Anisotropic GGX
@@ -40,7 +126,6 @@ float D_GGX_Aniso(float ax, float ay, float nDotH, float xDotH, float yDotH)
 ////////////////////////////////////////////
 // Geometric Attenuation    <G(l,v,h)>
 
-// Tuned to match behavior of Vis_Smith
 // [Schlick 1994, "An Inexpensive BRDF Model for Physically-Based Rendering"]
 float G_SchlickGGX(float a2, float nDotV, float nDotL)
 {

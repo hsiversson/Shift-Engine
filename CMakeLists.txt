@@ -50,6 +50,13 @@ endif()
 ##################################
 # 3rd Party Libraries
 
+## AMD Ags
+set(AGS_SDK_PATH "${ENGINE_EXTERNAL_DIRECTORY}/AMD/ags/ags_lib")
+set(AGS_BIN_PATH "${AGS_SDK_PATH}/lib")
+set(AGS_LIB_PATH "${AGS_SDK_PATH}/lib")
+set(AGS_INCLUDE_PATH "${AGS_SDK_PATH}/inc")
+set(AGS_LIB "${AGS_LIB_PATH}/amd_ags_x64.lib")
+
 ## Assimp
 set(ASSIMP_SDK_PATH "${ENGINE_EXTERNAL_DIRECTORY}/Assimp")
 set(ASSIMP_BIN_PATH "${ASSIMP_SDK_PATH}/bin")
@@ -73,8 +80,27 @@ set(DXC_LIB "${DXC_LIB_PATH}/dxcompiler.lib")
 set(IMGUI_SDK_PATH "${ENGINE_EXTERNAL_DIRECTORY}/ImGui")
 set(IMGUI_INCLUDE_PATH "${IMGUI_SDK_PATH}")
 
+## Nvidia NvApi
+set(NVAPI_SDK_PATH "${ENGINE_EXTERNAL_DIRECTORY}/Nvidia/nvapi")
+set(NVAPI_LIB_PATH "${NVAPI_SDK_PATH}/amd64")
+set(NVAPI_INCLUDE_PATH "${NVAPI_SDK_PATH}")
+set(NVAPI_LIB "${NVAPI_LIB_PATH}/nvapi64.lib")
+
+## Nvidia Nsight Aftermath
+set(AFTERMATH_SDK_PATH "${ENGINE_EXTERNAL_DIRECTORY}/Nvidia/Aftermath")
+set(AFTERMATH_BIN_PATH "${AFTERMATH_SDK_PATH}/lib")
+set(AFTERMATH_LIB_PATH "${AFTERMATH_SDK_PATH}/lib")
+set(AFTERMATH_INCLUDE_PATH "${AFTERMATH_SDK_PATH}/include")
+set(AFTERMATH_LIB "${AFTERMATH_LIB_PATH}/GFSDK_Aftermath_Lib.x64.lib")
+
+## WinPixEventRuntime
+set(WINPIXEVENTRUNTIME_SDK_PATH "${ENGINE_EXTERNAL_DIRECTORY}/WinPixEventRuntime")
+set(WINPIXEVENTRUNTIME_BIN_PATH "${WINPIXEVENTRUNTIME_SDK_PATH}/bin")
+set(WINPIXEVENTRUNTIME_INCLUDE_PATH "${WINPIXEVENTRUNTIME_SDK_PATH}/Include")
+set(WINPIXEVENTRUNTIME_LIB "${WINPIXEVENTRUNTIME_BIN_PATH}/WinPixEventRuntime.lib")
+
 ## Gather all SDKs into one variable
-set(VENDOR_SDK_LIBS ${ASSIMP_LIB} ${DXC_LIB})
+set(VENDOR_SDK_LIBS ${AGS_LIB} ${ASSIMP_LIB} ${DXC_LIB} ${NVAPI_LIB} ${AFTERMATH_LIB} ${WINPIXEVENTRUNTIME_LIB})
 
 ##################################
 # Utility functions
@@ -85,6 +111,13 @@ endfunction()
 
 function(ConfigTargetPostBuildLibInstall aTarget)
 
+    ## AMD Ags
+    set(AGS_DLL amd_ags_x64.dll)
+    add_custom_command(
+        TARGET ${aTarget} POST_BUILD 
+        COMMAND ${CMAKE_COMMAND} -E copy "${AGS_BIN_PATH}/${AGS_DLL}" "$<TARGET_FILE_DIR:${aTarget}>/${AGS_DLL}"
+        COMMENT "Copying [${AGS_DLL}] to output directory...\n"
+    )
     ## DirectX 12 Agility SDK
     set(D3D12_SDK_LAYERS_DLL d3d12SDKLayers.dll)
     set(D3D12_CORE_DLL D3D12Core.dll)
@@ -112,6 +145,25 @@ function(ConfigTargetPostBuildLibInstall aTarget)
         COMMAND ${CMAKE_COMMAND} -E copy "${ASSIMP_BIN_PATH}/${ASSIMP_DLL}" "$<TARGET_FILE_DIR:${aTarget}>/${ASSIMP_DLL}"
         COMMENT "Copying [${DXC_DXIL_DLL}] to output directory...\n"
     )
+
+    ## Nvidia Aftermath
+    set(AftermathDLL GFSDK_Aftermath_Lib.x64.dll)
+    set(LLVM_7_0_1_DLL llvm_7_0_1.dll)
+    add_custom_command(
+        TARGET ${aTarget} POST_BUILD 
+        COMMAND ${CMAKE_COMMAND} -E copy "${AFTERMATH_BIN_PATH}/${AftermathDLL}" "$<TARGET_FILE_DIR:${aTarget}>/${AftermathDLL}"
+        COMMAND ${CMAKE_COMMAND} -E copy "${AFTERMATH_BIN_PATH}/${LLVM_7_0_1_DLL}" "$<TARGET_FILE_DIR:${aTarget}>/${LLVM_7_0_1_DLL}"
+        COMMENT "Copying [${AftermathDLL}] and [${LLVM_7_0_1_DLL}] to output directory...\n"
+    )
+
+    ## WinPixEventRuntime
+    set(WINPIXEVENTRUNTIME_DLL WinPixEventRuntime.dll)
+    add_custom_command(
+        TARGET ${aTarget} POST_BUILD 
+        COMMAND ${CMAKE_COMMAND} -E copy "${WINPIXEVENTRUNTIME_BIN_PATH}/${WINPIXEVENTRUNTIME_DLL}" "$<TARGET_FILE_DIR:${aTarget}>/${WINPIXEVENTRUNTIME_DLL}"
+        COMMENT "Copying [${WINPIXEVENTRUNTIME_DLL}] to output directory...\n"
+    )
+
 endfunction()
 
 ##################################
