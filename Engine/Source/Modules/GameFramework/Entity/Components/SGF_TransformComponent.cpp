@@ -1,4 +1,5 @@
 #include "SGF_TransformComponent.h"
+#include "GameFramework/Entity/SGF_Entity.h"
 
 SGF_TransformComponent::SGF_TransformComponent() 
 	: mPosition(0.0f)
@@ -6,9 +7,6 @@ SGF_TransformComponent::SGF_TransformComponent()
 	, mScale(1.0f)
 	, mIsStatic(true)
 {
-#if IS_EDITOR_BUILD
-	mScale.SetDefaultValue(1.0f);
-#endif
 }
 
 SGF_TransformComponent::~SGF_TransformComponent()
@@ -20,7 +18,16 @@ SC_Matrix SGF_TransformComponent::GetTransform() const
 	SC_ScaleMatrix scale(mScale.Get());
 	SC_Matrix rotation = mRotation.Get().AsMatrix();
 	SC_TranslationMatrix translation(mPosition.Get());
-	return (scale * rotation) * translation;
+
+	SC_Matrix fullMatrix;
+	if (SGF_Entity* parent = GetParentEntity()->GetParent())
+	{
+		fullMatrix = parent->GetComponent<SGF_TransformComponent>()->GetTransform() * ((scale * rotation) * translation);
+	}
+	else
+		fullMatrix = (scale * rotation) * translation;
+
+	return fullMatrix;
 }
 
 bool SGF_TransformComponent::Save(SC_Json& aOutSaveData) const

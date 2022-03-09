@@ -1,5 +1,6 @@
 #include "SED_WorldHierarchyPanel.h"
 #include "GameFramework/GameWorld/SGF_World.h"
+#include "GameFramework/Entity/Components/SGF_EntityIdComponent.h"
 
 SED_WorldHierarchyPanel::SED_WorldHierarchyPanel(const SC_Ref<SGF_World>& aWorld)
 	: mWorld(aWorld)
@@ -17,13 +18,17 @@ void SED_WorldHierarchyPanel::OnRender()
 {
 	ImGui::Begin("World Hierarchy");
 
+	if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && ImGui::IsWindowHovered())
+		mSelectedEntity = nullptr;
+
 	for (SC_Ref<SGF_Level>& level : mWorld->mLevels)
 	{
 		if (ImGui::TreeNodeEx("Unnamed Level", ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth))
 		{
 			for (SC_Ref<SGF_Entity>& entity : level->mEntities)
 			{
-				DrawEntityNode(entity.get());
+				if (!entity->GetParent())
+					DrawEntityNode(entity.get());
 			}
 			ImGui::TreePop();
 		}
@@ -42,8 +47,31 @@ void SED_WorldHierarchyPanel::DrawEntityNode(SGF_Entity* aEntity)
 	ImGuiTreeNodeFlags treeNodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth;
 	if (aEntity == mSelectedEntity)
 		treeNodeFlags |= ImGuiTreeNodeFlags_Selected;
+	if (aEntity->GetChildren().IsEmpty())
+		treeNodeFlags |= ImGuiTreeNodeFlags_Leaf;
 
-	bool opened = ImGui::TreeNodeEx(aEntity->GetName().c_str(), treeNodeFlags);
+	bool opened = ImGui::TreeNodeEx(aEntity->GetName().c_str(), treeNodeFlags); 
+	
+	if (ImGui::BeginDragDropSource())
+	{
+		ImGui::SetDragDropPayload("EntityDrag", &aEntity, sizeof(aEntity));
+		ImGui::Text("%s", aEntity->GetName().c_str());
+		ImGui::EndDragDropSource();
+	}
+	if (ImGui::BeginDragDropTarget())
+	{
+		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("EntityDrag", ImGuiDragDropFlags_None))
+		{
+			SGF_Entity* entity;
+			SC_Memcpy(&entity, payload->Data, payload->DataSize);
+
+			if (entity != aEntity)
+			{
+				aEntity->AddChild(entity);
+			}
+		}
+		ImGui::EndDragDropTarget();
+	}
 
 	if (ImGui::IsItemClicked())
 		mSelectedEntity = aEntity;
@@ -57,13 +85,13 @@ void SED_WorldHierarchyPanel::DrawEntityNode(SGF_Entity* aEntity)
 		ImGui::EndPopup();
 	}
 
-	for (SGF_Entity* child : aEntity->mChildren)
-	{
-		DrawEntityNode(child);
-	}
-
 	if (opened)
 	{
+		for (SGF_Entity* child : aEntity->mChildren)
+		{
+			DrawEntityNode(child);
+		}
+
 		ImGui::TreePop();
 	}
 }

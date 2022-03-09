@@ -13,6 +13,9 @@ public:
 
 	SC_Ref<SR_Texture> GetDefaultThumbnail(const SED_AssetType& aType) const;
 	SC_Ref<SR_Texture> GetFolderThumbnail() const;
+
+	SC_Ref<SR_Texture> GetThumbnail();
+
 private:
 	SC_Ref<SR_Texture> mDefaultThumbnail[static_cast<uint32>(SED_AssetType::COUNT)];
 	SC_Ref<SR_Texture> mFolderThumbnail;

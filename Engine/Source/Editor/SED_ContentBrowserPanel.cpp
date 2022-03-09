@@ -1,4 +1,5 @@
 #include "SED_ContentBrowserPanel.h"
+#include "Graphics/Material/SGfx_MaterialInstance.h"
 #include "imgui_internal.h"
 
 SED_ContentBrowserPanel::SED_ContentBrowserPanel()
@@ -30,7 +31,9 @@ void SED_ContentBrowserPanel::OnRender()
 		DrawFolderEntry(n.c_str());
 		ImGui::NextColumn();
 	}
-	DrawAssetEntry("TestTexture0", SED_AssetType::Texture);
+
+	SR_Texture* thumbnailTexture = mThumbnailGenerator.GetDefaultThumbnail(SED_AssetType::Texture).get();
+	DrawAssetEntry("TestTexture0", SED_AssetType::Texture, &thumbnailTexture, sizeof(thumbnailTexture));
 	ImGui::NextColumn();
 	DrawAssetEntry("TestMaterial0", SED_AssetType::Material);
 
@@ -38,17 +41,7 @@ void SED_ContentBrowserPanel::OnRender()
 	ImGui::End();
 }
 
-void SED_ContentBrowserPanel::DrawFolderEntry(const char* aAssetName)
-{
-	DrawEntry(aAssetName, mThumbnailGenerator.GetFolderThumbnail().get());
-}
-
-void SED_ContentBrowserPanel::DrawAssetEntry(const char* aAssetName, const SED_AssetType& aType)
-{
-	DrawEntry(aAssetName, mThumbnailGenerator.GetDefaultThumbnail(aType).get());
-}
-
-void SED_ContentBrowserPanel::DrawEntry(const char* aEntryName, SR_Texture* aThumbnail)
+void SED_ContentBrowserPanel::DrawFolderEntry(const char* aFolderName)
 {
 	static const ImVec2 itemSize(192.f, 192.f);
 	const ImVec2 currentPos = ImGui::GetCursorScreenPos();
@@ -60,15 +53,83 @@ void SED_ContentBrowserPanel::DrawEntry(const char* aEntryName, SR_Texture* aThu
 	ImRect buttonRect = ImRect(currentPos.x, currentPos.y, currentPos.x + itemSize.x, currentPos.y + itemSize.y);
 	ImRect labelRect = ImRect(buttonRect.Min.x, buttonRect.Max.y - labelHeight - style.FramePadding.y, buttonRect.Max.x, buttonRect.Max.y);
 
-	ImGui::PushID(aEntryName);
+	ImGui::PushID(aFolderName);
 
 	// Thumbnail
 	{
-		ImGui::ImageButton(aThumbnail, itemSize);
+		ImGui::ImageButton(mThumbnailGenerator.GetFolderThumbnail().get(), itemSize);
 	}
 	// Label
 	{
-		ImGui::TextWrapped(aEntryName);
+		ImGui::TextWrapped(aFolderName);
+	}
+
+	ImGui::PopID();
+}
+
+void SED_ContentBrowserPanel::DrawAssetEntry(const char* aAssetName, const SED_AssetType& aType, void* aAssetPtr, SC_SizeT aAssetDataSize)
+{
+	static const ImVec2 itemSize(192.f, 192.f);
+	const ImVec2 currentPos = ImGui::GetCursorScreenPos();
+	ImVec2 currentPos2;
+	const ImGuiStyle& style = ImGui::GetStyle();
+	const ImGuiContext& context = *ImGui::GetCurrentContext();
+	const float labelHeight = context.FontSize;
+
+	ImRect buttonRect = ImRect(currentPos.x, currentPos.y, currentPos.x + itemSize.x, currentPos.y + itemSize.y);
+	ImRect labelRect = ImRect(buttonRect.Min.x, buttonRect.Max.y - labelHeight - style.FramePadding.y, buttonRect.Max.x, buttonRect.Max.y);
+
+	ImGui::PushID(aAssetName);
+
+	// Thumbnail
+	{
+		SR_Texture* thumbnailTexture = mThumbnailGenerator.GetDefaultThumbnail(aType).get();
+		ImGui::ImageButton(thumbnailTexture, itemSize);
+		if (ImGui::BeginDragDropSource())
+		{
+			const char* dataTag = nullptr;
+			switch (aType)
+			{
+			case SED_AssetType::Mesh:
+				dataTag = "MeshInstanceDrag";
+				break;
+			case SED_AssetType::Model:
+				dataTag = "ModelDrag";
+				break;
+			case SED_AssetType::Texture:
+				dataTag = "TextureDrag";
+				break;
+			case SED_AssetType::Material:
+				dataTag = "MaterialInstanceDrag";
+				break;
+			case SED_AssetType::Script:
+				dataTag = "ScriptDrag";
+				break;
+			case SED_AssetType::Font:
+				dataTag = "FontDrag";
+				break;
+			case SED_AssetType::DataTable:
+				dataTag = "DataTableDrag";
+				break;
+			case SED_AssetType::Level:
+				dataTag = "LevelDrag";
+				break;
+			case SED_AssetType::Project:
+				dataTag = "ProjectDrag";
+				break;
+			}
+
+			if (dataTag)
+			{
+				ImGui::SetDragDropPayload(dataTag, aAssetPtr, aAssetDataSize);
+				ImGui::Image(thumbnailTexture, { 64.f, 64.f });
+			}
+			ImGui::EndDragDropSource();
+		}
+	}
+	// Label
+	{
+		ImGui::TextWrapped(aAssetName);
 	}
 
 	ImGui::PopID();

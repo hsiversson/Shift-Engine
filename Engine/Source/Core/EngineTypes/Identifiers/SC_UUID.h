@@ -1,14 +1,16 @@
 #pragma once
+#include <string>
 
 class SC_UUID
 {
 public:
 	SC_UUID();
-	SC_UUID(const SC_UUID&) = default;
 	~SC_UUID();
 
-	bool operator==(const SC_UUID& aOther);
-	bool operator!=(const SC_UUID& aOther);
+	bool operator==(const SC_UUID& aOther) const;
+	bool operator!=(const SC_UUID& aOther) const;
+
+	void AsString(std::string& aOutString) const;
 
 private:
 	struct Components

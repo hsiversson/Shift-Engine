@@ -17,6 +17,8 @@ public:
 
 	void AddEntity(SC_Ref<SGF_Entity> aEntity);
 
+	SGF_Entity* FindEntityWithId(const SC_UUID& aId) const;
+
 	void SetWorld(SGF_World* aWorld);
 	SGF_World* GetWorld() const;
 private:

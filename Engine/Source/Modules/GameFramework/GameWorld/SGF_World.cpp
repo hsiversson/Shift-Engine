@@ -54,6 +54,18 @@ void SGF_World::RemoveLevel()
 
 }
 
+SGF_Entity* SGF_World::FindEntityWithId(const SC_UUID& aId) const
+{
+	for (const SC_Ref<SGF_Level>& level : mLevels)
+	{
+		SGF_Entity* entity = level->FindEntityWithId(aId);
+		if (entity)
+			return entity;
+	}
+
+	return nullptr;
+}
+
 SGfx_World* SGF_World::GetGraphicsWorld() const
 {
 	return mGraphicsWorld.get();

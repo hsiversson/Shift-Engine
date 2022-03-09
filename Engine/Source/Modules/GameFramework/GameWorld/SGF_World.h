@@ -26,6 +26,8 @@ public:
 	void AddLevel(const SC_Ref<SGF_Level>& aLevel);
 	void RemoveLevel();
 
+	SGF_Entity* FindEntityWithId(const SC_UUID& aId) const;
+
 	SGfx_World* GetGraphicsWorld() const;
 
 private:

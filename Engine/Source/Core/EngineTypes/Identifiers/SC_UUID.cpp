@@ -1,5 +1,6 @@
 #include "SC_UUID.h"
 #include <random>
+#include <sstream>
 
 static std::random_device gRandomDevice;
 static std::mt19937_64 gRandomEngine(gRandomDevice());
@@ -17,7 +18,7 @@ SC_UUID::~SC_UUID()
 
 }
 
-bool SC_UUID::operator==(const SC_UUID& aOther)
+bool SC_UUID::operator==(const SC_UUID& aOther) const
 {
 	if (mUUID.mLowComp == aOther.mUUID.mLowComp && mUUID.mHighComp == aOther.mUUID.mHighComp)
 		return true;
@@ -25,7 +26,14 @@ bool SC_UUID::operator==(const SC_UUID& aOther)
 	return false;
 }
 
-bool SC_UUID::operator!=(const SC_UUID& aOther)
+bool SC_UUID::operator!=(const SC_UUID& aOther) const
 {
 	return !(*this == aOther);
+}
+
+void SC_UUID::AsString(std::string& aOutString) const
+{
+	std::stringstream ss;
+	ss << "0x" << std::hex << mUUID.mHighComp << mUUID.mLowComp;
+	aOutString = ss.str();
 }

@@ -80,12 +80,29 @@ public:
 		Color,
 		Texture,
 		Mesh,
-		Material
+		Material,
+		EntityRef
 	};
 
 public:
-	SGF_PropertyBase(const Type& aType) : mType(aType), mInternalData(nullptr) {}
-	SGF_PropertyBase(const Type& aType, void* aData) : mType(aType), mInternalData(aData) {}
+	SGF_PropertyBase(const Type& aType) 
+		: mType(aType)
+		, mInternalData(nullptr) 
+#if IS_EDITOR_BUILD
+		, mName("Unnamed Property")
+		, mInternalResetData(nullptr)
+#endif
+	{}
+
+	SGF_PropertyBase(const Type& aType, void* aData) 
+		: mType(aType)
+		, mInternalData(aData)
+#if IS_EDITOR_BUILD
+		, mName("Unnamed Property")
+		, mInternalResetData(nullptr)
+#endif
+	{}
+
 	virtual ~SGF_PropertyBase() {}
 
 	const Type& GetType() const { return mType; }
@@ -104,13 +121,30 @@ public:
 		return static_cast<T*>(mInternalData);
 	}
 
-	virtual const char* GetName() const { return "Unnamed"; }
+#if IS_EDITOR_BUILD
+	void SetName(const char* aName) { mName = aName; }
+	const char* GetName() const { return mName; }
+
+	const void* GetResetData() const { return mInternalResetData; }
+
+	template<class T>
+	static const T* GetResetDataAs()
+	{
+		return static_cast<T*>(mInternalResetData);
+	}
+#endif
 
 protected:
 	void SetInternalData(void* aData) { mInternalData = aData; }
 
 	const Type mType;
 	void* mInternalData;
+
+#if IS_EDITOR_BUILD
+	void SetInternalResetData(void* aData) { mInternalResetData = aData; }
+	const char* mName;
+	void* mInternalResetData;
+#endif
 };
 template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<bool>() { return Type::Bool; }	
 template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<int32>() { return Type::Int; }
@@ -122,29 +156,20 @@ template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<
 template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<SC_Ref<SR_Texture>>() { return Type::Texture; }
 template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<SC_Ref<SGfx_MeshInstance>>() { return Type::Mesh; }
 template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<SC_Ref<SGfx_MaterialInstance>>() { return Type::Material; }
+template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<SC_Ref<SGF_Entity>>() { return Type::EntityRef; }
 
-template<
-	class T
-#if IS_EDITOR_BUILD
-	, const auto& aName
-#endif
->
+template<class T>
 class SGF_Property : public SGF_PropertyBase
 {
 public:
 	SGF_Property() 
 		: SGF_PropertyBase(SGF_PropertyBase::GetTypeFromClassType<T>(), &mInternalPropertyVariable)
-		, mInternalPropertyVariable(static_cast<T>(0))
-#if IS_EDITOR_BUILD
-		, mDefaultValue(static_cast<T>(0)) {}
-#endif
+		{}
 
-	SGF_Property(const T& aProperty) 
+	SGF_Property(const T& aProperty)
 		: SGF_PropertyBase(SGF_PropertyBase::GetTypeFromClassType<T>(), &mInternalPropertyVariable)
 		, mInternalPropertyVariable(aProperty)
-#if IS_EDITOR_BUILD
-		, mDefaultValue(static_cast<T>(0)) {}
-#endif
+	{}
 
 	void operator=(const T& aProperty) { mInternalPropertyVariable = aProperty; SetInternalData(&mInternalPropertyVariable); }
 
@@ -160,23 +185,19 @@ public:
 	void Set(const T& aProperty) { mInternalPropertyVariable = aProperty; SetInternalData(&mInternalPropertyVariable); }
 
 #if IS_EDITOR_BUILD
-	void SetDefaultValue(const T& aDefaultValue) { mDefaultValue = aDefaultValue; }
-	T GetDefaultValue() const { return mDefaultValue; }
-
-	const char* GetName() const override { return aName; }
+	void SetResetValue(const T& aResetValue) { mResetValue = aResetValue; SetInternalResetData(&mResetValue); }
+	const T& GetResetValue() const { return mResetValue; }
 #endif
 private:
 	T mInternalPropertyVariable;
-
 #if IS_EDITOR_BUILD
-	T mDefaultValue;
+	T mResetValue;
 #endif
 };
 
 class SGF_Component
 {
 	friend class SGF_Entity;
-	friend struct SGF_PropertyDeclHelper;
 public:
 	static SC_Ref<SGF_Component> CreateFromId(const SGF_ComponentId& aComponentId);
 	static SC_Ref<SGF_Component> CreateFromName(const char* aComponentName);
@@ -197,6 +218,8 @@ public:
 
 	SGF_Entity* GetParentEntity() const;
 	const SC_Array<SGF_PropertyBase*>& GetProperties() const;
+
+	void AddProperty(SGF_PropertyBase* aProperty) { mProperties.Add(aProperty); }
 
 public:
 	template<class ComponentType>
@@ -227,17 +250,26 @@ public:																									\
 
 
 #if IS_EDITOR_BUILD
+	template<class T>
 	struct SGF_PropertyDeclHelper
 	{
-		SGF_PropertyDeclHelper(SGF_PropertyBase* aProperty, SGF_Component* aParentComponent)
+		SGF_PropertyDeclHelper(SGF_Property<T>* aProperty, SGF_Component* aParentComponent, const char* aName)
 		{
-			aParentComponent->mProperties.Add(aProperty);
+			aProperty->SetName(aName);
+			aParentComponent->AddProperty(aProperty);
+		}
+
+		SGF_PropertyDeclHelper(SGF_Property<T>* aProperty, SGF_Component* aParentComponent, const char* aName, const T& aResetValue)
+		{
+			aProperty->SetName(aName);
+			aProperty->SetResetValue(aResetValue);
+			aParentComponent->AddProperty(aProperty);
 		}
 	};
-	#define SGF_PROPERTY(aVariableType, aVariableName, aPropertyName)				\
-	static constexpr const char* SC_CONCAT(__n, aVariableName) = aPropertyName;		\
-	SGF_Property<aVariableType, SC_CONCAT(__n, aVariableName)> aVariableName;		\
-	SGF_PropertyDeclHelper SC_CONCAT(__nHelper, aVariableName) = SGF_PropertyDeclHelper(&aVariableName, this)
+
+	#define SGF_PROPERTY(aVariableType, aVariableName, aPropertyName, ...)	\
+			SGF_Property<aVariableType> aVariableName;		\
+			SGF_PropertyDeclHelper<aVariableType> SC_CONCAT(__nHelper, aVariableName) = SGF_PropertyDeclHelper<aVariableType>(&aVariableName, this, aPropertyName, __VA_ARGS__)
 #else
-	#define SGF_PROPERTY(aVariableType, aVariableName, aPropertyName) SGF_Property<aVariableType> aVariableName;
+	#define SGF_PROPERTY(aVariableType, aVariableName, aPropertyName, ...) SGF_Property<aVariableType> aVariableName;
 #endif

@@ -726,7 +726,10 @@ void SR_CommandList_DX12::SetResources()
 				SR_BufferResource_DX12* cb = static_cast<SR_BufferResource_DX12*>(mResourceBindings.mConstantBuffers[param.mDescriptor.mRegisterIndex]);
 
 				if (!cb || !mResourceBindings.mConstantsDirty[param.mDescriptor.mRegisterIndex])
+				{
+					++paramIndex;
 					continue;
+				}
 
 				if (rootSignatureProperties.mIsCompute)
 					mD3D12CommandList->SetComputeRootConstantBufferView(paramIndex, cb->GetD3D12Resource()->GetGPUVirtualAddress());

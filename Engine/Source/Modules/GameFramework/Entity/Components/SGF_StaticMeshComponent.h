@@ -27,6 +27,9 @@ private:
 	// Support multiple meshes?
 	SGF_PROPERTY(SC_Ref<SGfx_MeshInstance>, mMeshInstance, "Mesh");
 	SGF_PROPERTY(SC_Ref<SGfx_MaterialInstance>, mMaterialInstance, "Material");
+	SGF_PROPERTY(SC_Ref<SR_Texture>, mTexture, "Texture");
+
+	SGF_PROPERTY(SC_Ref<SGF_Entity>, mEntityRef, "Entity");
 
 	bool mIsVisible;
 };

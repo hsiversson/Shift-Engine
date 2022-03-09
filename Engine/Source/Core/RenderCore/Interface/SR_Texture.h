@@ -25,6 +25,8 @@ struct SR_TextureProperties : public SR_TextureRange
 class SR_Texture
 {
 public:
+	virtual ~SR_Texture();
+
 	const SR_TextureProperties& GetProperties() const;
 	SR_TextureResource* GetResource() const;
 	const SR_TextureResourceProperties& GetResourceProperties() const;
@@ -37,7 +39,6 @@ public:
 
 protected:
 	SR_Texture(const SR_TextureProperties& aProperties, const SC_Ref<SR_TextureResource>& aResource);
-	virtual ~SR_Texture();
 
 	SR_TextureProperties mProperties;
 	SC_Ref<SR_TextureResource> mResource;

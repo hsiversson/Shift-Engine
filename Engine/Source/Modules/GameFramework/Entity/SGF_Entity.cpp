@@ -1,10 +1,12 @@
 #include "SGF_Entity.h"
 #include "SGF_EntityGraph.h"
 #include "GameFramework/GameWorld/SGF_World.h"
-#include "GameFramework/Entity/Components/SGF_Component.h"
+#include "Components/SGF_Component.h"
+#include "Components/SGF_EntityIdComponent.h"
 
 SGF_Entity::SGF_Entity()
 	: mWorld(nullptr)
+	, mParent(nullptr)
 {
 
 }
@@ -51,6 +53,32 @@ void SGF_Entity::AddComponent(SC_Ref<SGF_Component> aComponent)
 	aComponent->SetParentEntity(this);
 }
 
+bool SGF_Entity::Is(const SC_UUID& aId) const
+{
+	return GetComponent<SGF_EntityIdComponent>()->GetUUID() == aId;
+}
+
+const SC_Array<SGF_Entity*>& SGF_Entity::GetChildren() const
+{
+	return mChildren;
+}
+
+void SGF_Entity::SetParent(SGF_Entity* aParent)
+{
+	if (mParent)
+		mParent->RemoveChild(this);
+
+	mParent = aParent;
+
+	if (mParent)
+		mParent->AddChild(this);
+}
+
+SGF_Entity* SGF_Entity::GetParent() const
+{
+	return mParent;
+}
+
 void SGF_Entity::SetName(const std::string& aName)
 {
 	mName = aName;
@@ -92,4 +120,22 @@ bool SGF_Entity::Load(const SC_Json& aSavedData)
 	}
 
 	return true;
+}
+
+void SGF_Entity::AddChild(SGF_Entity* aEntity)
+{
+	if (aEntity == this)
+		return;
+	if (aEntity->GetParent() == this)
+		return;
+	if (GetParent() == aEntity)
+		return;
+
+	mChildren.Add(aEntity);
+	aEntity->SetParent(this);
+}
+
+void SGF_Entity::RemoveChild(SGF_Entity* aEntity)
+{
+	mChildren.Remove(aEntity);
 }

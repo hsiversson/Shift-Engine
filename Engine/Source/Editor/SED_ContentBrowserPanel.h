@@ -12,8 +12,7 @@ public:
 
 private:
 	void DrawFolderEntry(const char* aFolderName);
-	void DrawAssetEntry(const char* aAssetName, const SED_AssetType& aType);
-	void DrawEntry(const char* aEntryName, SR_Texture* aThumbnail);
+	void DrawAssetEntry(const char* aAssetName, const SED_AssetType& aType, void* aAssetPtr = nullptr, SC_SizeT aAssetDataSize = 0);
 private:
 	SED_Thumbnail mThumbnailGenerator;
 };

@@ -14,6 +14,7 @@ void SR_CommandList::Begin()
 {
 	mTempResources.RemoveAll();
 	mFenceWaits.RemoveAll();
+	mResourceBindings.Clear();
 }
 
 void SR_CommandList::End()

@@ -45,7 +45,7 @@ bool SED_Editor::Init()
 	mActiveWorld->Init();
 
 	mWorldHierarchy = SC_MakeRef<SED_WorldHierarchyPanel>(mActiveWorld);
-	mPropertiesPanel = SC_MakeRef<SED_PropertiesPanel>();
+	mPropertiesPanel = SC_MakeRef<SED_PropertiesPanel>(mActiveWorld);
 	mViewport = SC_MakeRef<SED_ViewportPanel>(mActiveWorld->GetGraphicsWorld(), &mGizmo);
 
 	mPanels.Add(mWorldHierarchy);

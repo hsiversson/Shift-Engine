@@ -13,8 +13,8 @@ public:
 	bool Save(SC_Json& aOutSaveData) const override;
 	bool Load(const SC_Json& aSavedData) override;
 
-	SGF_PROPERTY(SC_Vector, mPosition, "Position");
-	SGF_PROPERTY(SC_Quaternion, mRotation, "Rotation");
-	SGF_PROPERTY(SC_Vector, mScale, "Scale");
+	SGF_PROPERTY(SC_Vector, mPosition, "Position", SC_Vector::ZeroVector());
+	SGF_PROPERTY(SC_Quaternion, mRotation, "Rotation", SC_Quaternion::Identity());
+	SGF_PROPERTY(SC_Vector, mScale, "Scale", SC_Vector::OneVector());
 	SGF_PROPERTY(bool, mIsStatic, "Static");
 };

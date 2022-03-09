@@ -29,6 +29,12 @@ public:
 
 	void AddComponent(SC_Ref<SGF_Component> aComponent);
 
+	bool Is(const SC_UUID& aId) const;
+
+	const SC_Array<SGF_Entity*>& GetChildren() const;
+	void SetParent(SGF_Entity* aParent);
+	SGF_Entity* GetParent() const;
+
 	void SetName(const std::string& aName);
 	const std::string& GetName() const;
 
@@ -36,7 +42,11 @@ public:
 	bool Load(const SC_Json& aSavedData);
 
 private:
+	void AddChild(SGF_Entity* aEntity);
+	void RemoveChild(SGF_Entity* aEntity);
+
 	SC_Array<SGF_Entity*> mChildren;
+	SGF_Entity* mParent;
 	SGF_World* mWorld;
 
 	SC_UnorderedMap<SGF_ComponentId, SC_Ref<SGF_Component>> mComponents;

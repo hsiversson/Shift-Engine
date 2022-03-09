@@ -1,4 +1,5 @@
 #include "SGF_Level.h"
+#include "GameFramework/Entity/Components/SGF_EntityIdComponent.h"
 
 SGF_Level::SGF_Level()
     : mParentWorld(nullptr)
@@ -35,6 +36,7 @@ bool SGF_Level::Load(const SC_FilePath& aFilePath)
         auto CreateEntity = [this, entityData]()
         {
             SC_Ref<SGF_Entity> entity = SC_MakeRef<SGF_Entity>();
+            entity->AddComponent<SGF_EntityIdComponent>();
             entity->SetWorld(mParentWorld);
             if (!entity->Load(entityData))
                 return; // display error msg
@@ -72,6 +74,17 @@ void SGF_Level::AddEntity(SC_Ref<SGF_Entity> aEntity)
 {
     SC_MutexLock lock(mEntitiesMutex);
     mEntities.Add(aEntity);
+}
+
+SGF_Entity* SGF_Level::FindEntityWithId(const SC_UUID& aId) const
+{
+    for (const SC_Ref<SGF_Entity>& entity : mEntities)
+    {
+        if (entity->Is(aId))
+            return entity.get();
+    }
+
+    return nullptr;
 }
 
 void SGF_Level::SetWorld(SGF_World* aWorld)
