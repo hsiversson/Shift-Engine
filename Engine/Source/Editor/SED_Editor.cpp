@@ -214,6 +214,10 @@ bool SED_Editor::Render()
 
 				ImGui::SliderFloat("CSM Max Distance", &csmSettings.mMaxDistance, 1.0f, 1000.0f, "%.0f");
 				ImGui::SliderFloat("CSM Split Factor", &csmSettings.mSplitFactor, 0.7f, 1.0f, "%.2f");
+#if IS_DEBUG_BUILD
+				ImGui::Checkbox("CSM Debug Frustums", &csmSettings.mDebugDrawFrustums);
+				ImGui::Checkbox("CSM Lock Shadow View", &csmSettings.mLockShadowView);
+#endif
 
 				ImGui::EndMenu();
 			}

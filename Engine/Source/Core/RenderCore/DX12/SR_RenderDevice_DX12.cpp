@@ -20,6 +20,7 @@ extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8"./"; }
 #include "SR_ShaderState_DX12.h"
 #include "SR_Buffer_DX12.h"
 #include "SR_RootSignature_DX12.h"
+#include "SR_TempResourceHeap_DX12.h"
 #include "RenderCore/Resources/SR_TextureLoading.h"
 #include "RenderCore/ShaderCompiler/SR_DxcCompiler.h"
 
@@ -588,6 +589,10 @@ bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 		return false;
 
 	mDxcCompiler = SC_MakeUnique<SR_DxcCompiler>();
+
+	mTempResourceHeap = SC_MakeUnique<SR_TempResourceHeap_DX12>();
+	if (!mTempResourceHeap->Init())
+		return false;
 
 	return PostInit();
 }

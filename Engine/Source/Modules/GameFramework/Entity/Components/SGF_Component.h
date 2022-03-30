@@ -27,6 +27,17 @@ public:
 		return registryMap;
 	}
 
+	static inline SC_Ref<SGF_Component> CreateComponent(const SGF_ComponentId& aId)
+	{
+		SC_Ref<SGF_Component> comp;
+		Registry& registry = GetComponentRegistry();
+		if (registry.find(aId) != registry.end())
+		{
+			comp = registry.at(aId)();
+		}
+		return comp;
+	}
+
 	template<class ComponentType>
 	static SC_Ref<SGF_Component> CreateComponent()
 	{
@@ -152,6 +163,7 @@ template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<
 template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<float>() { return Type::Float; }
 template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<const char*>() { return Type::Text; }
 template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<SC_Vector>() { return Type::Vector; }
+template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<SC_Color>() { return Type::Color; }
 template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<SC_Quaternion>() { return Type::Quaternion; }
 template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<SC_Ref<SR_Texture>>() { return Type::Texture; }
 template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<SC_Ref<SGfx_MeshInstance>>() { return Type::Mesh; }

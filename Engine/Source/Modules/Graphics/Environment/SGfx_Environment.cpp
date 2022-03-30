@@ -4,17 +4,17 @@
 #include "Graphics/Misc/SGfx_DefaultTextures.h"
 #include "RenderCore/Interface/SR_CommandList.h"
 
-SGfx_Skybox::SGfx_Skybox()
+SGfx_Skysphere::SGfx_Skysphere()
 {
 
 }
 
-SGfx_Skybox::~SGfx_Skybox()
+SGfx_Skysphere::~SGfx_Skysphere()
 {
 
 }
 
-bool SGfx_Skybox::Init()
+bool SGfx_Skysphere::Init()
 {
 	SC_Array<SC_Vector> vertices;
 	SC_Array<uint32> indices;
@@ -24,13 +24,13 @@ bool SGfx_Skybox::Init()
 	vertexBufferResourceProps.mElementCount = vertices.Count();
 	vertexBufferResourceProps.mElementSize = vertices.ElementStride();
 	vertexBufferResourceProps.mBindFlags = SR_BufferBindFlag_VertexBuffer;
-	mCubeVertices = SR_RenderDevice::gInstance->CreateBufferResource(vertexBufferResourceProps, vertices.GetBuffer());
+	mVertexBuffer = SR_RenderDevice::gInstance->CreateBufferResource(vertexBufferResourceProps, vertices.GetBuffer());
 
 	SR_BufferResourceProperties indexBufferResourceProps;
 	indexBufferResourceProps.mElementCount = indices.Count();
 	indexBufferResourceProps.mElementSize = indices.ElementStride();
 	indexBufferResourceProps.mBindFlags = SR_BufferBindFlag_IndexBuffer;
-	mCubeIndices = SR_RenderDevice::gInstance->CreateBufferResource(indexBufferResourceProps, indices.GetBuffer());
+	mIndexBuffer = SR_RenderDevice::gInstance->CreateBufferResource(indexBufferResourceProps, indices.GetBuffer());
 
 	SR_ShaderStateProperties cubeShaderProps;
 	SR_ShaderCompileArgs compileArgs;
@@ -52,18 +52,18 @@ bool SGfx_Skybox::Init()
 
 	cubeShaderProps.mDepthStencilProperties.mDepthComparisonFunc = SR_ComparisonFunc::GreaterEqual;
 
-	mCubeShader = SR_RenderDevice::gInstance->CreateShaderState(cubeShaderProps);
+	mShader = SR_RenderDevice::gInstance->CreateShaderState(cubeShaderProps);
 
 	return true;
 }
 
-void SGfx_Skybox::Render(SR_CommandList* aCmdList)
+void SGfx_Skysphere::Render(SR_CommandList* aCmdList)
 {
-	aCmdList->SetVertexBuffer(mCubeVertices.get());
-	aCmdList->SetIndexBuffer(mCubeIndices.get());
-	aCmdList->SetShaderState(mCubeShader.get());
+	aCmdList->SetVertexBuffer(mVertexBuffer.get());
+	aCmdList->SetIndexBuffer(mIndexBuffer.get());
+	aCmdList->SetShaderState(mShader.get());
 	aCmdList->SetPrimitiveTopology(SR_PrimitiveTopology::TriangleList);
-	aCmdList->DrawIndexed(mCubeIndices->GetProperties().mElementCount);
+	aCmdList->DrawIndexed(mIndexBuffer->GetProperties().mElementCount);
 }
 
 SGfx_Environment::SGfx_Environment()
@@ -128,9 +128,9 @@ SGfx_Environment::SGfx_Environment()
 		SR_RenderDevice::gInstance->CompileShader(compileArgs, computeLUTShaderProps.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Compute)], &computeLUTShaderProps.mShaderMetaDatas[static_cast<uint32>(SR_ShaderType::Compute)]);
 		mComputeSkyViewLUTShader = SR_RenderDevice::gInstance->CreateShaderState(computeLUTShaderProps);
 	}
-	mSkybox = SC_MakeUnique<SGfx_Skybox>();
-	if (!mSkybox->Init())
-		mSkybox = nullptr;
+	mSkysphere = SC_MakeUnique<SGfx_Skysphere>();
+	if (!mSkysphere->Init())
+		mSkysphere = nullptr;
 		
 }
 

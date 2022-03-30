@@ -39,7 +39,6 @@ public:
 	void RemoveDecal(SC_Ref<SGfx_Decal> aDecal);
 
 private:
-
 	void CullMeshes(SGfx_View* aView);
 	void CullLights(SGfx_View* aView);
 

@@ -5,6 +5,13 @@
 struct ID3D12Resource;
 #endif
 
+struct SR_GlobalResourceState
+{
+	SR_ResourceState mCurrentLocalState;
+	SR_ResourceState mCurrentGlobalState;
+	SR_ResourceState mPrevState;
+};
+
 class SR_Resource
 {
 public:

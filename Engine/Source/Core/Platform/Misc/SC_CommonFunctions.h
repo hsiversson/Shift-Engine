@@ -35,6 +35,11 @@ inline Type SC_Clamp(const Type& aValue, const Type& aMin, const Type& aMax)
 		return aValue;
 }
 
+template<typename Type>
+inline Type SC_Lerp(const Type& aA, const Type& aB, const Type& aT)
+{
+	return aA + aT * (aB - aA);
+}
 
 //-------------------------------------------------------------//
 // Move

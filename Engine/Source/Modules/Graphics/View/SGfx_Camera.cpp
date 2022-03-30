@@ -198,8 +198,10 @@ SC_Vector SGfx_Camera::GetPosition() const
 
 void SGfx_Camera::LookAt(const SC_Vector& aTargetPos, const SC_Vector& aUpVector)
 {
-	SC_LookAtMatrix lookAtMatrix(GetPosition(), aTargetPos, aUpVector);
+	SC_Vector pos = GetPosition();
+	SC_LookAtMatrix lookAtMatrix(pos, aTargetPos, aUpVector);
 	mTransform = lookAtMatrix.Inverse();
+	mTransform.SetPosition(pos);
 	mIsDirty = true;
 }
 

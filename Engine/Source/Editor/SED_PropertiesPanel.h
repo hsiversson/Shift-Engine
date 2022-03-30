@@ -24,8 +24,9 @@ private:
 	void DrawPropertyInternal(const char* aName, int32& aProperty) const;
 	void DrawPropertyInternal(const char* aName, uint32& aProperty) const;
 	void DrawPropertyInternal(const char* aName, float& aProperty) const;
-	void DrawPropertyInternal(const char* aName, SC_Vector& aProperty, const SC_Vector& aDefaultValue) const;
-	void DrawPropertyInternal(const char* aName, SC_Quaternion& aProperty, const SC_Quaternion& aDefaultValue) const;
+	void DrawPropertyInternal(const char* aName, SC_Vector& aProperty, const SC_Vector& aResetValue) const;
+	void DrawPropertyInternal(const char* aName, SC_Color& aProperty) const;
+	void DrawPropertyInternal(const char* aName, SC_Quaternion& aProperty, const SC_Quaternion& aResetValue) const;
 	void DrawPropertyInternal(const char* aName, SC_Ref<SR_Texture>& aProperty) const;
 	void DrawPropertyInternal(const char* aName, SC_Ref<SGfx_MaterialInstance>& aProperty) const;
 	void DrawPropertyInternal(const char* aName, SC_Ref<SGfx_MeshInstance>& aProperty) const;

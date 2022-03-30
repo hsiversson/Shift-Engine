@@ -16,7 +16,7 @@ struct SR_LocalLight
 	float3 mPosition;
 	float mRange;
 
-	float3 mColoredBrightness;
+	float3 mColoredIntensity;
 	uint mType;
 
 	float2 mSpotAngles;
@@ -40,7 +40,7 @@ struct SR_DirectionalLight
 {
     float3 mToLightDirection;
     float _unused0;
-    float3 mColoredBrightness;
+    float3 mColoredIntensity;
 };
 
 StructuredBuffer<SR_LocalLight> GetLightBuffer()

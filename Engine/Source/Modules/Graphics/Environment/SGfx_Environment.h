@@ -56,20 +56,20 @@ struct alignas(16) SGfx_EnvironmentConstants
 	SGfx_ScatteringConstants mScatteringConstants;
 };
 
-class SGfx_Skybox
+class SGfx_Skysphere
 {
 public:
-	SGfx_Skybox();
-	~SGfx_Skybox();
+	SGfx_Skysphere();
+	~SGfx_Skysphere();
 
 	bool Init();
 
 	void Render(SR_CommandList* aCmdList);
 
 private:
-	SC_Ref<SR_BufferResource> mCubeVertices;
-	SC_Ref<SR_BufferResource> mCubeIndices;
-	SC_Ref<SR_ShaderState> mCubeShader;
+	SC_Ref<SR_BufferResource> mVertexBuffer;
+	SC_Ref<SR_BufferResource> mIndexBuffer;
+	SC_Ref<SR_ShaderState> mShader;
 };
 
 class SGfx_Environment
@@ -89,7 +89,7 @@ public:
 
 	void UpdateConstants(const SGfx_Camera& aWorldCamera);
 
-	SGfx_Skybox* GetSkybox() const { return mSkybox.get(); }
+	SGfx_Skysphere* GetSkysphere() const { return mSkysphere.get(); }
 
 	void ComputeScatteringLUTs(SR_CommandList* aCmdList);
 
@@ -112,7 +112,7 @@ private:
 	SC_Ref<SR_BufferResource> mSkyViewLUTConstantBuffer;
 	
 
-	SC_UniquePtr<SGfx_Skybox> mSkybox;
+	SC_UniquePtr<SGfx_Skysphere> mSkysphere;
 
 };
 

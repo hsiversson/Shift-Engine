@@ -80,10 +80,10 @@ private:
 	void RenderAverageLuminance();
 
 	void RenderBloom(SGfx_View* aView, SR_Texture* aScreenColor);
-	void RenderBloomMipRecursive(const SGfx_ViewData& aRenderData, SR_Texture*& aOutMip, SR_Texture* aInMip);
-	void UpsampleBloomMip(SR_Texture*& aOutMip, SR_Texture* aFullMip, SR_Texture* aDownsampledMip, SC_Ref<SR_Texture>* aRefOut = nullptr);
+	void RenderBloomMipRecursive(const SGfx_ViewData& aRenderData, SR_TempTexture& aOutMip, SR_Texture* aInMip);
+	void UpsampleBloomMip(SR_TempTexture& aOutMip, SR_Texture* aFullMip, SR_TempTexture& aDownsampledMip);
 
-	SR_Texture* Downsample(SR_Texture* aSource);
+	SR_TempTexture Downsample(SR_Texture* aSource);
 
 	void RenderLensFlare();
 	void RenderChromaticAbberation();

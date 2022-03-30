@@ -1,6 +1,10 @@
 #include "SGF_World.h"
 #include "Graphics/World/SGfx_World.h"
-//#include "../Editor/SED_AssimpImporter.h"
+
+////////////////////////////////
+// TEMP
+#include "../Editor/SED_AssimpImporter.h"
+////////////////////////////////
 
 SGF_World::SGF_World()
 {
@@ -32,9 +36,8 @@ bool SGF_World::LoadLevel(const char* /*aLevel*/)
 	//importer.ImportScene(SC_EnginePaths::Get().GetGameDataDirectory() + "/Models/SponzaPBR/sponzaPBR.obj", scene, 0.01f);
 	//
 	//scene.ConvertToLevelAndSave(*level);
-	////level->Save(SC_EnginePaths::Get().GetGameDataDirectory() + "/Levels/Sponza.slvl");
-	//mLevels.Add(level);
-
+	//level->Save(SC_EnginePaths::Get().GetGameDataDirectory() + "/Levels/Sponza.slvl");
+	mLevels.Add(level);
 	return true;
 }
 

@@ -63,6 +63,16 @@ SR_RenderDevice::~SR_RenderDevice()
 
 }
 
+void SR_RenderDevice::Present()
+{
+	SR_SwapChain* sc = GetSwapChain();
+	WaitForFence(sc->GetLastFrameFence());
+
+	sc->Present();
+
+	mTempResourceHeap->EndFrame();
+}
+
 SC_Ref<SR_CommandList> SR_RenderDevice::CreateCommandList(const SR_CommandListType& /*aType*/)
 {
 	assert(false && "Not implemented yet!");
@@ -91,6 +101,12 @@ SC_Ref<SR_TextureResource> SR_RenderDevice::CreateTextureResource(const SR_Textu
 {
 	assert(false && "Not implemented yet!");
 	return nullptr;
+}
+
+SR_TempTexture SR_RenderDevice::CreateTempTexture(const SR_TextureResourceProperties& aTextureProperties, bool aIsTexture, bool aIsRenderTarget, bool aIsWritable)
+{
+	assert(mTempResourceHeap);
+	return mTempResourceHeap->GetTexture(aTextureProperties, aIsTexture, aIsRenderTarget, aIsWritable);
 }
 
 SC_Ref<SR_Texture> SR_RenderDevice::LoadTexture(const SC_FilePath& aTextureFilePath)

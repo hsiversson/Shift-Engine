@@ -111,16 +111,12 @@ bool SAF_Framework::Update()
 
 	if (SR_RenderDevice::gInstance)
 	{
-		SR_SwapChain* sc = SR_RenderDevice::gInstance->GetSwapChain();
-
 		if (mCallbacks)
 			mCallbacks->Render();
 
 		// Render Modules
 
-		SR_RenderDevice::gInstance->WaitForFence(sc->GetLastFrameFence());
-		sc->Present();
-		//SR_RenderDevice::gInstance->Present();
+		SR_RenderDevice::gInstance->Present();
 		SR_RenderDevice::gInstance->mLatestFinishedFrame = SC_Time::gFrameCounter;
 	}
 

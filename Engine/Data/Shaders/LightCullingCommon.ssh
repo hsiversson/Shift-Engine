@@ -5,7 +5,7 @@
 #include "BindlessResources.ssh"
 
 #define TILE_SIZE (16)
-#define NUM_LIGHTS_PER_TILE (31)
+#define NUM_LIGHTS_PER_TILE (63)
 
 #define NUM_THREADS_X TILE_SIZE
 #define NUM_THREADS_Y TILE_SIZE

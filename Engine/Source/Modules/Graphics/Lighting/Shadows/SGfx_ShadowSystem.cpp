@@ -2,8 +2,12 @@
 #include "Graphics/View/SGfx_Camera.h"
 #include "Graphics/View/SGfx_View.h"
 #include "Graphics/Renderer/SGfx_DrawInfo.h"
+#include "Graphics/Renderer/SGfx_DebugRenderer.h"
 
 SGfx_CascadedShadowMap::SGfx_CascadedShadowMap()
+#if IS_DEBUG_BUILD
+	: mWasLocked(false)
+#endif
 {
 
 }
@@ -49,10 +53,41 @@ SC_Sphere GetMinimumBoundingSphereFromPoints(SC_Vector* aPoints, uint32 aNumPoin
 	return s;
 }
 
+#if IS_DEBUG_BUILD
+static const SC_Vector4& GetCascadeDebugColor(uint32 aCascadeIndex)
+{
+	static SC_Vector4 gColors[4] =
+	{
+		SC_Vector4(1.0f, 0.0f, 0.0f, 1.0f),
+		SC_Vector4(1.0f, 1.0f, 0.0f, 1.0f),
+		SC_Vector4(0.0f, 1.0f, 0.0f, 1.0f),
+		SC_Vector4(0.0f, 0.0f, 1.0f, 1.0f)
+	};
+
+	return gColors[aCascadeIndex];
+}
+#endif
+
 void SGfx_CascadedShadowMap::UpdateViews(SGfx_View* aMainView)
 {
 	const SGfx_ViewData& prepareData = aMainView->GetPrepareData();
+
+#if IS_DEBUG_BUILD
+	if (mSettings.mLockShadowView)
+	{
+		if (!mWasLocked)
+		{
+			mLockedViewCamera = aMainView->GetCamera();
+			mWasLocked = true;
+		}
+	}
+	else
+		mWasLocked = false;
+
+	const SGfx_Camera& camera = (mSettings.mLockShadowView) ? mLockedViewCamera : aMainView->GetCamera();
+#else
 	const SGfx_Camera& camera = aMainView->GetCamera();
+#endif
 
 	if (mSettings.mResolution != (uint32)mCascades[0].mTarget->GetResource()->GetProperties().mSize.x)
 	{
@@ -89,6 +124,8 @@ void SGfx_CascadedShadowMap::UpdateViews(SGfx_View* aMainView)
 		cascade.mMBSCache = minBoundingSphere;
 	}
 
+	const SC_Vector& lightDir = prepareData.mSceneConstants.mEnvironmentConstants.mSunLightDirection;
+	SC_Vector3f up = (lightDir.Dot(up) < -0.999f) ? SC_Vector3f(1.0f, 0.0f, 0.0f) : SC_Vector3f(0.0f, 1.0f, 0.0f);
 	const uint32 lastCascadeIndex = mSettings.gNumCascades - 1;
 	for (uint32 i = 0; i < mSettings.gNumCascades; ++i)
 	{
@@ -98,23 +135,67 @@ void SGfx_CascadedShadowMap::UpdateViews(SGfx_View* aMainView)
 
 		const float lastRadius = mCascades[lastCascadeIndex].mMBSCache.mRadius;
 		const float lastSplitPoint = mSplitPoints[lastCascadeIndex] - mSplitPoints[i + 1] * 0.08f;
-		const float pushBackDistance = lastRadius + lastSplitPoint;
+		const float pushBackDistance = (lastRadius + lastSplitPoint) * 0.2f;
 
 		float radius = mCascades[i].mMBSCache.mRadius;
-		float size = mCascades[i].mMBSCache.mRadius * 2.4f;
-		cascade.mCamera.SetOrthogonalProjection({ size, size }, -pushBackDistance, radius + 100.0f);
+		float size = radius * 2.4f;
+		cascade.mCamera.SetOrthogonalProjection({ size, size }, -pushBackDistance, radius + mSettings.mMaxDistance);
 
-		const SC_Vector center(
+		SC_Vector center(
 			camera.GetPosition() +
 			camera.GetRight()	* cascade.mCameraToMBSCenterCache.x +
 			camera.GetUp()		* cascade.mCameraToMBSCenterCache.y +
 			camera.GetForward() * cascade.mCameraToMBSCenterCache.z);
 
-		const SC_Vector& lightDir = prepareData.mSceneConstants.mEnvironmentConstants.mSunLightDirection;
-		cascade.mCamera.SetPosition(center);
-		cascade.mCamera.LookAt(center + (-lightDir * 10.f));
+		const float metersPerSMTexel = size / mSettings.mResolution;
+		SC_Vector3f& oldPosition = cascade.mOldPosition;
+		float xerror = (center.x - oldPosition.x) / metersPerSMTexel;
+		float yerror = (center.y - oldPosition.y) / metersPerSMTexel;
+		float zerror = (center.z - oldPosition.z) / (radius * 0.05f);
+		bool posChange = SC_Max(SC_Math::Abs(xerror), SC_Math::Abs(yerror), SC_Math::Abs(zerror)) > 1.0f;
+		if (posChange)
+		{
+			center.x = oldPosition.x + SC_Math::Floor(xerror + 0.5f) * metersPerSMTexel;
+			center.y = oldPosition.y + SC_Math::Floor(yerror + 0.5f) * metersPerSMTexel;
+			center.z = oldPosition.z + SC_Math::Floor(zerror + 0.5f) * radius * 0.05f;
+			oldPosition = center;
+
+			const SC_Vector3f lightCameraPosition = cascade.mCamera.GetRight() * center.x + cascade.mCamera.GetUp() * center.y + cascade.mCamera.GetForward() * center.z;
+			const SC_Vector3f lightCameraTarget = lightCameraPosition + -lightDir;
+
+			cascade.mCamera.SetPosition(lightCameraPosition);
+			cascade.mCamera.LookAt(lightCameraTarget, up);
+		}
 		//mCascades[i].mNeedsCacheUpdate = false;
+
+#if IS_DEBUG_BUILD
+		if (mSettings.mDebugDrawFrustums)
+		{
+			SC_Vector corners[8];
+			cascade.mCamera.GetCornersOnPlane(cascade.mCamera.GetNear(), corners);
+			cascade.mCamera.GetCornersOnPlane(cascade.mCamera.GetFar(), corners + 4);
+
+			SC_Vector4 color = GetCascadeDebugColor(i);
+
+			DRAW_LINE_COLORED(corners[0], corners[1], color);
+			DRAW_LINE_COLORED(corners[1], corners[3], color);
+			DRAW_LINE_COLORED(corners[3], corners[2], color);
+			DRAW_LINE_COLORED(corners[2], corners[0], color);
+			DRAW_LINE_COLORED(corners[0], corners[4], color);
+			DRAW_LINE_COLORED(corners[4], corners[5], color);
+			DRAW_LINE_COLORED(corners[5], corners[1], color);
+			DRAW_LINE_COLORED(corners[1], corners[5], color);
+			DRAW_LINE_COLORED(corners[5], corners[7], color);
+			DRAW_LINE_COLORED(corners[7], corners[3], color);
+			DRAW_LINE_COLORED(corners[3], corners[7], color);
+			DRAW_LINE_COLORED(corners[7], corners[6], color);
+			DRAW_LINE_COLORED(corners[6], corners[2], color);
+			DRAW_LINE_COLORED(corners[2], corners[6], color);
+			DRAW_LINE_COLORED(corners[6], corners[4], color);
+		}
+#endif
 	}
+
 }
 
 void SGfx_CascadedShadowMap::Generate(SR_CommandList* aCmdList, const SGfx_ViewData& aRenderData)
@@ -293,7 +374,7 @@ SGfx_ShadowConstants SGfx_ShadowSystem::GetShadowConstants() const
 			0.5f, 0.0f, 0.0f, 0.0f,
 			0.0f, -0.5f, 0.0f, 0.0f,
 			0.0f, 0.0f, 1.0f, 0.0f,
-			0.5f, 0.5f, 0.0002f, 0.0f);
+			0.5f, 0.5f, 0.0f, 0.0f);
 
 		constants.mCSMWorldToClip[i] = (mCSM->GetCascade(i).mCamera.GetViewConstants().mWorldToClip * biasMatrix);
 	}

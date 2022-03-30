@@ -226,6 +226,7 @@ void SGfx_SceneGraph::CullLights(SGfx_View* aView)
 		tempLightsList.Add(mLights);
 	}
 
+	SGfx_ViewData& prepareData = aView->GetPrepareData();
 	const SGfx_Camera& camera = aView->GetCamera();
 	const SGfx_Frustum& frustum = camera.GetFrustum();
 
@@ -234,6 +235,10 @@ void SGfx_SceneGraph::CullLights(SGfx_View* aView)
 		if (light->GetType() == SGfx_LightType::Directional || frustum.Intersects(light->GetBoundingSphere()))
 		{
 			// Add to light queues because this light is visible inside our current view
+			SGfx_LightRenderData lightRenderData;
+			lightRenderData.mCastShadow = false;
+			lightRenderData.mGPUData = light->GetShaderData();
+			prepareData.mVisibleLights.Add(lightRenderData);
 		}
 	}
 }

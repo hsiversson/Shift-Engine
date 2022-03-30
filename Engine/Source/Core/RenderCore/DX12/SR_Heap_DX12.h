@@ -13,13 +13,15 @@ public:
 
 	bool Init();
 
+	void ResetOffset();
+
 	const uint64 GetOffset(uint64 aSize, uint64 aAlignment) override;
 
 	ID3D12Heap* GetD3D12Heap() const;
 	uint64 GetHeapOffset() const;
 private:
 	SR_ComPtr<ID3D12Heap> mD3D12Heap;
-	uint64 mHeapOffset;
+	volatile uint64 mHeapOffset;
 };
 
 #endif //ENABLE_DX12

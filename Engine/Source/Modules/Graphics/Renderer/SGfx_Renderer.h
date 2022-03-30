@@ -24,7 +24,7 @@ class SGfx_Environment;
 /**
  * 
  *		Default scene renderer.
- *		Renders views with a clustered forward path.
+ *		Renders views with a tiled forward path.
  * 
  */
 class SGfx_Renderer

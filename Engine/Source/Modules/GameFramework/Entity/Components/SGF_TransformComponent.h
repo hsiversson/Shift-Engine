@@ -3,7 +3,7 @@
 
 class SGF_TransformComponent : public SGF_Component
 {
-	COMPONENT_DECLARE(SGF_TransformComponent, "TransformComponent");
+	COMPONENT_DECLARE(SGF_TransformComponent, "Transform");
 public:
 	SGF_TransformComponent();
 	~SGF_TransformComponent();

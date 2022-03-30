@@ -81,11 +81,7 @@ void SGfx_PostEffects::RenderBloom(SGfx_View* aView, SR_Texture* aScreenColor)
 	resourceProps.mAllowUnorderedAccess = true;
 	resourceProps.mType = SR_ResourceType::Texture2D;
 	SC_Ref<SR_TextureResource> tempResource = SR_RenderDevice::gInstance->CreateTextureResource(resourceProps);
-
-	SR_TextureProperties texProps(resourceProps.mFormat);
-	SC_Ref<SR_Texture> tex = mTempTextures.Add(SR_RenderDevice::gInstance->CreateTexture(texProps, tempResource));
-	texProps.mWritable = true;
-	SC_Ref<SR_Texture> rwtex = mTempTextures.Add(SR_RenderDevice::gInstance->CreateTexture(texProps, tempResource));
+	SR_TempTexture tempTex = SR_RenderDevice::gInstance->CreateTempTexture(resourceProps, true, false, true);
 
 	struct FilterConstants
 	{
@@ -99,7 +95,7 @@ void SGfx_PostEffects::RenderBloom(SGfx_View* aView, SR_Texture* aScreenColor)
 	constants.mThreshold = 1.0f;
 	constants.mSoftThreshold = 1.0f;
 	constants.mInputTextureDescriptorIndex = aScreenColor->GetDescriptorHeapIndex();
-	constants.mOutputTextureDescriptorIndex = rwtex->GetDescriptorHeapIndex();
+	constants.mOutputTextureDescriptorIndex = tempTex.mRWTexture->GetDescriptorHeapIndex();
 
 	SR_BufferResourceProperties cbProps;
 	cbProps.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
@@ -109,35 +105,44 @@ void SGfx_PostEffects::RenderBloom(SGfx_View* aView, SR_Texture* aScreenColor)
 	cb->UpdateData(0, &constants, sizeof(constants));
 	cmdList->SetRootConstantBuffer(cb.get(), 0);
 	cmdList->Dispatch(mBloomData.mBrightnessFilterShader.get(), targetSize.x, targetSize.y);
-	cmdList->UnorderedAccessBarrier(rwtex->GetResource());
+	cmdList->UnorderedAccessBarrier(tempTex.mResource.get());
 
-	SR_Texture* outtex = nullptr;
-	RenderBloomMipRecursive(renderData, outtex, tex.get());
-	SR_Texture* result = nullptr;
-	UpsampleBloomMip(result, tex.get(), outtex, &mBloomData.mResult);
-	
+	SR_TempTexture mipResult;
+	RenderBloomMipRecursive(renderData, mipResult, tempTex.mTexture.get());
+
+	SR_TempTexture result;
+	UpsampleBloomMip(result, tempTex.mTexture.get(), mipResult);
+
+	if (!mBloomData.mResult)
+	{
+		SC_Ref<SR_TextureResource> res = SR_RenderDevice::gInstance->CreateTextureResource(result.mResource->GetProperties());
+		mBloomData.mResult = SR_RenderDevice::gInstance->CreateTexture(result.mResource->GetProperties().mFormat, res);
+	}
+	cmdList->CopyResource(mBloomData.mResult->GetResource(), result.mResource.get());
 }
 
-void SGfx_PostEffects::RenderBloomMipRecursive(const SGfx_ViewData& aRenderData, SR_Texture*& aOutMip, SR_Texture* aInMip)
+void SGfx_PostEffects::RenderBloomMipRecursive(const SGfx_ViewData& aRenderData, SR_TempTexture& aOutMip, SR_Texture* aInMip)
 {
-	SR_Texture* downsampledMip = Downsample(aInMip);
+	SR_TempTexture downsampledMip = Downsample(aInMip);
+	SR_Texture* downsampledMipTex = downsampledMip.mTexture.get();
 
-	int32 maxResolutionSize = SC_Max(downsampledMip->GetResourceProperties().mSize.x, downsampledMip->GetResourceProperties().mSize.y);
+	int32 maxResolutionSize = SC_Max(downsampledMipTex->GetResourceProperties().mSize.x, downsampledMipTex->GetResourceProperties().mSize.y);
 	if (maxResolutionSize > 4)
 	{
-		SR_Texture* tex = nullptr;
-		RenderBloomMipRecursive(aRenderData, tex, downsampledMip);
-		UpsampleBloomMip(aOutMip, downsampledMip, tex);
+		SR_TempTexture mipResult;
+		RenderBloomMipRecursive(aRenderData, mipResult, downsampledMipTex);
+		UpsampleBloomMip(aOutMip, downsampledMipTex, mipResult);
 	}
 	else
 		aOutMip = downsampledMip;
 }
 
-void SGfx_PostEffects::UpsampleBloomMip(SR_Texture*& aOutMip, SR_Texture* aFullMip, SR_Texture* aDownsampledMip, SC_Ref<SR_Texture>* aRefOut)
+void SGfx_PostEffects::UpsampleBloomMip(SR_TempTexture& aOutMip, SR_Texture* aFullMip, SR_TempTexture& aDownsampledMip)
 {
 	SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
 	SC_IntVector fullSize = aFullMip->GetResourceProperties().mSize;
 	SC_IntVector upsampleSize = fullSize;
+	SR_Texture* downsampledMipTex = aDownsampledMip.mTexture.get();
 
 	SR_TextureResourceProperties resourceProps;
 	resourceProps.mAllowUnorderedAccess = true;
@@ -145,17 +150,7 @@ void SGfx_PostEffects::UpsampleBloomMip(SR_Texture*& aOutMip, SR_Texture* aFullM
 	resourceProps.mFormat = aFullMip->GetResourceProperties().mFormat;
 	resourceProps.mDebugName = "Bloom Upsample";
 	resourceProps.mType = SR_ResourceType::Texture2D;
-	SC_Ref<SR_TextureResource> tempResource = SR_RenderDevice::gInstance->CreateTextureResource(resourceProps);
-
-	SR_TextureProperties texProps(resourceProps.mFormat);
-	aOutMip = mTempTextures.Add(SR_RenderDevice::gInstance->CreateTexture(texProps, tempResource)).get();
-	if (aRefOut)
-	{
-		*aRefOut = mTempTextures.Last();
-	}
-
-	texProps.mWritable = true;
-	SC_Ref<SR_Texture> rwtex = mTempTextures.Add(SR_RenderDevice::gInstance->CreateTexture(texProps, tempResource));
+	aOutMip = SR_RenderDevice::gInstance->CreateTempTexture(resourceProps, true, false, true);
 
 	struct Constants
 	{
@@ -176,9 +171,9 @@ void SGfx_PostEffects::UpsampleBloomMip(SR_Texture*& aOutMip, SR_Texture* aFullM
 	constants.mTentFilterScale = SC_Vector2(1.75f, 1.25f);
 	constants.mDestOffset = SC_Vector2(0.0f);
 	constants.mStrength = 0.63f;
-	constants.mInput0TextureDescriptorIndex = aDownsampledMip->GetDescriptorHeapIndex();
+	constants.mInput0TextureDescriptorIndex = downsampledMipTex->GetDescriptorHeapIndex();
 	constants.mInput1TextureDescriptorIndex = aFullMip->GetDescriptorHeapIndex();
-	constants.mOutputTextureDescriptorIndex = rwtex->GetDescriptorHeapIndex();
+	constants.mOutputTextureDescriptorIndex = aOutMip.mRWTexture->GetDescriptorHeapIndex();
 
 	SR_BufferResourceProperties cbProps;
 	cbProps.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
@@ -189,10 +184,10 @@ void SGfx_PostEffects::UpsampleBloomMip(SR_Texture*& aOutMip, SR_Texture* aFullM
 	cmdList->SetRootConstantBuffer(cb.get(), 0);
 
 	cmdList->Dispatch(mBloomData.mUpsampleShader.get(), SC_IntVector(upsampleSize.XY(), 1));
-	cmdList->UnorderedAccessBarrier(rwtex->GetResource());
+	cmdList->UnorderedAccessBarrier(aOutMip.mResource.get());
 }
 
-SR_Texture* SGfx_PostEffects::Downsample(SR_Texture* aSource)
+SR_TempTexture SGfx_PostEffects::Downsample(SR_Texture* aSource)
 {
 	// TODO: Make viewport aware
 	const SC_IntVector2 fullSize = aSource->GetResourceProperties().mSize.XY();
@@ -204,12 +199,7 @@ SR_Texture* SGfx_PostEffects::Downsample(SR_Texture* aSource)
 	resourceProps.mAllowRenderTarget = true;
 	resourceProps.mAllowUnorderedAccess = true;
 	resourceProps.mType = SR_ResourceType::Texture2D;
-	SC_Ref<SR_TextureResource> tempResource = SR_RenderDevice::gInstance->CreateTextureResource(resourceProps);
-
-	SR_TextureProperties texProps(resourceProps.mFormat);
-	SC_Ref<SR_Texture> tex = mTempTextures.Add(SR_RenderDevice::gInstance->CreateTexture(texProps, tempResource));
-	texProps.mWritable = true;
-	SC_Ref<SR_Texture> rwtex = mTempTextures.Add(SR_RenderDevice::gInstance->CreateTexture(texProps, tempResource));
+	SR_TempTexture tempTex = SR_RenderDevice::gInstance->CreateTempTexture(resourceProps, true, false, true);
 
 	struct Constants
 	{
@@ -229,7 +219,7 @@ SR_Texture* SGfx_PostEffects::Downsample(SR_Texture* aSource)
 	constants.mUVOffset = SC_Vector2(0.0f);
 	constants.m2DivTexelSizeAndUVScale = SC_Vector2(2.0f) / constants.mTexelSizeAndUVScale;
 	constants.mInputTextureDescriptorIndex = aSource->GetDescriptorHeapIndex();
-	constants.mOutputTextureDescriptorIndex = rwtex->GetDescriptorHeapIndex();
+	constants.mOutputTextureDescriptorIndex = tempTex.mRWTexture->GetDescriptorHeapIndex();
 
 	SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
 
@@ -242,9 +232,9 @@ SR_Texture* SGfx_PostEffects::Downsample(SR_Texture* aSource)
 	cmdList->SetRootConstantBuffer(cb.get(), 0);
 
 	cmdList->Dispatch(mDownsampleShader.get(), targetSize.x, targetSize.y);
-	cmdList->UnorderedAccessBarrier(rwtex->GetResource());
+	cmdList->UnorderedAccessBarrier(tempTex.mResource.get());
 
-	return tex.get();
+	return tempTex;
 }
 
 void SGfx_PostEffects::RenderLensFlare()

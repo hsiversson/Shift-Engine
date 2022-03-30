@@ -25,7 +25,7 @@ public:
 		SC_Vector mPosition;
 		float mRange;
 
-		SC_Vector mColoredBrightness;
+		SC_Vector mColoredIntensity;
 		uint32 mType;
 
 		SC_Vector2 mSpotAngles;
@@ -41,13 +41,17 @@ public:
 	virtual ~SGfx_Light();
 
 	const SC_Sphere& GetBoundingSphere() const { return mBoundingSphere; }
+	void SetBoundingSphere(const SC_Sphere& aSphere) { mBoundingSphere = aSphere; }
 	const SGfx_LightType& GetType() const { return mType; }
 
 	const SC_Vector4& GetColor() const;
 	void SetColor(const SC_Vector4& aColor);
 
-	virtual void SetBrightness(float aBrightness);
-	virtual float GetBrightness() const;
+	void SetLightUnit(const SGfx_LightUnit& aLightUnit);
+	const SGfx_LightUnit& GetLightUnit() const;
+
+	virtual void SetIntensity(float aBrightness);
+	virtual float GetIntensity() const;
 
 	virtual LocalLightShaderData GetShaderData() const;
 
@@ -68,8 +72,8 @@ public:
 	SGfx_DirectionalLight();
 	~SGfx_DirectionalLight();
 
-	void SetBrightness(float aBrightness) override;
-	float GetBrightness() const override;
+	void SetIntensity(float aIntensity) override;
+	float GetIntensity() const override;
 
 	virtual LocalLightShaderData GetShaderData() const override;
 private:
@@ -81,8 +85,8 @@ public:
 	SGfx_PointLight();
 	~SGfx_PointLight();
 
-	void SetBrightness(float aBrightness) override;
-	float GetBrightness() const override;
+	void SetIntensity(float aIntensity) override;
+	float GetIntensity() const override;
 
 	void SetPosition(const SC_Vector& aPosition);
 	const SC_Vector& GetPosition() const;
@@ -112,8 +116,8 @@ public:
 	SGfx_SpotLight();
 	~SGfx_SpotLight();
 
-	void SetBrightness(float aBrightness) override;
-	float GetBrightness() const override;
+	void SetIntensity(float aIntensity) override;
+	float GetIntensity() const override;
 
 	void SetPosition(const SC_Vector& aPosition);
 	const SC_Vector& GetPosition() const;

@@ -94,8 +94,8 @@ SED_ViewportPanel::SED_ViewportPanel(SGfx_World* aGfxWorld, SED_TransformationGi
 	mView = mGfxWorld->CreateView();
 	mView->SetMainView(true);
 
-	mEditorCamera.SetPerspectiveProjection({ 1920.f, 1080.f }, 0.01f, 1000.f, 90.0f);
-	mEditorCamera.SetPosition({ 10.0f, 2.0f, 0.0f });
+	mEditorCamera.SetPerspectiveProjection({ 1920.f, 1080.f }, 0.01f, 10000.f, 90.0f);
+	mEditorCamera.SetPosition({ -10.0f, 2.0f, 0.0f });
 	mEditorCamera.LookAt({ 0.f, 1.f, 0.f });
 	mActiveCamera = &mEditorCamera;
 }
@@ -132,7 +132,7 @@ void SED_ViewportPanel::Update()
 		// if viewport bounds changed, update camera and render-viewport to account for it
 		if (mViewportSize != mActiveCamera->GetSize() && mViewportSize > 0.0f)
 		{
-			mActiveCamera->SetPerspectiveProjection(mViewportSize, 0.01f, 1000.f);
+			mActiveCamera->SetPerspectiveProjection(mViewportSize, 0.01f, 10000.f);
 			mActiveCamera->SetViewportOffset({ (int32)mViewportBounds.x, (int32)mViewportBounds.y });
 		}
 

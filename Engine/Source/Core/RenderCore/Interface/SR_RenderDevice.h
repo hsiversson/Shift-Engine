@@ -13,6 +13,7 @@
 #include "SR_CommandQueue.h"
 #include "SR_ShaderState.h"
 #include "SR_RootSignature.h"
+#include "SR_TempResourceHeap.h"
 #include "RenderCore/Resources/SR_InstanceBuffer.h"
 #include "RenderCore/RenderTasks/SR_RenderTaskManager.h"
 
@@ -47,12 +48,16 @@ class SR_RenderDevice
 public:
 	virtual ~SR_RenderDevice();
 
+	void Present();
+
 	virtual SC_Ref<SR_CommandList> CreateCommandList(const SR_CommandListType& aType);
 
 	virtual SC_Ref<SR_Texture> CreateTexture(const SR_TextureProperties& aTextureProperties, const SC_Ref<SR_TextureResource>& aResource);
 	virtual SC_Ref<SR_RenderTarget> CreateRenderTarget(const SR_RenderTargetProperties& aRenderTargetProperties, const SC_Ref<SR_TextureResource>& aResource);
 	virtual SC_Ref<SR_DepthStencil> CreateDepthStencil(const SR_DepthStencilProperties& aDepthStencilProperties, const SC_Ref<SR_TextureResource>& aResource);
 	virtual SC_Ref<SR_TextureResource> CreateTextureResource(const SR_TextureResourceProperties& aTextureResourceProperties, const SR_PixelData* aInitialData = nullptr, uint32 aDataCount = 0);
+
+	SR_TempTexture CreateTempTexture(const SR_TextureResourceProperties& aTextureProperties, bool aIsTexture = true, bool aIsRenderTarget = false, bool aIsWritable = false);
 
 	SC_Ref<SR_Texture> LoadTexture(const SC_FilePath& aTextureFilePath);
 
@@ -78,7 +83,6 @@ public:
 	virtual SR_DescriptorHeap* GetSamplerDescriptorHeap() const;
 	virtual SR_DescriptorHeap* GetRTVDescriptorHeap() const;
 	virtual SR_DescriptorHeap* GetDSVDescriptorHeap() const;
-
 
 	SR_RootSignature* GetRootSignature(const SR_RootSignatureType& aType) const;
 
@@ -122,6 +126,8 @@ protected:
 	SC_UniquePtr<SR_InstanceBuffer> mPersistentResourceInfo;
 
 	SC_UniquePtr<SR_RenderTaskManager> mRenderTaskManager;
+
+	SC_UniquePtr<SR_TempResourceHeap> mTempResourceHeap;
 
 	SR_RenderSupportCaps mSupportCaps;
 	bool mEnableDebugMode : 1;

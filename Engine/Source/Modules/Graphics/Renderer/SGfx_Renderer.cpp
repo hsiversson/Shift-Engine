@@ -475,8 +475,8 @@ void SGfx_Renderer::RenderOpaque()
 		++i;
 	}
 
-	if (renderData.mSkybox)
-		renderData.mSkybox->Render(cmdList.get());
+	if (renderData.mSkysphere)
+		renderData.mSkysphere->Render(cmdList.get());
 
 	cmdList->EndEvent(); // Render Opaque
 }

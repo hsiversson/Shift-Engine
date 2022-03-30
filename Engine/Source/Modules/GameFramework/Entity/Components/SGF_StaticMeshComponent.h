@@ -5,7 +5,7 @@ class SGfx_MeshInstance;
 class SGfx_MaterialInstance;
 class SGF_StaticMeshComponent : public SGF_Component
 {
-	COMPONENT_DECLARE(SGF_StaticMeshComponent, "StaticMeshComponent");
+	COMPONENT_DECLARE(SGF_StaticMeshComponent, "StaticMesh");
 public:
 	SGF_StaticMeshComponent();
 	~SGF_StaticMeshComponent();
@@ -28,8 +28,6 @@ private:
 	SGF_PROPERTY(SC_Ref<SGfx_MeshInstance>, mMeshInstance, "Mesh");
 	SGF_PROPERTY(SC_Ref<SGfx_MaterialInstance>, mMaterialInstance, "Material");
 	SGF_PROPERTY(SC_Ref<SR_Texture>, mTexture, "Texture");
-
-	SGF_PROPERTY(SC_Ref<SGF_Entity>, mEntityRef, "Entity");
 
 	bool mIsVisible;
 };

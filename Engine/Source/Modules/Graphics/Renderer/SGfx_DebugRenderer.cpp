@@ -47,15 +47,23 @@ static const char* GetPixelShaderCode()
 		"}\n";
 }
 
+SGfx_DebugRenderer* SGfx_DebugRenderer::gInstance = nullptr;
+
 SGfx_DebugRenderer::SGfx_DebugRenderer()
 	: mDrawGrid(true)
 {
-
+	SC_ASSERT(gInstance == nullptr, "Only one instance can be created!");
+	gInstance = this;
 }
 
 SGfx_DebugRenderer::~SGfx_DebugRenderer()
 {
+	gInstance = nullptr;
+}
 
+SGfx_DebugRenderer* SGfx_DebugRenderer::Get()
+{
+	return gInstance;
 }
 
 bool SGfx_DebugRenderer::Init()
@@ -134,8 +142,37 @@ bool SGfx_DebugRenderer::GetDrawGrid()
 	return mDrawGrid;
 }
 
+void SGfx_DebugRenderer::DrawLine(const SC_Vector& aFrom, const SC_Vector& aTo, const SC_Vector& aFromColor, const SC_Vector& aToColor)
+{
+	SC_MutexLock lock(mLinesMutex);
+	mLines.Add({aFrom, aFromColor});
+	mLines.Add({aTo, aToColor});
+}
+
+void SGfx_DebugRenderer::DrawLineNoDepthTest(const SC_Vector& /*aFrom*/, const SC_Vector& /*aTo*/, const SC_Vector& /*aFromColor*/, const SC_Vector& /*aToColor*/)
+{
+}
+
 void SGfx_DebugRenderer::Render(SR_CommandList* aCmdList, const SGfx_ViewData& /*aRenderData*/)
 {
+	if (!mLines.IsEmpty())
+	{
+		{
+			SC_MutexLock lock(mLinesMutex);
+			SR_BufferResourceProperties vertexBufferResourceProps;
+			vertexBufferResourceProps.mElementCount = mLines.Count();
+			vertexBufferResourceProps.mElementSize = mLines.ElementStride();
+			vertexBufferResourceProps.mBindFlags = SR_BufferBindFlag_VertexBuffer;
+			mLinesBuffer = SR_RenderDevice::gInstance->CreateBufferResource(vertexBufferResourceProps, mLines.GetBuffer());
+			mLines.RemoveAll();
+		}
+
+		aCmdList->SetVertexBuffer(mLinesBuffer.get());
+		aCmdList->SetShaderState(mLineShader.get());
+		aCmdList->SetPrimitiveTopology(SR_PrimitiveTopology::LineList);
+		aCmdList->Draw(mLinesBuffer->GetProperties().mElementCount);
+	}
+
 	if (mDrawGrid)
 	{
 		aCmdList->SetVertexBuffer(mVertexBuffer.get());

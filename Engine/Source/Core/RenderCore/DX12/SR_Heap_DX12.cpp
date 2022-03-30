@@ -5,6 +5,7 @@
 
 SR_Heap_DX12::SR_Heap_DX12(const SR_HeapProperties& aProperties)
 	: SR_Heap(aProperties)
+	, mHeapOffset(0)
 {
 
 }
@@ -65,11 +66,21 @@ bool SR_Heap_DX12::Init()
 	return true;
 }
 
+void SR_Heap_DX12::ResetOffset()
+{
+	while (true)
+	{
+		uint64 currentOffset = mHeapOffset;
+		if (SC_Atomic::CompareExchange(mHeapOffset, 0, currentOffset))
+			break;
+	}
+}
+
 const uint64 SR_Heap_DX12::GetOffset(uint64 aSize, uint64 aAlignment)
 {
 	uint64 aligned = SC_Align(aSize, aAlignment);
 	uint64 offset = mHeapOffset;
-	mHeapOffset += aligned;
+	SC_Atomic::Add(mHeapOffset, aligned);
 	return offset;
 }
 

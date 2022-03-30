@@ -21,12 +21,22 @@ void SGfx_Light::SetColor(const SC_Vector4& aColor)
 	mColor = aColor;
 }
 
-void SGfx_Light::SetBrightness(float aBrightness)
+void SGfx_Light::SetLightUnit(const SGfx_LightUnit& aLightUnit)
 {
-	mIntensity = aBrightness;
+	mLightUnit = aLightUnit;
 }
 
-float SGfx_Light::GetBrightness() const
+const SGfx_LightUnit& SGfx_Light::GetLightUnit() const
+{
+	return mLightUnit;
+}
+
+void SGfx_Light::SetIntensity(float aIntensity)
+{
+	mIntensity = aIntensity;
+}
+
+float SGfx_Light::GetIntensity() const
 {
 	return mIntensity;
 }
@@ -47,14 +57,14 @@ SGfx_DirectionalLight::~SGfx_DirectionalLight()
 
 }
 
-void SGfx_DirectionalLight::SetBrightness(float aBrightness)
+void SGfx_DirectionalLight::SetIntensity(float aIntensity)
 {
-	SGfx_Light::SetBrightness(aBrightness);
+	SGfx_Light::SetIntensity(aIntensity);
 }
 
-float SGfx_DirectionalLight::GetBrightness() const
+float SGfx_DirectionalLight::GetIntensity() const
 {
-	return SGfx_Light::GetBrightness();
+	return SGfx_Light::GetIntensity();
 }
 
 SGfx_DirectionalLight::LocalLightShaderData SGfx_DirectionalLight::GetShaderData() const
@@ -73,37 +83,37 @@ SGfx_PointLight::~SGfx_PointLight()
 
 }
 
-void SGfx_PointLight::SetBrightness(float aBrightness)
+void SGfx_PointLight::SetIntensity(float aIntensity)
 {
 	//switch (mLightUnit)
 	//{
 	//case SGfx_LightUnit::Candelas:
-	//	SGfx_Light::SetBrightness(aBrightness / (100.0f * 100.0f));
+	//	SGfx_Light::SetIntensity(aIntensity / (100.0f * 100.0f));
 	//	break;
 	//case SGfx_LightUnit::Lumens:
-	//	SGfx_Light::SetBrightness(aBrightness / (100.0f * 100.0f / 4.0f / SC_Math::PI));
+	//	SGfx_Light::SetIntensity(aIntensity / (100.0f * 100.0f / 4.0f / SC_Math::PI));
 	//	break;
 	//default:
-	//	SGfx_Light::SetBrightness(aBrightness / 16.f);
+	//	SGfx_Light::SetIntensity(aIntensity / 16.f);
 	//}
-	SGfx_Light::SetBrightness(aBrightness);
+	SGfx_Light::SetIntensity(aIntensity);
 }
 
-float SGfx_PointLight::GetBrightness() const
+float SGfx_PointLight::GetIntensity() const
 {
-	float brightness = SGfx_Light::GetBrightness();
+	float Intensity = SGfx_Light::GetIntensity();
 	switch (mLightUnit)
 	{
 	case SGfx_LightUnit::Candelas:
-		return brightness;
+		return Intensity;
 	case SGfx_LightUnit::Lumens:
-		brightness /= (4.0f * SC_Math::PI);
+		Intensity /= (4.0f * SC_Math::PI);
 		break;
 	default:
-		brightness *= 16.0f;
+		Intensity *= 16.0f;
 	}
 
-	return brightness;
+	return Intensity;
 }
 
 void SGfx_PointLight::SetPosition(const SC_Vector& aPosition)
@@ -149,7 +159,7 @@ float SGfx_PointLight::GetSourceRadiusSoft() const
 SGfx_PointLight::LocalLightShaderData SGfx_PointLight::GetShaderData() const
 {
 	SGfx_Light::LocalLightShaderData shaderData;
-	shaderData.mColoredBrightness = GetColor() * GetBrightness();
+	shaderData.mColoredIntensity = GetColor() * GetIntensity();
 	shaderData.mDirection = SC_Vector(0);
 	shaderData.mPosition = GetPosition();
 	shaderData.mRange = GetRange();
@@ -173,26 +183,26 @@ SGfx_SpotLight::~SGfx_SpotLight()
 
 }
 
-void SGfx_SpotLight::SetBrightness(float aBrightness)
+void SGfx_SpotLight::SetIntensity(float aIntensity)
 {
-	SGfx_Light::SetBrightness(aBrightness);
+	SGfx_Light::SetIntensity(aIntensity);
 }
 
-float SGfx_SpotLight::GetBrightness() const
+float SGfx_SpotLight::GetIntensity() const
 {
-	float brightness = SGfx_Light::GetBrightness();
+	float Intensity = SGfx_Light::GetIntensity();
 	switch (mLightUnit)
 	{
 	case SGfx_LightUnit::Candelas:
-		return brightness;
+		return Intensity;
 	case SGfx_LightUnit::Lumens:
-		brightness /= (2.0f * SC_Math::PI * (1.0f - GetCosHalfConeAngle()));
+		Intensity /= (2.0f * SC_Math::PI * (1.0f - GetCosHalfConeAngle()));
 		break;
 	default:
-		brightness *= 16.0f;
+		Intensity *= 16.0f;
 	}
 
-	return brightness;
+	return Intensity;
 }
 
 void SGfx_SpotLight::SetPosition(const SC_Vector& aPosition)
@@ -290,7 +300,7 @@ float SGfx_SpotLight::GetSourceRadiusSoft() const
 SGfx_SpotLight::LocalLightShaderData SGfx_SpotLight::GetShaderData() const
 {
 	SGfx_Light::LocalLightShaderData shaderData;
-	shaderData.mColoredBrightness = GetColor() * GetBrightness();
+	shaderData.mColoredIntensity = GetColor() * GetIntensity();
 	shaderData.mDirection = GetDirection();
 	shaderData.mPosition = GetPosition();
 	shaderData.mRange = GetRange();

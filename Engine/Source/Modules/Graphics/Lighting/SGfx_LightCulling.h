@@ -32,7 +32,7 @@ public:
 
 private:
 	static constexpr uint32 gTileSize = 16;
-	static constexpr uint32 gNumLightsPerTile = 31;
+	static constexpr uint32 gNumLightsPerTile = 63;
 
 	SGfx_LightCullingConstants mConstants;
 

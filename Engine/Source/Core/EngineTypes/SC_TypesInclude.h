@@ -4,6 +4,7 @@
 #include "Platform/Types/SC_TypeDefines.h"
 #include "EngineTypes/Functional/SC_Pointers.h"
 #include "EngineTypes/Math/SC_Math.h"
+#include "EngineTypes/Misc/SC_Color.h"
 #include "EngineTypes/Containers/SC_Array.h"
 #include "EngineTypes/Containers/SC_Queue.h"
 #include "EngineTypes/Containers/SC_HybridArray.h"

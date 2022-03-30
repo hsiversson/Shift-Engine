@@ -80,5 +80,6 @@ inline ComponentType* SGF_Entity::AddComponent()
 
 	mComponents[ComponentType::Id()] = SC_MakeRef<ComponentType>();
 	mComponents[ComponentType::Id()]->SetParentEntity(this);
+	mComponents[ComponentType::Id()]->OnCreate();
 	return static_cast<ComponentType*>(mComponents[ComponentType::Id()].get());
 }

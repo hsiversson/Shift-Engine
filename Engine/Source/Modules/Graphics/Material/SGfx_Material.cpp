@@ -85,7 +85,9 @@ bool SGfx_Material::Init(const SGfx_MaterialProperties& aProperties)
 	mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::Depth)].mDepthStencilProperties.mWriteDepth = true;
 	mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::Depth)].mDepthStencilProperties.mDepthComparisonFunc = SR_ComparisonFunc::GreaterEqual;
 	mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::ShadowDepth)] = mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::Depth)];
-	mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::ShadowDepth)].mRasterizerProperties.mCullMode = SR_CullMode::None;
+	mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::ShadowDepth)].mRasterizerProperties.mCullMode = SR_CullMode::Back;
+	mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::ShadowDepth)].mRasterizerProperties.mDepthBias = -100;
+	mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::ShadowDepth)].mRasterizerProperties.mSlopedScaleDepthBias = -2.0f;
 
 	if (aProperties.mOutputVelocity)
 		mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::Depth)].mRTVFormats.mColorFormats[0] = SR_Format::RG16_FLOAT;

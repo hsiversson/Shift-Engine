@@ -10,12 +10,24 @@ class SGfx_CascadedShadowMap
 public:
 	struct Settings
 	{
-		Settings() : mResolution(2048), mMaxDistance(400.0f), mSplitFactor(0.93f) {}
+		Settings() 
+			: mResolution(2048)
+			, mMaxDistance(400.0f)
+			, mSplitFactor(0.93f)
+#if IS_DEBUG_BUILD
+			, mDebugDrawFrustums(false)
+			, mLockShadowView(false)
+#endif
+		{}
 
 		static constexpr uint32 gNumCascades = 4;
 		uint32 mResolution;
 		float mMaxDistance;
 		float mSplitFactor;
+#if IS_DEBUG_BUILD
+		bool mDebugDrawFrustums;
+		bool mLockShadowView;
+#endif
 	};
 
 	struct Cascade
@@ -28,6 +40,7 @@ public:
 
 		SC_Sphere mMBSCache;
 		SC_Vector mCameraToMBSCenterCache;
+		SC_Vector mOldPosition;
 
 		bool mNeedsCacheUpdate;
 	};
@@ -64,6 +77,11 @@ private:
 	SC_Ref<SR_TextureResource> mCSMResource;
 	SC_Array<SC_Ref<SR_BufferResource>> mDrawInfoBuffers[4];
 	SC_Ref<SR_BufferResource> mSceneConstantsBuffer[4];
+
+#if IS_DEBUG_BUILD
+	SGfx_Camera mLockedViewCamera;
+	bool mWasLocked;
+#endif
 };
 
 class SGfx_ShadowSystem

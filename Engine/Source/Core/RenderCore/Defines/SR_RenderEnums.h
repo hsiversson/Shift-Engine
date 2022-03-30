@@ -173,7 +173,7 @@ enum class SR_ResourceType
 	Buffer
 };
 
-enum SR_ResourceState : unsigned int
+enum SR_ResourceState : uint32
 {
 	SR_ResourceState_Common = 0,
 	SR_ResourceState_Present = SR_ResourceState_Common,
@@ -192,7 +192,7 @@ enum SR_ResourceState : unsigned int
 	SR_ResourceState_AccelerationStructure,
 };
 
-enum SR_BufferBindFlag : unsigned int 
+enum SR_BufferBindFlag : uint32
 {
 	SR_BufferBindFlag_None				= 0,
 	SR_BufferBindFlag_Staging			= 0x1,

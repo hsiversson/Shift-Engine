@@ -32,6 +32,5 @@ public:
 
 private:
 	SC_Array<SC_Ref<SGF_Level>> mLevels;
-
 	SC_UniquePtr<SGfx_World> mGraphicsWorld;
 };

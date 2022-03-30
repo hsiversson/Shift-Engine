@@ -18,9 +18,17 @@ public:
 
 	virtual bool Init() = 0;
 
-	virtual SR_TempTexture GetTexture(const SR_TextureResourceProperties& aTextureProperties, bool aIsTexture = true, bool aIsRenderTarget = false, bool aIsWritable = false) = 0;
+	void EndFrame();
+
+	SR_TempTexture GetTexture(const SR_TextureResourceProperties& aTextureProperties, bool aIsTexture = true, bool aIsRenderTarget = false, bool aIsWritable = false);
+	
 	virtual SR_BufferResource* GetBuffer() = 0;
 
 protected:
+	virtual void EndFrameInternal();
+	virtual SR_TempTexture GetTextureInternal(const SR_TextureResourceProperties& aTextureProperties, bool aIsTexture = true, bool aIsRenderTarget = false, bool aIsWritable = false) = 0;
+
+	SC_Array<SR_TempTexture> mKeepAliveList;
+	SC_Queue<SC_Pair<SR_Fence, SC_Array<SR_TempTexture>>> mRemovalQueue;
 };
 

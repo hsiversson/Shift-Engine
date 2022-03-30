@@ -40,6 +40,10 @@ public:
 	void SetPosition(const SC_Vector& aPosition);
 	SC_Vector GetPosition() const;
 
+	SC_Vector GetRight() const;
+	SC_Vector GetUp() const;
+	SC_Vector GetForward() const;
+
 	void Rotate(const SC_Vector& aAxis, float aRotationAmount);
 
 	float& operator[](uint32 aIndex);
@@ -198,6 +202,24 @@ inline void SC_Matrix::SetPosition(const SC_Vector& aPosition)
 inline SC_Vector SC_Matrix::GetPosition() const
 {
 	return SC_Vector(m[12], m[13], m[14]);
+}
+
+inline SC_Vector SC_Matrix::GetRight() const
+{
+	SC_Vector right = SC_Vector(m[0], m[1], m[2]);
+	return right.GetNormalized();
+}
+
+inline SC_Vector SC_Matrix::GetUp() const
+{
+	SC_Vector up = SC_Vector(m[4], m[5], m[6]);
+	return up.GetNormalized();
+}
+
+inline SC_Vector SC_Matrix::GetForward() const
+{
+	SC_Vector forward = SC_Vector(m[8], m[9], m[10]);
+	return forward.GetNormalized();
 }
 
 inline void SC_Matrix::Rotate(const SC_Vector& aAxis, float aRotationAmount)

@@ -3,6 +3,7 @@
 #include "GameFramework/GameWorld/SGF_World.h"
 #include "GameFramework/Entity/SGF_Entity.h"
 #include "GameFramework/Entity/Components/SGF_EntityIdComponent.h"
+#include "GameFramework/Entity/Components/SGF_TransformComponent.h"
 #include "Graphics/Material/SGfx_MaterialInstance.h"
 #include "Graphics/Mesh/SGfx_MeshInstance.h"
 #include "RenderCore/Interface/SR_Texture.h"
@@ -53,9 +54,31 @@ void SED_PropertiesPanel::OnRender()
 
 		const SGF_ComponentFactory::RegistryMap& componentRegistry = SGF_ComponentFactory::GetComponentRegistryMap();
 
+		if (ImGui::BeginCombo("##addComp", "Add Component"))
+		{
+			for (auto& pair : componentRegistry)
+			{
+				if (!mSelectedEntity->HasComponent(pair.second))
+				{
+					if (ImGui::Button(pair.first.c_str()))
+					{
+						SC_Ref<SGF_Component> comp = SGF_ComponentFactory::CreateComponent(pair.second);
+						mSelectedEntity->AddComponent(comp);
+					}
+				}
+			}
+			ImGui::EndCombo();
+		}
+
+		ImGui::Separator();
+
+
+		DrawComponent(SGF_TransformComponent::Id(), mSelectedEntity);
+
 		for (auto& pair : componentRegistry)
 		{
-			DrawComponent(pair.second, mSelectedEntity);
+			if (pair.second != SGF_TransformComponent::Id())
+				DrawComponent(pair.second, mSelectedEntity);
 		}
 	}
 
@@ -140,6 +163,12 @@ void SED_PropertiesPanel::DrawProperty(const SGF_PropertyBase::Type& aType, void
 		SC_Vector* vectorPtr = static_cast<SC_Vector*>(aData);
 		const SC_Vector* resetValPtr = static_cast<const SC_Vector*>(aResetData);
 		DrawPropertyInternal(aPropertyName, *vectorPtr, *resetValPtr);
+		break;
+	}
+	case SGF_PropertyBase::Type::Color:
+	{
+		SC_Color* colorPtr = static_cast<SC_Color*>(aData);
+		DrawPropertyInternal(aPropertyName, *colorPtr);
 		break;
 	}
 	case SGF_PropertyBase::Type::Quaternion:
@@ -254,6 +283,15 @@ void SED_PropertiesPanel::DrawPropertyInternal(const char* /*aName*/, SC_Vector&
 	ImGui::PopItemWidth();
 
 	ImGui::PopStyleVar();
+}
+
+void SED_PropertiesPanel::DrawPropertyInternal(const char* /*aName*/, SC_Color& aProperty) const
+{
+	SC_LinearColor linear = SC_ConvertColorToLinear(aProperty);
+	if (ImGui::ColorEdit4("##_coloredit_", &linear.r, ImGuiColorEditFlags_Uint8))
+	{
+		aProperty = SC_ConvertLinearToColor(linear);
+	}
 }
 
 ////////////////////////////////
