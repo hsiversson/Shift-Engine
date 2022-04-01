@@ -6,6 +6,7 @@
 #include "SED_ViewportPanel.h"
 #include "SED_MaterialEditor.h"
 #include "SED_TransformationGizmo.h"
+#include "SED_Icons.h"
 
 #include "GameFramework/Entity/SGF_ECSModule.h"
 #include "GameFramework/GameWorld/SGF_World.h"
@@ -26,16 +27,17 @@ SED_Editor::SED_Editor()
 	, mIsDemoWindowOpen(false)
 	, mIsMetricsWindowOpen(false)
 {
-
 }
 
 SED_Editor::~SED_Editor()
 {
-
+	SED_Icons::Destroy();
 }
 
 bool SED_Editor::Init()
 {
+	SED_Icons::Create();
+
 	if (!mImGui.Init(SAF_Framework::Get()->GetNativeWindowHandle(), SAF_Framework::Get()->GetWindowDPI()))
 		return false;
 

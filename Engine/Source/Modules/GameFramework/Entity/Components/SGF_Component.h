@@ -216,10 +216,14 @@ public:
 	SGF_Component();
 	virtual ~SGF_Component();
 
+	// Common overrides
 	virtual void OnCreate() {}
 	virtual void OnStart() {}
 	virtual void OnUpdate() {}
 	virtual void OnDestroy() {}
+
+	// Misc overrides
+	virtual void OnSetVisible(bool /*aValue*/) {}
 
 	virtual bool Save(SC_Json& aOutSaveData) const;
 	virtual bool Load(const SC_Json& aSavedData);

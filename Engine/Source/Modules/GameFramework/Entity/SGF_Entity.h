@@ -42,6 +42,9 @@ public:
 	void SetName(const std::string& aName);
 	const std::string& GetName() const;
 
+	void SetVisible(bool aValue);
+	bool IsVisible() const;
+
 	bool Save(SC_Json& aOutSaveData) const;
 	bool Load(const SC_Json& aSavedData);
 
@@ -57,6 +60,7 @@ private:
 	SC_UnorderedMap<SGF_ComponentId, uint32> mMappedComponents;
 
 	std::string mName;
+	bool mIsVisible;
 };
 
 template<class ComponentType>

@@ -18,7 +18,7 @@ public:
 	SGF_Entity* GetSelectedEntity() const;
 
 private:
-	void DrawComponent(const SGF_ComponentId& aComponentId, SGF_Entity* aEntity) const;
+	void DrawComponent(const SGF_ComponentId& aComponentId, SGF_Entity* aEntity);
 
 	void DrawProperty(SGF_PropertyHelperBase& aProperty) const;
 	void DrawPropertyInternal(SGF_PropertyHelper<bool>& aProperty) const;
@@ -36,5 +36,6 @@ private:
 	SGF_Entity* mSelectedEntity;
 
 	SC_Ref<SGF_World> mWorld;
+	float mPropertyNameColumnWidth;
 };
 

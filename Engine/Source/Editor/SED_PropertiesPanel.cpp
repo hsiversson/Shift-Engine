@@ -11,6 +11,8 @@
 
 SED_PropertiesPanel::SED_PropertiesPanel()
 	: mSelectedEntity(nullptr)
+	, mWorld(nullptr)
+	, mPropertyNameColumnWidth(50.f)
 {
 
 }
@@ -18,6 +20,7 @@ SED_PropertiesPanel::SED_PropertiesPanel()
 SED_PropertiesPanel::SED_PropertiesPanel(const SC_Ref<SGF_World>& aWorld)
 	: mSelectedEntity(nullptr)
 	, mWorld(aWorld)
+	, mPropertyNameColumnWidth(50.f)
 {
 }
 
@@ -71,10 +74,11 @@ void SED_PropertiesPanel::OnRender()
 
 		DrawComponent(SGF_TransformComponent::Id(), mSelectedEntity);
 
-		for (auto& pair : componentRegistry)
+		for (const SC_Ref<SGF_Component>& comp : mSelectedEntity->GetComponents())
 		{
-			if (pair.second != SGF_TransformComponent::Id())
-				DrawComponent(pair.second, mSelectedEntity);
+			SGF_ComponentId id = comp->GetId();
+			if (id != SGF_TransformComponent::Id())
+				DrawComponent(id, mSelectedEntity);
 		}
 	}
 
@@ -91,7 +95,7 @@ SGF_Entity* SED_PropertiesPanel::GetSelectedEntity() const
 	return mSelectedEntity;
 }
 
-void SED_PropertiesPanel::DrawComponent(const SGF_ComponentId& aComponentId, SGF_Entity* aEntity) const
+void SED_PropertiesPanel::DrawComponent(const SGF_ComponentId& aComponentId, SGF_Entity* aEntity)
 {
 	if (aComponentId == SGF_EntityIdComponent::Id())
 		return;
@@ -102,7 +106,7 @@ void SED_PropertiesPanel::DrawComponent(const SGF_ComponentId& aComponentId, SGF
 
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2{ 4, 4 });
 		bool isOpen = ImGui::TreeNodeEx(&aComponentId, treeNodeFlags, component->GetName());
-		if (ImGui::BeginPopupContextItem())
+		if (aComponentId != SGF_TransformComponent::Id() && ImGui::BeginPopupContextItem(component->GetName()))
 		{
 			if (ImGui::MenuItem("Remove"))
 			{
@@ -117,7 +121,10 @@ void SED_PropertiesPanel::DrawComponent(const SGF_ComponentId& aComponentId, SGF
 		if (isOpen)
 		{
 			ImGui::PushID(component->GetName());
-			ImGui::Columns(2);
+			ImGui::BeginTable("##propertyTable", 2, ImGuiTableFlags_Resizable);
+			ImGui::TableSetupColumn("##0", ImGuiTableColumnFlags_WidthFixed, 128.0f);
+			ImGui::TableSetupColumn("##1");
+			ImGui::TableNextColumn();
 
 			const SC_Array<SGF_PropertyHelperBase*>& properties2 = component->GetProperties();
 			for (SGF_PropertyHelperBase* property : properties2)
@@ -125,7 +132,8 @@ void SED_PropertiesPanel::DrawComponent(const SGF_ComponentId& aComponentId, SGF
 				DrawProperty(*property);
 			}
 
-			ImGui::Columns(1);
+			mPropertyNameColumnWidth = ImGui::GetColumnWidth(0);
+			ImGui::EndTable();
 			ImGui::PopID();
 			ImGui::TreePop();
 		}
@@ -136,7 +144,7 @@ void SED_PropertiesPanel::DrawProperty(SGF_PropertyHelperBase& aProperty) const
 {
 	ImGui::PushID(aProperty.GetName());
 	ImGui::Text(aProperty.GetName());
-	ImGui::NextColumn();
+	ImGui::TableNextColumn();
 
 	switch (aProperty.GetType())
 	{
@@ -153,7 +161,7 @@ void SED_PropertiesPanel::DrawProperty(SGF_PropertyHelperBase& aProperty) const
 	case SGF_PropertyHelperBase::Type::EntityRef:	DrawPropertyInternal(static_cast<SGF_PropertyHelper<SC_Ref<SGF_Entity>>&>(aProperty)); break;
 	}
 
-	ImGui::NextColumn();
+	ImGui::TableNextColumn();
 	ImGui::PopID();
 }
 

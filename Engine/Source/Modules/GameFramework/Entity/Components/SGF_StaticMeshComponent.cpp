@@ -37,6 +37,11 @@ void SGF_StaticMeshComponent::OnDestroy()
 	SetVisible(false);
 }
 
+void SGF_StaticMeshComponent::OnSetVisible(bool aValue)
+{
+	SetVisible(aValue);
+}
+
 void SGF_StaticMeshComponent::SetMesh(SC_Ref<SGfx_MeshInstance> aMeshInstance)
 {
 	bool wasVisible = mIsVisible;

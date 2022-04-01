@@ -7,6 +7,7 @@
 SGF_Entity::SGF_Entity()
 	: mWorld(nullptr)
 	, mParent(nullptr)
+	, mIsVisible(true)
 {
 
 }
@@ -115,6 +116,18 @@ void SGF_Entity::SetName(const std::string& aName)
 const std::string& SGF_Entity::GetName() const
 {
 	return mName;
+}
+
+void SGF_Entity::SetVisible(bool aValue)
+{
+	mIsVisible = aValue;
+	for (const SC_Ref<SGF_Component>& component : mComponents)
+		component->OnSetVisible(aValue);
+}
+
+bool SGF_Entity::IsVisible() const
+{
+	return mIsVisible;
 }
 
 bool SGF_Entity::Save(SC_Json& aOutSaveData) const
