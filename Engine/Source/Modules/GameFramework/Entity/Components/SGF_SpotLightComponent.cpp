@@ -1,8 +1,17 @@
 #include "SGF_SpotLightComponent.h"
 #include "SGF_TransformComponent.h"
 #include "GameFramework/Entity/SGF_Entity.h"
+#include "GameFramework/GameWorld/SGF_World.h"
+#include "Graphics/World/SGfx_World.h"
 
 SGF_SpotLightComponent::SGF_SpotLightComponent()
+	: mColor({ 255, 255, 255, 255 })
+	, mRange(10.0f)
+	, mIntensity(10.0f)
+	, mSourceRadius(0.0f)
+	, mSourceRadiusSoft(0.0f)
+	, mInnerAngle(0.0f)
+	, mOuterAngle(45.0f)
 {
 	mSpotLight = SC_MakeRef<SGfx_SpotLight>();
 }
@@ -10,6 +19,12 @@ SGF_SpotLightComponent::SGF_SpotLightComponent()
 SGF_SpotLightComponent::~SGF_SpotLightComponent()
 {
 
+}
+
+void SGF_SpotLightComponent::OnCreate()
+{
+	if (SGF_Entity* entity = GetParentEntity())
+		entity->GetWorld()->GetGraphicsWorld()->AddLight(mSpotLight);
 }
 
 void SGF_SpotLightComponent::OnUpdate()

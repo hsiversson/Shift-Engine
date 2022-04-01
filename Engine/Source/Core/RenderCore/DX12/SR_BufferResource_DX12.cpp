@@ -3,6 +3,7 @@
 
 #if ENABLE_DX12
 #include "SR_RenderDevice_DX12.h"
+#include "SR_Heap_DX12.h"
 
 SR_BufferResource_DX12::SR_BufferResource_DX12(const SR_BufferResourceProperties& aProperties)
 	: SR_BufferResource(aProperties)
@@ -22,19 +23,10 @@ SR_BufferResource_DX12::~SR_BufferResource_DX12()
 
 bool SR_BufferResource_DX12::Init(const void* aInitialData)
 {
-	D3D12_RESOURCE_DESC bufferDesc = {};
-	bufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	bufferDesc.Width = uint64(mProperties.mElementCount) * uint64(mProperties.mElementSize);
-	bufferDesc.Height = 1;
-	bufferDesc.DepthOrArraySize = 1;
-	bufferDesc.MipLevels = 1;
-	bufferDesc.Format = DXGI_FORMAT_UNKNOWN;
-	bufferDesc.SampleDesc.Count = 1;
-	bufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-	bufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+	D3D12_RESOURCE_DESC resourceDesc = SR_GetD3D12ResourceDesc(mProperties);
 
 	if (mProperties.mWritable)
-		bufferDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+		resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
 	D3D12_HEAP_PROPERTIES heapProps = {};
 	heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
@@ -45,7 +37,7 @@ bool SR_BufferResource_DX12::Init(const void* aInitialData)
 	{
 		heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
 		initialState = D3D12_RESOURCE_STATE_GENERIC_READ;
-		bufferDesc.Width = SC_Align(bufferDesc.Width, 256);
+		resourceDesc.Width = SC_Align(resourceDesc.Width, 16);
 	}
 
 	if (mProperties.mBindFlags & SR_BufferBindFlag_Readback)
@@ -69,7 +61,26 @@ bool SR_BufferResource_DX12::Init(const void* aInitialData)
 		initialState = D3D12_RESOURCE_STATE_GENERIC_READ;
 	}
 
-	HRESULT hr = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &bufferDesc, initialState, nullptr, IID_PPV_ARGS(&mD3D12Resource));
+	HRESULT hr = S_OK;
+	if (mProperties.mHeap)
+	{
+		const D3D12_RESOURCE_ALLOCATION_INFO allocInfo = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->GetResourceAllocationInfo(0, 1, &resourceDesc);
+
+		SR_Heap_DX12* heap = static_cast<SR_Heap_DX12*>(mProperties.mHeap);
+
+		hr = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreatePlacedResource(
+			heap->GetD3D12Heap(),
+			heap->GetOffset(allocInfo.SizeInBytes, allocInfo.Alignment),
+			&resourceDesc,
+			initialState,
+			nullptr,
+			IID_PPV_ARGS(&mD3D12Resource)
+		);
+	}
+	else
+	{
+		hr = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, initialState, nullptr, IID_PPV_ARGS(&mD3D12Resource));
+	}
 	if (!VerifyHRESULT(hr))
 	{
 		//LOG_ERROR("Could not create buffer with id: %ls \n", aDebugName);
@@ -99,7 +110,7 @@ bool SR_BufferResource_DX12::Init(const void* aInitialData)
 			assert(false && "Could not init upload buffer.");
 		}
 
-		uploadBuffer->UpdateData(0, aInitialData, bufferDesc.Width);
+		uploadBuffer->UpdateData(0, aInitialData, resourceDesc.Width);
 
 		SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->CreateCommandList(SR_CommandListType::Copy);
 		cmdList->Begin();

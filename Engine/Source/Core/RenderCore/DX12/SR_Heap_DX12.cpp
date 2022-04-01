@@ -63,6 +63,9 @@ bool SR_Heap_DX12::Init()
 		return false;
 	}
 
+	if (mProperties.mDebugName)
+		mD3D12Heap->SetName(SC_UTF8ToUTF16(mProperties.mDebugName).c_str());
+
 	return true;
 }
 

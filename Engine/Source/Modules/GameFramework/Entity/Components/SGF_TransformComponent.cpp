@@ -15,9 +15,9 @@ SGF_TransformComponent::~SGF_TransformComponent()
 
 SC_Matrix SGF_TransformComponent::GetTransform() const
 {
-	SC_ScaleMatrix scale(mScale.Get());
-	SC_Matrix rotation = mRotation.Get().AsMatrix();
-	SC_TranslationMatrix translation(mPosition.Get());
+	SC_ScaleMatrix scale(mScale);
+	SC_Matrix rotation = mRotation.AsMatrix();
+	SC_TranslationMatrix translation(mPosition);
 
 	SC_Matrix fullMatrix;
 	if (SGF_Entity* parent = GetParentEntity()->GetParent())
@@ -36,20 +36,20 @@ bool SGF_TransformComponent::Save(SC_Json& aOutSaveData) const
 		return false;
 	
 	SC_Json positionData;
-	positionData["x"] = mPosition.Get().x;
-	positionData["y"] = mPosition.Get().y;
-	positionData["z"] = mPosition.Get().z;
+	positionData["x"] = mPosition.x;
+	positionData["y"] = mPosition.y;
+	positionData["z"] = mPosition.z;
 
 	SC_Json rotationData;
-	rotationData["x"] = mRotation.Get().x;
-	rotationData["y"] = mRotation.Get().y;
-	rotationData["z"] = mRotation.Get().z;
-	rotationData["w"] = mRotation.Get().w;
+	rotationData["x"] = mRotation.x;
+	rotationData["y"] = mRotation.y;
+	rotationData["z"] = mRotation.z;
+	rotationData["w"] = mRotation.w;
 
 	SC_Json scaleData;
-	scaleData["x"] = mScale.Get().x;
-	scaleData["y"] = mScale.Get().y;
-	scaleData["z"] = mScale.Get().z;
+	scaleData["x"] = mScale.x;
+	scaleData["y"] = mScale.y;
+	scaleData["z"] = mScale.z;
 
 	aOutSaveData["Position"] = positionData;
 	aOutSaveData["Rotation"] = rotationData;

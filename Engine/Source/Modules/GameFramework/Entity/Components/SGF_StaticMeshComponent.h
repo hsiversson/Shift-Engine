@@ -10,6 +10,7 @@ public:
 	SGF_StaticMeshComponent();
 	~SGF_StaticMeshComponent();
 
+	void OnCreate() override;
 	void OnUpdate() override;
 
 	void SetMesh(SC_Ref<SGfx_MeshInstance> aMeshInstance);

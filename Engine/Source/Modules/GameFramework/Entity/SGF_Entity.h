@@ -18,16 +18,18 @@ public:
 
 	template<class ComponentType>
 	bool HasComponent() const;
-	bool HasComponent(const SGF_ComponentId& aComponentId);
+	bool HasComponent(const SGF_ComponentId& aComponentId) const;
 
 	template<class ComponentType>
 	ComponentType* GetComponent() const;
-	SGF_Component* GetComponent(const SGF_ComponentId& aComponentId);
+	SGF_Component* GetComponent(const SGF_ComponentId& aComponentId) const;
 
 	template<class ComponentType>
 	ComponentType* AddComponent();
+	SGF_Component* AddComponent(const SGF_ComponentId& aComponentId);
+	SGF_Component* AddComponent(const char* aComponentName);
 
-	void AddComponent(SC_Ref<SGF_Component> aComponent);
+	const SC_Array<SC_Ref<SGF_Component>>& GetComponents() const;
 
 	bool Is(const SC_UUID& aId) const;
 
@@ -49,10 +51,8 @@ private:
 	SGF_Entity* mParent;
 	SGF_World* mWorld;
 
-	SC_UnorderedMap<SGF_ComponentId, SC_Ref<SGF_Component>> mComponents;
-	//SC_Array<SC_Ref<SGF_Component>> mComponents;
-
-	//SC_UniquePtr<SGF_EntityGraph> mEntityGraph;
+	SC_Array<SC_Ref<SGF_Component>> mComponents;
+	SC_UnorderedMap<SGF_ComponentId, uint32> mMappedComponents;
 
 	std::string mName;
 };
@@ -60,26 +60,17 @@ private:
 template<class ComponentType>
 inline bool SGF_Entity::HasComponent() const
 {
-	return mComponents.find(ComponentType::Id()) != mComponents.end();
+	return HasComponent(ComponentType::Id());
 }
 
 template<class ComponentType>
 inline ComponentType* SGF_Entity::GetComponent() const
 {
-	if (HasComponent<ComponentType>())
-		return static_cast<ComponentType*>(mComponents.at(ComponentType::Id()).get());
-
-	return nullptr;
+	return static_cast<ComponentType*>(GetComponent(ComponentType::Id()));
 }
 
 template<class ComponentType>
 inline ComponentType* SGF_Entity::AddComponent()
 {
-	if (HasComponent<ComponentType>())
-		return static_cast<ComponentType*>(mComponents.at(ComponentType::Id()).get());
-
-	mComponents[ComponentType::Id()] = SC_MakeRef<ComponentType>();
-	mComponents[ComponentType::Id()]->SetParentEntity(this);
-	mComponents[ComponentType::Id()]->OnCreate();
-	return static_cast<ComponentType*>(mComponents[ComponentType::Id()].get());
+	return static_cast<ComponentType*>(AddComponent(ComponentType::Id()));
 }

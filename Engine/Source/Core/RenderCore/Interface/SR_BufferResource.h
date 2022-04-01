@@ -1,13 +1,16 @@
 #pragma once
 #include "RenderCore/Resources/SR_Resource.h"
 
+class SR_Heap;
 struct SR_BufferResourceProperties
 {
-	SR_BufferResourceProperties() : mElementSize(0), mElementCount(0), mBindFlags(0), mWritable(false), mIsUploadBuffer(false), mDebugName(nullptr){}
+	SR_BufferResourceProperties() : mElementSize(0), mElementCount(0), mBindFlags(0), mHeap(nullptr), mWritable(false), mIsUploadBuffer(false), mDebugName(nullptr) {}
 
 	uint32 mElementSize;
 	uint32 mElementCount;
 	uint32 mBindFlags;
+
+	SR_Heap* mHeap;
 
 	bool mWritable;
 	bool mIsUploadBuffer;

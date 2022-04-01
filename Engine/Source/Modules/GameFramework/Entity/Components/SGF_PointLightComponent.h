@@ -9,6 +9,7 @@ public:
 	SGF_PointLightComponent();
 	~SGF_PointLightComponent();
 
+	void OnCreate() override;
 	void OnUpdate() override;
 //private:
 	SC_Ref<SGfx_PointLight> mPointLight;

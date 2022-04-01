@@ -133,18 +133,16 @@ SC_Ref<SR_BufferResource> SR_RenderDevice::CreateBufferResource(const SR_BufferR
 	return nullptr;
 }
 
+SR_TempBuffer SR_RenderDevice::CreateTempBuffer(const SR_BufferResourceProperties& aBufferResourceProperties, bool aIsWritable)
+{
+	assert(mTempResourceHeap);
+	return mTempResourceHeap->GetBuffer(aBufferResourceProperties, aIsWritable);
+}
+
 SC_Ref<SR_Heap> SR_RenderDevice::CreateHeap(const SR_HeapProperties& /*aHeapProperties*/)
 {
 	assert(false && "Not implemented yet!");
 	return nullptr;
-}
-
-SR_BufferResource* SR_RenderDevice::CreateTempBuffer(const void* /*aInitialData*/, uint32 /*aSize*/, const SR_BufferBindFlag& /*aUsageFlag*/, uint32 /*aAlignment*/)
-{
-	SR_BufferResource* buffer = nullptr;
-
-
-	return buffer;
 }
 
 bool SR_RenderDevice::CompileShader(const SR_ShaderCompileArgs& /*aArgs*/, SR_ShaderByteCode& /*aOutByteCode*/, SR_ShaderMetaData* /*aOutMetaData*/)

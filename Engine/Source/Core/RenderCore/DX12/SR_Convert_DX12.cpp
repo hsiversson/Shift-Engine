@@ -688,9 +688,23 @@ D3D12_RESOURCE_DESC SR_GetD3D12ResourceDesc(const SR_TextureResourceProperties& 
 	return resourceDesc;
 }
 
-D3D12_RESOURCE_DESC SR_GetD3D12ResourceDesc(const SR_BufferResourceProperties& /*aProperties*/)
+D3D12_RESOURCE_DESC SR_GetD3D12ResourceDesc(const SR_BufferResourceProperties& aProperties)
 {
-	return D3D12_RESOURCE_DESC();
+	D3D12_RESOURCE_DESC resourceDesc = {};
+	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	resourceDesc.Width = aProperties.mElementSize * aProperties.mElementCount;
+	resourceDesc.Height = 1;
+	resourceDesc.DepthOrArraySize = 1;
+	resourceDesc.MipLevels = 1;
+	resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
+	resourceDesc.SampleDesc.Count = 1;
+	resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+	if (aProperties.mWritable)
+		resourceDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+	return resourceDesc;
 }
 
 #endif

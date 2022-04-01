@@ -96,7 +96,4 @@ private:
 	Tonemap mTonemapData;
 
 	SC_Ref<SR_ShaderState> mDownsampleShader;
-
-	SC_Array<SC_Ref<SR_Texture>> mTempTextures; // TODO: Remove this!
-	SC_Array<SC_Ref<SR_BufferResource>> mTempConstantBuffers; // TODO: Remove this!
 };

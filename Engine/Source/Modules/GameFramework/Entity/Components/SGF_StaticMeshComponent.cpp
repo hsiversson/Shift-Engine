@@ -16,9 +16,13 @@ SGF_StaticMeshComponent::~SGF_StaticMeshComponent()
 
 }
 
+void SGF_StaticMeshComponent::OnCreate()
+{
+}
+
 void SGF_StaticMeshComponent::OnUpdate()
 {
-	if (mMeshInstance.Valid())
+	if (mMeshInstance)
 	{
 		SGF_TransformComponent* transformComp = GetParentEntity()->GetComponent<SGF_TransformComponent>();
 		if (transformComp)
@@ -35,7 +39,7 @@ void SGF_StaticMeshComponent::SetMesh(SC_Ref<SGfx_MeshInstance> aMeshInstance)
 
 	mMeshInstance = aMeshInstance;
 
-	if (mMaterialInstance.Valid())
+	if (mMaterialInstance)
 		mMeshInstance->SetMaterialInstance(mMaterialInstance);
 
 	SetVisible(wasVisible);
@@ -45,11 +49,11 @@ void SGF_StaticMeshComponent::SetMaterial(SC_Ref<SGfx_MaterialInstance> aMateria
 {
 	if (!aMaterialInstance)
 		return;
-	if (mMaterialInstance.Get() == aMaterialInstance)
+	if (mMaterialInstance == aMaterialInstance)
 		return;
 
 	mMaterialInstance = aMaterialInstance;
-	if (mMeshInstance.Valid())
+	if (mMeshInstance)
 		mMeshInstance->SetMaterialInstance(mMaterialInstance);
 }
 
@@ -65,16 +69,16 @@ void SGF_StaticMeshComponent::SetVisible(bool aValue)
 		if (SGF_World* world = entity->GetWorld())
 		{
 			SGfx_World* graphicsWorld = world->GetGraphicsWorld();
-			if (graphicsWorld && mMeshInstance.Valid())
+			if (graphicsWorld && mMeshInstance)
 			{
 				if (mIsVisible)
 				{
 					SGF_TransformComponent* transformComp = entity->GetComponent<SGF_TransformComponent>();
 					if (transformComp)
 					{
-						SC_Matrix transform = SC_ScaleMatrix(transformComp->mScale.Get());
-						transform *= transformComp->mRotation.Get().AsMatrix();
-						transform *= SC_TranslationMatrix(transformComp->mPosition.Get());
+						SC_Matrix transform = SC_ScaleMatrix(transformComp->mScale);
+						transform *= transformComp->mRotation.AsMatrix();
+						transform *= SC_TranslationMatrix(transformComp->mPosition);
 
 						mMeshInstance->SetTransform(transform);
 					}
@@ -91,12 +95,12 @@ void SGF_StaticMeshComponent::SetVisible(bool aValue)
 
 SC_Ref<SGfx_MeshInstance>& SGF_StaticMeshComponent::GetMeshInstance()
 {
-	return mMeshInstance.Get();
+	return mMeshInstance;
 }
 
 SC_Ref<SGfx_MaterialInstance>& SGF_StaticMeshComponent::GetMaterialInstance()
 {
-	return mMaterialInstance.Get();
+	return mMaterialInstance;
 }
 
 bool SGF_StaticMeshComponent::Save(SC_Json& aOutSaveData) const
@@ -128,7 +132,7 @@ bool SGF_StaticMeshComponent::Load(const SC_Json& aSavedData)
 		return false;
 
 	SetMesh(SGfx_MeshInstance::Create(meshCreateParams));
-	if (!mMeshInstance.Valid())
+	if (!mMeshInstance)
 		return false;
 
 	// TEMP

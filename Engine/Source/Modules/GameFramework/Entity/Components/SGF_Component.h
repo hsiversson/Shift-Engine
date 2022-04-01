@@ -75,7 +75,8 @@ public:
 	};
 };
 
-class SGF_PropertyBase
+#if IS_EDITOR_BUILD
+class SGF_PropertyHelperBase
 {
 public:
 	enum class Type
@@ -95,28 +96,14 @@ public:
 		EntityRef
 	};
 
-public:
-	SGF_PropertyBase(const Type& aType) 
-		: mType(aType)
-		, mInternalData(nullptr) 
-#if IS_EDITOR_BUILD
-		, mName("Unnamed Property")
-		, mInternalResetData(nullptr)
-#endif
-	{}
+	SGF_PropertyHelperBase(const Type& aType, const char* aName, const char* aMetaData = nullptr) 
+		: mPropertyType(aType)
+		, mName(aName) 
+	{
+		ParseMetaData(aMetaData);
+	}
 
-	SGF_PropertyBase(const Type& aType, void* aData) 
-		: mType(aType)
-		, mInternalData(aData)
-#if IS_EDITOR_BUILD
-		, mName("Unnamed Property")
-		, mInternalResetData(nullptr)
-#endif
-	{}
-
-	virtual ~SGF_PropertyBase() {}
-
-	const Type& GetType() const { return mType; }
+	virtual ~SGF_PropertyHelperBase() {}
 
 	template<class T>
 	static Type GetTypeFromClassType()
@@ -124,88 +111,98 @@ public:
 		return Type::Unknown;
 	}
 
-	void* GetData() const { return mInternalData; }
-
-	template<class T>
-	static T* GetDataAs()
-	{
-		return static_cast<T*>(mInternalData);
-	}
-
-#if IS_EDITOR_BUILD
-	void SetName(const char* aName) { mName = aName; }
+	const Type& GetType() const { return mPropertyType; }
 	const char* GetName() const { return mName; }
 
-	const void* GetResetData() const { return mInternalResetData; }
-
-	template<class T>
-	static const T* GetResetDataAs()
+	std::string GetMetaDataFromKey(const char* aKey) const
 	{
-		return static_cast<T*>(mInternalResetData);
+		if (mMetaData.find(aKey) != mMetaData.end())
+			return mMetaData.at(aKey);
+
+		return std::string();
 	}
-#endif
 
-protected:
-	void SetInternalData(void* aData) { mInternalData = aData; }
+private:
+	void ParseMetaData(const char* aMetaData)
+	{
+		if (!aMetaData)
+			return;
 
-	const Type mType;
-	void* mInternalData;
+		static constexpr char metaDataDelimiter = ',';
+		static constexpr char keyValueDelimiter = '=';
 
-#if IS_EDITOR_BUILD
-	void SetInternalResetData(void* aData) { mInternalResetData = aData; }
+		std::string metaDataStr(aMetaData);
+		size_t lastCommaPos = 0;
+		size_t nextCommaPos = metaDataStr.find(metaDataDelimiter, 0);
+		bool shouldBreakOnNextIter = false;
+		while (true)
+		{
+			size_t len = nextCommaPos - lastCommaPos;
+			std::string keyValue = metaDataStr.substr(lastCommaPos, len);
+			size_t delimPos = keyValue.find(keyValueDelimiter);
+			std::string key = keyValue.substr(0, delimPos);
+			std::string value = keyValue.substr(delimPos + 1, nextCommaPos);
+
+			mMetaData[key] = value;
+
+			if (shouldBreakOnNextIter)
+				break;
+
+			lastCommaPos = nextCommaPos + 1; // Skip one for the comma itself
+			nextCommaPos = metaDataStr.find(metaDataDelimiter, lastCommaPos);
+			shouldBreakOnNextIter = nextCommaPos == std::string::npos;
+			if (shouldBreakOnNextIter)
+			{
+				nextCommaPos = metaDataStr.length();
+			}
+		}
+	}
+
+private:
+	SC_UnorderedMap<std::string, std::string> mMetaData;
+	const Type mPropertyType;
 	const char* mName;
-	void* mInternalResetData;
-#endif
 };
-template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<bool>() { return Type::Bool; }	
-template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<int32>() { return Type::Int; }
-template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<uint32>() { return Type::Uint; }
-template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<float>() { return Type::Float; }
-template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<const char*>() { return Type::Text; }
-template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<SC_Vector>() { return Type::Vector; }
-template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<SC_Color>() { return Type::Color; }
-template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<SC_Quaternion>() { return Type::Quaternion; }
-template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<SC_Ref<SR_Texture>>() { return Type::Texture; }
-template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<SC_Ref<SGfx_MeshInstance>>() { return Type::Mesh; }
-template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<SC_Ref<SGfx_MaterialInstance>>() { return Type::Material; }
-template<> inline SGF_PropertyBase::Type SGF_PropertyBase::GetTypeFromClassType<SC_Ref<SGF_Entity>>() { return Type::EntityRef; }
+template<> inline SGF_PropertyHelperBase::Type SGF_PropertyHelperBase::GetTypeFromClassType<bool>() { return Type::Bool; }
+template<> inline SGF_PropertyHelperBase::Type SGF_PropertyHelperBase::GetTypeFromClassType<int32>() { return Type::Int; }
+template<> inline SGF_PropertyHelperBase::Type SGF_PropertyHelperBase::GetTypeFromClassType<uint32>() { return Type::Uint; }
+template<> inline SGF_PropertyHelperBase::Type SGF_PropertyHelperBase::GetTypeFromClassType<float>() { return Type::Float; }
+template<> inline SGF_PropertyHelperBase::Type SGF_PropertyHelperBase::GetTypeFromClassType<const char*>() { return Type::Text; }
+template<> inline SGF_PropertyHelperBase::Type SGF_PropertyHelperBase::GetTypeFromClassType<SC_Vector>() { return Type::Vector; }
+template<> inline SGF_PropertyHelperBase::Type SGF_PropertyHelperBase::GetTypeFromClassType<SC_Color>() { return Type::Color; }
+template<> inline SGF_PropertyHelperBase::Type SGF_PropertyHelperBase::GetTypeFromClassType<SC_Quaternion>() { return Type::Quaternion; }
+template<> inline SGF_PropertyHelperBase::Type SGF_PropertyHelperBase::GetTypeFromClassType<SC_Ref<SR_Texture>>() { return Type::Texture; }
+template<> inline SGF_PropertyHelperBase::Type SGF_PropertyHelperBase::GetTypeFromClassType<SC_Ref<SGfx_MeshInstance>>() { return Type::Mesh; }
+template<> inline SGF_PropertyHelperBase::Type SGF_PropertyHelperBase::GetTypeFromClassType<SC_Ref<SGfx_MaterialInstance>>() { return Type::Material; }
+template<> inline SGF_PropertyHelperBase::Type SGF_PropertyHelperBase::GetTypeFromClassType<SC_Ref<SGF_Entity>>() { return Type::EntityRef; }
 
 template<class T>
-class SGF_Property : public SGF_PropertyBase
+class SGF_PropertyHelper : public SGF_PropertyHelperBase
 {
 public:
-	SGF_Property() 
-		: SGF_PropertyBase(SGF_PropertyBase::GetTypeFromClassType<T>(), &mInternalPropertyVariable)
-		{}
+	SGF_PropertyHelper(SGF_Component* aParentComponent, const char* aName, T& aProperty)
+		: SGF_PropertyHelperBase(SGF_PropertyHelperBase::GetTypeFromClassType<T>(), aName)
+		, mPropertyRef(aProperty)
+	{
+		if (aParentComponent)
+			aParentComponent->AddProperty(this);
+	}
 
-	SGF_Property(const T& aProperty)
-		: SGF_PropertyBase(SGF_PropertyBase::GetTypeFromClassType<T>(), &mInternalPropertyVariable)
-		, mInternalPropertyVariable(aProperty)
-	{}
+	SGF_PropertyHelper(SGF_Component* aParentComponent, const char* aName, T& aProperty, const char* aMetaData)
+		: SGF_PropertyHelperBase(SGF_PropertyHelperBase::GetTypeFromClassType<T>(), aName, aMetaData)
+		, mPropertyRef(aProperty)
+	{
+		if (aParentComponent)
+			aParentComponent->AddProperty(this);
+	}
 
-	void operator=(const T& aProperty) { mInternalPropertyVariable = aProperty; SetInternalData(&mInternalPropertyVariable); }
+	T& Get() { return mPropertyRef; }
+	const T& Get() const { return mPropertyRef; }
 
-	T& operator->() { return mInternalPropertyVariable; }
-	const T& operator->() const { return mInternalPropertyVariable; }
-
-	operator T() const { return mInternalPropertyVariable; }
-
-	bool Valid() const { return mInternalPropertyVariable != static_cast<T>(0); }
-
-	T& Get() { return mInternalPropertyVariable; }
-	const T& Get() const { return mInternalPropertyVariable; }
-	void Set(const T& aProperty) { mInternalPropertyVariable = aProperty; SetInternalData(&mInternalPropertyVariable); }
-
-#if IS_EDITOR_BUILD
-	void SetResetValue(const T& aResetValue) { mResetValue = aResetValue; SetInternalResetData(&mResetValue); }
-	const T& GetResetValue() const { return mResetValue; }
-#endif
 private:
-	T mInternalPropertyVariable;
-#if IS_EDITOR_BUILD
-	T mResetValue;
-#endif
+	T& mPropertyRef;
 };
+#endif
 
 class SGF_Component
 {
@@ -213,6 +210,7 @@ class SGF_Component
 public:
 	static SC_Ref<SGF_Component> CreateFromId(const SGF_ComponentId& aComponentId);
 	static SC_Ref<SGF_Component> CreateFromName(const char* aComponentName);
+	static const SGF_ComponentId& GetIdFromName(const char* aComponentName);
 
 public:
 	SGF_Component();
@@ -229,9 +227,11 @@ public:
 	virtual const char* GetName() const;
 
 	SGF_Entity* GetParentEntity() const;
-	const SC_Array<SGF_PropertyBase*>& GetProperties() const;
 
-	void AddProperty(SGF_PropertyBase* aProperty) { mProperties.Add(aProperty); }
+#if IS_EDITOR_BUILD
+	void AddProperty(SGF_PropertyHelperBase* aProperty) { mProperties.Add(aProperty); }
+	const SC_Array<SGF_PropertyHelperBase*>& GetProperties() const { return mProperties; }
+#endif
 
 public:
 	template<class ComponentType>
@@ -241,7 +241,9 @@ public:
 	}
 
 protected:
-	SC_Array<SGF_PropertyBase*> mProperties;
+#if IS_EDITOR_BUILD
+	SC_Array<SGF_PropertyHelperBase*> mProperties;
+#endif
 
 private:
 	void SetParentEntity(SGF_Entity* aParentEntity);
@@ -262,26 +264,9 @@ public:																									\
 
 
 #if IS_EDITOR_BUILD
-	template<class T>
-	struct SGF_PropertyDeclHelper
-	{
-		SGF_PropertyDeclHelper(SGF_Property<T>* aProperty, SGF_Component* aParentComponent, const char* aName)
-		{
-			aProperty->SetName(aName);
-			aParentComponent->AddProperty(aProperty);
-		}
-
-		SGF_PropertyDeclHelper(SGF_Property<T>* aProperty, SGF_Component* aParentComponent, const char* aName, const T& aResetValue)
-		{
-			aProperty->SetName(aName);
-			aProperty->SetResetValue(aResetValue);
-			aParentComponent->AddProperty(aProperty);
-		}
-	};
-
 	#define SGF_PROPERTY(aVariableType, aVariableName, aPropertyName, ...)	\
-			SGF_Property<aVariableType> aVariableName;		\
-			SGF_PropertyDeclHelper<aVariableType> SC_CONCAT(__nHelper, aVariableName) = SGF_PropertyDeclHelper<aVariableType>(&aVariableName, this, aPropertyName, __VA_ARGS__)
+			aVariableType aVariableName;		\
+			SGF_PropertyHelper<aVariableType> SC_CONCAT(__nHelper, aVariableName) = SGF_PropertyHelper<aVariableType>(this, aPropertyName, aVariableName, __VA_ARGS__)
 #else
-	#define SGF_PROPERTY(aVariableType, aVariableName, aPropertyName, ...) SGF_Property<aVariableType> aVariableName;
+	#define SGF_PROPERTY(aVariableType, aVariableName, aPropertyName, ...) aVariableType aVariableName;
 #endif

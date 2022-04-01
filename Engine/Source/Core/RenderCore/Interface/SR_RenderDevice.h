@@ -64,9 +64,9 @@ public:
 	virtual SC_Ref<SR_Buffer> CreateBuffer(const SR_BufferProperties& aBufferProperties, const SC_Ref<SR_BufferResource>& aResource);
 	virtual SC_Ref<SR_BufferResource> CreateBufferResource(const SR_BufferResourceProperties& aBufferResourceProperties, const void* aInitialData = nullptr);
 
-	virtual SC_Ref<SR_Heap> CreateHeap(const SR_HeapProperties& aHeapProperties);
+	SR_TempBuffer CreateTempBuffer(const SR_BufferResourceProperties& aBufferResourceProperties, bool aIsWritable = true);
 
-	SR_BufferResource* CreateTempBuffer(const void* aInitialData, uint32 aSize, const SR_BufferBindFlag& aUsageFlag, uint32 aAlignment = 0);
+	virtual SC_Ref<SR_Heap> CreateHeap(const SR_HeapProperties& aHeapProperties);
 
 	virtual bool CompileShader(const SR_ShaderCompileArgs& aArgs, SR_ShaderByteCode& aOutByteCode, SR_ShaderMetaData* aOutMetaData = nullptr);
 	virtual bool CompileShader(const std::string& aShadercode, const SR_ShaderCompileArgs& aArgs, SR_ShaderByteCode& aOutByteCode, SR_ShaderMetaData* aOutMetaData = nullptr);

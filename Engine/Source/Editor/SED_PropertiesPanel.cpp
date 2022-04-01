@@ -61,17 +61,13 @@ void SED_PropertiesPanel::OnRender()
 				if (!mSelectedEntity->HasComponent(pair.second))
 				{
 					if (ImGui::Button(pair.first.c_str()))
-					{
-						SC_Ref<SGF_Component> comp = SGF_ComponentFactory::CreateComponent(pair.second);
-						mSelectedEntity->AddComponent(comp);
-					}
+						mSelectedEntity->AddComponent(pair.second);
 				}
 			}
 			ImGui::EndCombo();
 		}
 
 		ImGui::Separator();
-
 
 		DrawComponent(SGF_TransformComponent::Id(), mSelectedEntity);
 
@@ -113,10 +109,10 @@ void SED_PropertiesPanel::DrawComponent(const SGF_ComponentId& aComponentId, SGF
 			ImGui::PushID(component->GetName());
 			ImGui::Columns(2);
 
-			const SC_Array<SGF_PropertyBase*>& properties = component->GetProperties();
-			for (SGF_PropertyBase* property : properties)
+			const SC_Array<SGF_PropertyHelperBase*>& properties2 = component->GetProperties();
+			for (SGF_PropertyHelperBase* property : properties2)
 			{
-				DrawProperty(property->GetType(), property->GetData(), property->GetName(), property->GetResetData());
+				DrawProperty(*property);
 			}
 
 			ImGui::Columns(1);
@@ -126,82 +122,25 @@ void SED_PropertiesPanel::DrawComponent(const SGF_ComponentId& aComponentId, SGF
 	}
 }
 
-void SED_PropertiesPanel::DrawProperty(const SGF_PropertyBase::Type& aType, void* aData, const char* aPropertyName, const void* aResetData) const
+void SED_PropertiesPanel::DrawProperty(SGF_PropertyHelperBase& aProperty) const
 {
-	ImGui::PushID(aPropertyName);
-	ImGui::Text(aPropertyName);
+	ImGui::PushID(aProperty.GetName());
+	ImGui::Text(aProperty.GetName());
 	ImGui::NextColumn();
 
-	switch (aType)
+	switch (aProperty.GetType())
 	{
-	case SGF_PropertyBase::Type::Bool:
-	{
-		bool* boolPtr = static_cast<bool*>(aData);
-		DrawPropertyInternal(aPropertyName, *boolPtr);
-		break;
-	}
-	case SGF_PropertyBase::Type::Int:
-	{
-		int32* intPtr = static_cast<int32*>(aData);
-		DrawPropertyInternal(aPropertyName, *intPtr);
-		break;
-	}
-	case SGF_PropertyBase::Type::Uint:
-	{
-		uint32* uintPtr = static_cast<uint32*>(aData);
-		DrawPropertyInternal(aPropertyName, *uintPtr);
-		break;
-	}
-	case SGF_PropertyBase::Type::Float:
-	{
-		float* floatPtr = static_cast<float*>(aData);
-		DrawPropertyInternal(aPropertyName, *floatPtr);
-		break;
-	}
-	case SGF_PropertyBase::Type::Vector:
-	{
-		SC_Vector* vectorPtr = static_cast<SC_Vector*>(aData);
-		const SC_Vector* resetValPtr = static_cast<const SC_Vector*>(aResetData);
-		DrawPropertyInternal(aPropertyName, *vectorPtr, *resetValPtr);
-		break;
-	}
-	case SGF_PropertyBase::Type::Color:
-	{
-		SC_Color* colorPtr = static_cast<SC_Color*>(aData);
-		DrawPropertyInternal(aPropertyName, *colorPtr);
-		break;
-	}
-	case SGF_PropertyBase::Type::Quaternion:
-	{
-		SC_Quaternion* quatPtr = static_cast<SC_Quaternion*>(aData);
-		const SC_Quaternion* resetValPtr = static_cast<const SC_Quaternion*>(aResetData);
-		DrawPropertyInternal(aPropertyName, *quatPtr, *resetValPtr);
-		break;
-	}
-	case SGF_PropertyBase::Type::Texture:
-	{
-		SC_Ref<SR_Texture>* texPtr = static_cast<SC_Ref<SR_Texture>*>(aData);
-		DrawPropertyInternal(aPropertyName, *texPtr);
-		break;
-	}
-	case SGF_PropertyBase::Type::Material:
-	{
-		SC_Ref<SGfx_MaterialInstance>* matPtr = static_cast<SC_Ref<SGfx_MaterialInstance>*>(aData);
-		DrawPropertyInternal(aPropertyName, *matPtr);
-		break;
-	}
-	case SGF_PropertyBase::Type::Mesh:
-	{
-		SC_Ref<SGfx_MeshInstance>* meshPtr = static_cast<SC_Ref<SGfx_MeshInstance>*>(aData);
-		DrawPropertyInternal(aPropertyName, *meshPtr);
-		break;
-	}
-	case SGF_PropertyBase::Type::EntityRef:
-	{
-		SC_Ref<SGF_Entity>* entityRefPtr = static_cast<SC_Ref<SGF_Entity>*>(aData);
-		DrawPropertyInternal(aPropertyName, *entityRefPtr);
-		break;
-	}
+	case SGF_PropertyHelperBase::Type::Bool:		DrawPropertyInternal(static_cast<SGF_PropertyHelper<bool>&>(aProperty)); break;
+	case SGF_PropertyHelperBase::Type::Int:			DrawPropertyInternal(static_cast<SGF_PropertyHelper<int32>&>(aProperty)); break;
+	case SGF_PropertyHelperBase::Type::Uint:		DrawPropertyInternal(static_cast<SGF_PropertyHelper<uint32>&>(aProperty)); break;
+	case SGF_PropertyHelperBase::Type::Float:		DrawPropertyInternal(static_cast<SGF_PropertyHelper<float>&>(aProperty)); break;
+	case SGF_PropertyHelperBase::Type::Vector:		DrawPropertyInternal(static_cast<SGF_PropertyHelper<SC_Vector>&>(aProperty)); break;
+	case SGF_PropertyHelperBase::Type::Color:		DrawPropertyInternal(static_cast<SGF_PropertyHelper<SC_Color>&>(aProperty)); break;
+	case SGF_PropertyHelperBase::Type::Quaternion:	DrawPropertyInternal(static_cast<SGF_PropertyHelper<SC_Quaternion>&>(aProperty)); break;
+	case SGF_PropertyHelperBase::Type::Texture:		DrawPropertyInternal(static_cast<SGF_PropertyHelper<SC_Ref<SR_Texture>>&>(aProperty)); break;
+	case SGF_PropertyHelperBase::Type::Material:	DrawPropertyInternal(static_cast<SGF_PropertyHelper<SC_Ref<SGfx_MaterialInstance>>&>(aProperty)); break;
+	case SGF_PropertyHelperBase::Type::Mesh:		DrawPropertyInternal(static_cast<SGF_PropertyHelper<SC_Ref<SGfx_MeshInstance>>&>(aProperty)); break;
+	case SGF_PropertyHelperBase::Type::EntityRef:	DrawPropertyInternal(static_cast<SGF_PropertyHelper<SC_Ref<SGF_Entity>>&>(aProperty)); break;
 	}
 
 	ImGui::NextColumn();
@@ -210,37 +149,37 @@ void SED_PropertiesPanel::DrawProperty(const SGF_PropertyBase::Type& aType, void
 
 ////////////////////////////////
 // Native Types
-void SED_PropertiesPanel::DrawPropertyInternal(const char* aName, bool& aProperty) const
+void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<bool>& aProperty) const
 {
-	std::string label("##_checkbox_");
-	label += aName;
-	ImGui::Checkbox(label.c_str(), &aProperty);
+	std::string label("##_bool_");
+	label += aProperty.GetName();
+	ImGui::Checkbox(label.c_str(), &aProperty.Get());
 }
 
-void SED_PropertiesPanel::DrawPropertyInternal(const char* aName, int32& aProperty) const
+void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<int32>& aProperty) const
 {
-	std::string label("##_checkbox_");
-	label += aName;
-	ImGui::DragInt(label.c_str(), &aProperty);
+	std::string label("##_int_");
+	label += aProperty.GetName();
+	ImGui::DragInt(label.c_str(), &aProperty.Get());
 }
 
-void SED_PropertiesPanel::DrawPropertyInternal(const char* aName, uint32& aProperty) const
+void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<uint32>& aProperty) const
 {
-	std::string label("##_checkbox_");
-	label += aName;
-	ImGui::DragScalar(label.c_str(), ImGuiDataType_U32, &aProperty);
+	std::string label("##_uint_");
+	label += aProperty.GetName();
+	ImGui::DragScalar(label.c_str(), ImGuiDataType_U32, &aProperty.Get());
 }
 
-void SED_PropertiesPanel::DrawPropertyInternal(const char* aName, float& aProperty) const
+void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<float>& aProperty) const
 {
-	std::string label("##_checkbox_");
-	label += aName;
-	ImGui::DragFloat(label.c_str(), &aProperty);
+	std::string label("##_float_");
+	label += aProperty.GetName();
+	ImGui::DragFloat(label.c_str(), &aProperty.Get());
 }
 
 ////////////////////////////////
 //	Vector
-static void DrawPropertyVectorComponent(const char* aName, const ImVec2& aButtonSize, float& aOutComponent, const ImVec4& aColor, const float aResetValue)
+static void DrawPropertyVectorComponent(const char* aName, const ImVec2& aButtonSize, float& aOutComponent, const ImVec4& aColor, const float aMin, const float aMax, const float aSpeed, const float aResetValue)
 {
 	const ImVec4 hoverColor = { aColor.x + 0.1f, aColor.y + 0.1f, aColor.z + 0.1f, 1.0f };
 
@@ -256,11 +195,11 @@ static void DrawPropertyVectorComponent(const char* aName, const ImVec2& aButton
 
 	std::string label("##_VectorComponent_");
 	label += aName;
-	ImGui::DragFloat(label.c_str(), &aOutComponent, 0.1f, 0.0f, 0.0f, "%.2f");
+	ImGui::DragFloat(label.c_str(), &aOutComponent, aSpeed, aMin, aMax, "%.3f");
 	ImGui::PopStyleVar();
 }
 
-void SED_PropertiesPanel::DrawPropertyInternal(const char* /*aName*/, SC_Vector& aProperty, const SC_Vector& aResetValue) const
+void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<SC_Vector>& aProperty) const
 {
 	ImGui::PushMultiItemsWidths(3, ImGui::CalcItemWidth());
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 4, 6 });
@@ -268,108 +207,179 @@ void SED_PropertiesPanel::DrawPropertyInternal(const char* /*aName*/, SC_Vector&
 	float lineHeight = GImGui->Font->FontSize + GImGui->Style.FramePadding.y * 5.0f;
 	ImVec2 buttonSize = { lineHeight + 3.0f, lineHeight };
 
+	SC_Vector& property = aProperty.Get();
+
+	float resetValue = 0.0f;
+	std::string resetValueStr = aProperty.GetMetaDataFromKey("resetvalue");
+	if (!resetValueStr.empty())
+		resetValue = std::stof(resetValueStr);
+
+	float minValue = 0.0f;
+	std::string minValueStr = aProperty.GetMetaDataFromKey("min");
+	if (!minValueStr.empty())
+		minValue = std::stof(minValueStr);
+
+	float maxValue = 0.0f;
+	std::string maxValueStr = aProperty.GetMetaDataFromKey("max");
+	if (!maxValueStr.empty())
+		maxValue = std::stof(maxValueStr);
+
+	float speedValue = 0.01f;
+	std::string speedValueStr = aProperty.GetMetaDataFromKey("floatdragspeed");
+	if (!speedValueStr.empty())
+		speedValue = std::stof(speedValueStr);
+
 	const ImVec4 xColor = ImVec4{ 0.8f, 0.1f, 0.15f, 1.0f };
-	DrawPropertyVectorComponent("X", buttonSize, aProperty.x, xColor, aResetValue.x);
+	DrawPropertyVectorComponent("X", buttonSize, property.x, xColor, minValue, maxValue, speedValue, resetValue);
 	ImGui::PopItemWidth();
 	ImGui::SameLine();
 
 	const ImVec4 yColor = ImVec4{ 0.2f, 0.7f, 0.2f, 1.0f };
-	DrawPropertyVectorComponent("Y", buttonSize, aProperty.y, yColor, aResetValue.y);
+	DrawPropertyVectorComponent("Y", buttonSize, property.y, yColor, minValue, maxValue, speedValue, resetValue);
 	ImGui::PopItemWidth();
 	ImGui::SameLine();
 
 	const ImVec4 zColor = ImVec4{ 0.1f, 0.25f, 0.8f, 1.0f };
-	DrawPropertyVectorComponent("Z", buttonSize, aProperty.z, zColor, aResetValue.z);
+	DrawPropertyVectorComponent("Z", buttonSize, property.z, zColor, minValue, maxValue, speedValue, resetValue);
 	ImGui::PopItemWidth();
 
 	ImGui::PopStyleVar();
 }
 
-void SED_PropertiesPanel::DrawPropertyInternal(const char* /*aName*/, SC_Color& aProperty) const
+void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<SC_Color>& aProperty) const
 {
-	SC_LinearColor linear = SC_ConvertColorToLinear(aProperty);
+	SC_Color& col = aProperty.Get();
+	SC_LinearColor linear = SC_ConvertColorToLinear(col);
 	if (ImGui::ColorEdit4("##_coloredit_", &linear.r, ImGuiColorEditFlags_Uint8))
 	{
-		aProperty = SC_ConvertLinearToColor(linear);
+		col = SC_ConvertLinearToColor(linear);
 	}
 }
 
 ////////////////////////////////
 //	Quaternion / Rotation
-void SED_PropertiesPanel::DrawPropertyInternal(const char* aName, SC_Quaternion& aProperty, const SC_Quaternion& aResetValue) const
+void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<SC_Quaternion>& aProperty) const
 {
-	SC_Vector anglesProperty = aProperty.AsEulerAngles();
-	DrawPropertyInternal(aName, anglesProperty, aResetValue.AsEulerAngles());
-	aProperty = aProperty.FromEulerAngles(anglesProperty);
+	SC_Quaternion& quat = aProperty.Get();
+	SC_Vector angles = quat.AsEulerAngles();
+
+	ImGui::PushMultiItemsWidths(3, ImGui::CalcItemWidth());
+	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 4, 6 });
+
+	float lineHeight = GImGui->Font->FontSize + GImGui->Style.FramePadding.y * 5.0f;
+	ImVec2 buttonSize = { lineHeight + 3.0f, lineHeight };
+
+	float resetValue = 0.0f;
+	std::string resetValueStr = aProperty.GetMetaDataFromKey("resetvalue");
+	if (!resetValueStr.empty())
+		resetValue = std::stof(resetValueStr);
+
+	float minValue = 0.0f;
+	std::string minValueStr = aProperty.GetMetaDataFromKey("min");
+	if (!minValueStr.empty())
+		minValue = std::stof(minValueStr);
+
+	float maxValue = 0.0f;
+	std::string maxValueStr = aProperty.GetMetaDataFromKey("max");
+	if (!maxValueStr.empty())
+		maxValue = std::stof(maxValueStr);
+
+	float speedValue = 0.01f;
+	std::string speedValueStr = aProperty.GetMetaDataFromKey("floatdragspeed");
+	if (!speedValueStr.empty())
+		speedValue = std::stof(speedValueStr);
+
+	const ImVec4 xColor = ImVec4{ 0.8f, 0.1f, 0.15f, 1.0f };
+	DrawPropertyVectorComponent("X", buttonSize, angles.x, xColor, minValue, maxValue, speedValue, resetValue);
+	ImGui::PopItemWidth();
+	ImGui::SameLine();
+
+	const ImVec4 yColor = ImVec4{ 0.2f, 0.7f, 0.2f, 1.0f };
+	DrawPropertyVectorComponent("Y", buttonSize, angles.y, yColor, minValue, maxValue, speedValue, resetValue);
+	ImGui::PopItemWidth();
+	ImGui::SameLine();
+
+	const ImVec4 zColor = ImVec4{ 0.1f, 0.25f, 0.8f, 1.0f };
+	DrawPropertyVectorComponent("Z", buttonSize, angles.z, zColor, minValue, maxValue, speedValue, resetValue);
+	ImGui::PopItemWidth();
+
+	ImGui::PopStyleVar();
+
+	quat = quat.FromEulerAngles(angles);
 }
 
 ////////////////////////////////
 //	Asset
-void SED_PropertiesPanel::DrawPropertyInternal(const char* aName, SC_Ref<SR_Texture>& aProperty) const
+void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SR_Texture>>& aProperty) const
 {
+	SC_Ref<SR_Texture>& texture = aProperty.Get();
 	std::string label("##_texture_");
-	label += aName;
-	ImGui::ImageButton(aProperty.get(), { 128.f, 128.f });
+	label += aProperty.GetName();
+	ImGui::ImageButton(texture.get(), {128.f, 128.f});
 
 	if (ImGui::BeginDragDropTarget())
 	{
 		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("TextureDrag", ImGuiDragDropFlags_None))
 		{
-			SR_Texture* tex;
-			SC_Memcpy(&tex, payload->Data, payload->DataSize);
-			aProperty.reset(tex);
+			SR_Texture* newTexture;
+			SC_Memcpy(&newTexture, payload->Data, payload->DataSize);
+			texture.reset(newTexture);
 		}
 
 		ImGui::EndDragDropTarget();
 	}
 }
 
-void SED_PropertiesPanel::DrawPropertyInternal(const char* aName, SC_Ref<SGfx_MaterialInstance>& aProperty) const
+void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SGfx_MaterialInstance>>& aProperty) const
 {
+	SC_Ref<SGfx_MaterialInstance>& material = aProperty.Get();
 	std::string label("##_material_");
-	label += aName;
-	ImGui::ImageButton(nullptr, { 128.f, 128.f }); 
-	
+	label += aProperty.GetName();
+	ImGui::ImageButton(nullptr, { 128.f, 128.f });
+
 	if (ImGui::BeginDragDropTarget())
 	{
 		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MaterialInstanceDrag", ImGuiDragDropFlags_None))
 		{
-			SGfx_MaterialInstance* mat;
-			SC_Memcpy(&mat, payload->Data, payload->DataSize);
-			aProperty.reset(mat);
+			SGfx_MaterialInstance* newMaterial;
+			SC_Memcpy(&newMaterial, payload->Data, payload->DataSize);
+			material.reset(newMaterial);
 		}
 
 		ImGui::EndDragDropTarget();
 	}
 }
 
-void SED_PropertiesPanel::DrawPropertyInternal(const char* aName, SC_Ref<SGfx_MeshInstance>& aProperty) const
+void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SGfx_MeshInstance>>& aProperty) const
 {
+	SC_Ref<SGfx_MeshInstance>& mesh = aProperty.Get();
 	std::string label("##_mesh_");
-	label += aName;
+	label += aProperty.GetName();
 	ImGui::ImageButton(nullptr, { 128.f, 128.f });
 	if (ImGui::BeginDragDropTarget())
 	{
 		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MeshInstanceDrag", ImGuiDragDropFlags_None))
 		{
-			SGfx_MeshInstance* mesh;
-			SC_Memcpy(&mesh, payload->Data, payload->DataSize);
-			aProperty.reset(mesh);
+			SGfx_MeshInstance* newMesh;
+			SC_Memcpy(&newMesh, payload->Data, payload->DataSize);
+			mesh.reset(newMesh);
 		}
 
 		ImGui::EndDragDropTarget();
 	}
 }
 
-void SED_PropertiesPanel::DrawPropertyInternal(const char* aName, SC_Ref<SGF_Entity>& aProperty) const
+void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SGF_Entity>>& aProperty) const
 {
+	SC_Ref<SGF_Entity>& entity = aProperty.Get();
+	const char* name = aProperty.GetName();
 	std::string label("##_entity_");
-	label += aName;
+	label += name;
 
 	if (mWorld)
 	{
-		if (aProperty)
-			ImGui::Text("%s", aProperty->GetName().c_str());
+		if (entity)
+			ImGui::Text("%s", entity->GetName().c_str());
 		else
 			ImGui::Text("<None>");
 
@@ -377,9 +387,9 @@ void SED_PropertiesPanel::DrawPropertyInternal(const char* aName, SC_Ref<SGF_Ent
 		{
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("EntityDrag", ImGuiDragDropFlags_None))
 			{
-				SGF_Entity* entity;
-				SC_Memcpy(&entity, payload->Data, payload->DataSize);
-				aProperty.reset(entity);
+				SGF_Entity* newEntity;
+				SC_Memcpy(&newEntity, payload->Data, payload->DataSize);
+				entity.reset(newEntity);
 			}
 
 			ImGui::EndDragDropTarget();

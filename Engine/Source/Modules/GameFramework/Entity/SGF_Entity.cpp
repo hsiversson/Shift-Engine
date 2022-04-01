@@ -20,7 +20,7 @@ void SGF_Entity::Update()
 {
 	for (auto& comp : mComponents)
 	{
-		comp.second->OnUpdate();
+		comp->OnUpdate();
 	}
 }
 
@@ -34,23 +34,40 @@ SGF_World* SGF_Entity::GetWorld() const
 	return mWorld;
 }
 
-bool SGF_Entity::HasComponent(const SGF_ComponentId& aComponentId)
+bool SGF_Entity::HasComponent(const SGF_ComponentId& aComponentId) const
 {
-	return mComponents.find(aComponentId) != mComponents.end();
+	return mMappedComponents.find(aComponentId) != mMappedComponents.end();
 }
 
-SGF_Component* SGF_Entity::GetComponent(const SGF_ComponentId& aComponentId)
+SGF_Component* SGF_Entity::GetComponent(const SGF_ComponentId& aComponentId) const
 {
 	if (HasComponent(aComponentId))
-		return mComponents.at(aComponentId).get();
+		return mComponents[mMappedComponents.at(aComponentId)].get();
 
 	return nullptr;
 }
 
-void SGF_Entity::AddComponent(SC_Ref<SGF_Component> aComponent)
+SGF_Component* SGF_Entity::AddComponent(const SGF_ComponentId& aComponentId)
 {
-	mComponents[aComponent->GetId()] = aComponent;
-	aComponent->SetParentEntity(this);
+	if (SGF_Component* comp = GetComponent(aComponentId))
+		return comp;
+
+	SC_Ref<SGF_Component>& newComp = mComponents.Add(SGF_Component::CreateFromId(aComponentId));
+	newComp->SetParentEntity(this);
+	newComp->OnCreate();
+	mMappedComponents[aComponentId] = mComponents.Count() - 1;
+
+	return newComp.get();
+}
+
+SGF_Component* SGF_Entity::AddComponent(const char* aComponentName)
+{
+	return AddComponent(SGF_Component::GetIdFromName(aComponentName));
+}
+
+const SC_Array<SC_Ref<SGF_Component>>& SGF_Entity::GetComponents() const
+{
+	return mComponents;
 }
 
 bool SGF_Entity::Is(const SC_UUID& aId) const
@@ -94,9 +111,8 @@ bool SGF_Entity::Save(SC_Json& aOutSaveData) const
 	aOutSaveData["Name"] = mName;
 	aOutSaveData["Tag"] = std::string("None");
 
-	for (const auto& pair : mComponents)
+	for (const SC_Ref<SGF_Component>& component : mComponents)
 	{
-		const SC_Ref<SGF_Component>& component = pair.second;
 		SC_Json componentSaveData;
 		component->Save(componentSaveData);
 		aOutSaveData["Components"].push_back(componentSaveData);
@@ -111,12 +127,10 @@ bool SGF_Entity::Load(const SC_Json& aSavedData)
 	
 	for (const SC_Json& componentData : aSavedData["Components"])
 	{
-		SC_Ref<SGF_Component> component = SGF_Component::CreateFromName(componentData["Name"].get<std::string>().c_str());
+		SGF_Component* component = AddComponent(componentData["Name"].get<std::string>().c_str());
 		component->SetParentEntity(this);
 		if (!component->Load(componentData))
 			continue;
-	
-		AddComponent(component);
 	}
 
 	return true;

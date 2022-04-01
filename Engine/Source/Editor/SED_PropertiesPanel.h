@@ -19,18 +19,19 @@ public:
 
 private:
 	void DrawComponent(const SGF_ComponentId& aComponentId, SGF_Entity* aEntity) const;
-	void DrawProperty(const SGF_PropertyBase::Type& aType, void* aData, const char* aPropertyName, const void* aResetData) const;
-	void DrawPropertyInternal(const char* aName, bool& aProperty) const;
-	void DrawPropertyInternal(const char* aName, int32& aProperty) const;
-	void DrawPropertyInternal(const char* aName, uint32& aProperty) const;
-	void DrawPropertyInternal(const char* aName, float& aProperty) const;
-	void DrawPropertyInternal(const char* aName, SC_Vector& aProperty, const SC_Vector& aResetValue) const;
-	void DrawPropertyInternal(const char* aName, SC_Color& aProperty) const;
-	void DrawPropertyInternal(const char* aName, SC_Quaternion& aProperty, const SC_Quaternion& aResetValue) const;
-	void DrawPropertyInternal(const char* aName, SC_Ref<SR_Texture>& aProperty) const;
-	void DrawPropertyInternal(const char* aName, SC_Ref<SGfx_MaterialInstance>& aProperty) const;
-	void DrawPropertyInternal(const char* aName, SC_Ref<SGfx_MeshInstance>& aProperty) const;
-	void DrawPropertyInternal(const char* aName, SC_Ref<SGF_Entity>& aProperty) const;
+
+	void DrawProperty(SGF_PropertyHelperBase& aProperty) const;
+	void DrawPropertyInternal(SGF_PropertyHelper<bool>& aProperty) const;
+	void DrawPropertyInternal(SGF_PropertyHelper<int32>& aProperty) const;
+	void DrawPropertyInternal(SGF_PropertyHelper<uint32>& aProperty) const;
+	void DrawPropertyInternal(SGF_PropertyHelper<float>& aProperty) const;
+	void DrawPropertyInternal(SGF_PropertyHelper<SC_Vector>& aProperty) const;
+	void DrawPropertyInternal(SGF_PropertyHelper<SC_Color>& aProperty) const;
+	void DrawPropertyInternal(SGF_PropertyHelper<SC_Quaternion>& aProperty) const;
+	void DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SR_Texture>>& aProperty) const;
+	void DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SGfx_MaterialInstance>>& aProperty) const;
+	void DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SGfx_MeshInstance>>& aProperty) const;
+	void DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SGF_Entity>>& aProperty) const;
 
 	SGF_Entity* mSelectedEntity;
 

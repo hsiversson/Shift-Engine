@@ -26,6 +26,18 @@ SC_Ref<SGF_Component> SGF_Component::CreateFromName(const char* aComponentName)
 	return it2->second();
 }
 
+const SGF_ComponentId& SGF_Component::GetIdFromName(const char* aComponentName)
+{
+	SGF_ComponentFactory::RegistryMap& registryMap = SGF_ComponentFactory::GetComponentRegistryMap();
+	auto it = registryMap.find(aComponentName);
+	if (it == registryMap.end())
+	{
+		assert(false && "No component with this name has been registered.");
+		return SGF_InvalidComponentId;
+	}
+	return registryMap.at(aComponentName);
+}
+
 SGF_Component::SGF_Component()
 	: mParentEntity(nullptr)
 {
@@ -62,11 +74,6 @@ const char* SGF_Component::GetName() const
 SGF_Entity* SGF_Component::GetParentEntity() const
 {
 	return mParentEntity;
-}
-
-const SC_Array<SGF_PropertyBase*>& SGF_Component::GetProperties() const
-{
-	return mProperties;
 }
 
 void SGF_Component::SetParentEntity(SGF_Entity* aParentEntity)

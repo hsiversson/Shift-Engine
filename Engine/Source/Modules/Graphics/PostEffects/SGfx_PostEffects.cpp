@@ -44,9 +44,6 @@ bool SGfx_PostEffects::Init()
 
 void SGfx_PostEffects::Render(SGfx_View* aView, SR_Texture* aScreenColor)
 {
-	mTempTextures.RemoveAll();
-	mTempConstantBuffers.RemoveAll();
-
 	if (mBloomData.mEnabled)
 		RenderBloom(aView, aScreenColor);
 
@@ -101,9 +98,11 @@ void SGfx_PostEffects::RenderBloom(SGfx_View* aView, SR_Texture* aScreenColor)
 	cbProps.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
 	cbProps.mElementCount = sizeof(FilterConstants);
 	cbProps.mElementSize = 1;
-	SC_Ref<SR_BufferResource> cb = mTempConstantBuffers.Add(SR_RenderDevice::gInstance->CreateBufferResource(cbProps));
-	cb->UpdateData(0, &constants, sizeof(constants));
-	cmdList->SetRootConstantBuffer(cb.get(), 0);
+	cbProps.mDebugName = "BloomFilterConstants";
+	SR_TempBuffer cb = SR_RenderDevice::gInstance->CreateTempBuffer(cbProps);
+
+	cb.mResource->UpdateData(0, &constants, sizeof(constants));
+	cmdList->SetRootConstantBuffer(cb.mResource.get(), 0);
 	cmdList->Dispatch(mBloomData.mBrightnessFilterShader.get(), targetSize.x, targetSize.y);
 	cmdList->UnorderedAccessBarrier(tempTex.mResource.get());
 
@@ -179,9 +178,11 @@ void SGfx_PostEffects::UpsampleBloomMip(SR_TempTexture& aOutMip, SR_Texture* aFu
 	cbProps.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
 	cbProps.mElementCount = sizeof(Constants);
 	cbProps.mElementSize = 1;
-	SC_Ref<SR_BufferResource> cb = mTempConstantBuffers.Add(SR_RenderDevice::gInstance->CreateBufferResource(cbProps));
-	cb->UpdateData(0, &constants, sizeof(constants));
-	cmdList->SetRootConstantBuffer(cb.get(), 0);
+	cbProps.mDebugName = "BloomUpsampleConstants";
+	SR_TempBuffer cb = SR_RenderDevice::gInstance->CreateTempBuffer(cbProps);
+
+	cb.mResource->UpdateData(0, &constants, sizeof(constants));
+	cmdList->SetRootConstantBuffer(cb.mResource.get(), 0);
 
 	cmdList->Dispatch(mBloomData.mUpsampleShader.get(), SC_IntVector(upsampleSize.XY(), 1));
 	cmdList->UnorderedAccessBarrier(aOutMip.mResource.get());
@@ -227,9 +228,10 @@ SR_TempTexture SGfx_PostEffects::Downsample(SR_Texture* aSource)
 	cbProps.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
 	cbProps.mElementCount = sizeof(Constants);
 	cbProps.mElementSize = 1;
-	SC_Ref<SR_BufferResource> cb = mTempConstantBuffers.Add(SR_RenderDevice::gInstance->CreateBufferResource(cbProps));
-	cb->UpdateData(0, &constants, sizeof(constants));
-	cmdList->SetRootConstantBuffer(cb.get(), 0);
+	cbProps.mDebugName = "BloomDownsampleConstants";
+	SR_TempBuffer cb = SR_RenderDevice::gInstance->CreateTempBuffer(cbProps);
+	cb.mResource->UpdateData(0, &constants, sizeof(constants));
+	cmdList->SetRootConstantBuffer(cb.mResource.get(), 0);
 
 	cmdList->Dispatch(mDownsampleShader.get(), targetSize.x, targetSize.y);
 	cmdList->UnorderedAccessBarrier(tempTex.mResource.get());

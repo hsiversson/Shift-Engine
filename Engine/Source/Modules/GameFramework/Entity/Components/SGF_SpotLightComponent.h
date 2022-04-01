@@ -10,6 +10,7 @@ public:
 	SGF_SpotLightComponent();
 	~SGF_SpotLightComponent();
 
+	void OnCreate() override;
 	void OnUpdate() override;
 
 	//PROPERTY(float, mIntensity, SGF_PropertyAccess::Edit);

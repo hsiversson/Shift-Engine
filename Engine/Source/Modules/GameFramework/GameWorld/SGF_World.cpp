@@ -37,7 +37,7 @@ bool SGF_World::LoadLevel(const char* /*aLevel*/)
 	//
 	//scene.ConvertToLevelAndSave(*level);
 	//level->Save(SC_EnginePaths::Get().GetGameDataDirectory() + "/Levels/Sponza.slvl");
-	mLevels.Add(level);
+	//mLevels.Add(level);
 	return true;
 }
 

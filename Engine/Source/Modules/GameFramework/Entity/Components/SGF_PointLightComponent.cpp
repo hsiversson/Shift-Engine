@@ -7,7 +7,7 @@
 
 SGF_PointLightComponent::SGF_PointLightComponent()
 	: mColor({ 255, 255, 255, 255 })
-	, mRange(1.0f)
+	, mRange(10.0f)
 	, mIntensity(10.0f)
 	, mSourceRadius(0.0f)
 	, mSourceRadiusSoft(0.0f)
@@ -18,6 +18,12 @@ SGF_PointLightComponent::SGF_PointLightComponent()
 SGF_PointLightComponent::~SGF_PointLightComponent()
 {
 
+}
+
+void SGF_PointLightComponent::OnCreate()
+{
+	if (SGF_Entity* entity = GetParentEntity())
+		entity->GetWorld()->GetGraphicsWorld()->AddLight(mPointLight);
 }
 
 void SGF_PointLightComponent::OnUpdate()
@@ -36,12 +42,4 @@ void SGF_PointLightComponent::OnUpdate()
 	mPointLight->SetSourceRadiusSoft(mSourceRadiusSoft);
 	mPointLight->SetRange(mRange);
 	mPointLight->SetIntensity(mIntensity);
-
-	static bool first = true;
-	SGF_Entity* entity = GetParentEntity();
-	if (first && entity)
-	{
-		entity->GetWorld()->GetGraphicsWorld()->AddLight(mPointLight);
-		first = false;
-	}
 }

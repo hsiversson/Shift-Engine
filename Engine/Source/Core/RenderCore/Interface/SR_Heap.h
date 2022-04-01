@@ -19,10 +19,14 @@ enum class SR_HeapType
 
 struct SR_HeapProperties
 {
+	SR_HeapProperties() : mByteSize(0), mResourceType(SR_HeapResourceType::COUNT), mType(SR_HeapType::COUNT), mCreateResourcesUninitialized(false), mDebugName(nullptr) {}
+
 	uint64 mByteSize;
 	SR_HeapResourceType mResourceType;
 	SR_HeapType mType;
 	bool mCreateResourcesUninitialized;
+
+	const char* mDebugName;
 };
 
 class SR_Heap

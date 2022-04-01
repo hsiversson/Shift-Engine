@@ -36,8 +36,8 @@ bool SGF_Level::Load(const SC_FilePath& aFilePath)
         auto CreateEntity = [this, entityData]()
         {
             SC_Ref<SGF_Entity> entity = SC_MakeRef<SGF_Entity>();
-            entity->AddComponent<SGF_EntityIdComponent>();
             entity->SetWorld(mParentWorld);
+            entity->AddComponent<SGF_EntityIdComponent>();
             if (!entity->Load(entityData))
                 return; // display error msg
 

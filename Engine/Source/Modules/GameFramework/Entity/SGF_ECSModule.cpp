@@ -7,6 +7,7 @@
 #include "Components/SGF_SpotLightComponent.h"
 #include "Components/SGF_AtmosphereComponent.h"
 #include "Components/SGF_CameraComponent.h"
+#include "Components/SGF_EntityIdComponent.h"
 
 SGF_ECSModule::SGF_ECSModule()
 {
@@ -20,6 +21,7 @@ SGF_ECSModule::~SGF_ECSModule()
 
 void SGF_ECSModule::RegisterComponents()
 {
+	SGF_Component::RegisterComponent<SGF_EntityIdComponent>();
 	SGF_Component::RegisterComponent<SGF_TransformComponent>();
 	SGF_Component::RegisterComponent<SGF_StaticMeshComponent>();
 	SGF_Component::RegisterComponent<SGF_SpotLightComponent>();
