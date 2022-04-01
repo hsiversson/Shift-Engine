@@ -102,6 +102,16 @@ void SED_PropertiesPanel::DrawComponent(const SGF_ComponentId& aComponentId, SGF
 
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2{ 4, 4 });
 		bool isOpen = ImGui::TreeNodeEx(&aComponentId, treeNodeFlags, component->GetName());
+		if (ImGui::BeginPopupContextItem())
+		{
+			if (ImGui::MenuItem("Remove"))
+			{
+				aEntity->RemoveComponent(aComponentId);
+				return;
+			}
+
+			ImGui::EndPopup();
+		}
 		ImGui::PopStyleVar();
 
 		if (isOpen)

@@ -21,9 +21,22 @@ void SED_WorldHierarchyPanel::OnRender()
 	if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && ImGui::IsWindowHovered())
 		mSelectedEntity = nullptr;
 
+	if (ImGui::BeginPopupContextWindow())
+	{
+		ImGui::Button("New Entity");
+		ImGui::EndPopup();
+	}
+
 	for (SC_Ref<SGF_Level>& level : mWorld->mLevels)
 	{
-		if (ImGui::TreeNodeEx("Unnamed Level", ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth))
+		bool open = ImGui::TreeNodeEx("Unnamed Level", ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth);
+		if (ImGui::BeginPopupContextItem())
+		{
+			ImGui::Button("Right Clicked Level");
+			ImGui::EndPopup();
+		}
+
+		if (open)
 		{
 			for (SC_Ref<SGF_Entity>& entity : level->mEntities)
 			{

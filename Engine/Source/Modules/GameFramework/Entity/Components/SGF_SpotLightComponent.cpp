@@ -47,3 +47,9 @@ void SGF_SpotLightComponent::OnUpdate()
 	mSpotLight->SetRange(mRange);
 	mSpotLight->SetIntensity(mIntensity);
 }
+
+void SGF_SpotLightComponent::OnDestroy()
+{
+	if (SGF_Entity* entity = GetParentEntity())
+		entity->GetWorld()->GetGraphicsWorld()->RemoveLight(mSpotLight);
+}

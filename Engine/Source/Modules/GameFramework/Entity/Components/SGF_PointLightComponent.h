@@ -11,6 +11,7 @@ public:
 
 	void OnCreate() override;
 	void OnUpdate() override;
+	void OnDestroy() override;
 //private:
 	SC_Ref<SGfx_PointLight> mPointLight;
 

@@ -12,6 +12,7 @@ public:
 
 	void OnCreate() override;
 	void OnUpdate() override;
+	void OnDestroy() override;
 
 	void SetMesh(SC_Ref<SGfx_MeshInstance> aMeshInstance);
 	void SetMaterial(SC_Ref<SGfx_MaterialInstance> aMaterialInstance);

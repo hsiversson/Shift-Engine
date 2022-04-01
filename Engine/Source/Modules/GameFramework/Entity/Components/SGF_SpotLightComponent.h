@@ -12,6 +12,7 @@ public:
 
 	void OnCreate() override;
 	void OnUpdate() override;
+	void OnDestroy() override;
 
 	//PROPERTY(float, mIntensity, SGF_PropertyAccess::Edit);
 

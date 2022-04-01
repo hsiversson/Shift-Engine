@@ -16,6 +16,13 @@ void SED_ContentBrowserPanel::OnRender()
 {
 	ImGui::Begin("Content Browser");
 
+	if (ImGui::BeginPopupContextWindow())
+	{
+		ImGui::Selectable("Right Click Menu");
+
+		ImGui::EndPopup();
+	}
+
 	static float padding = 16.0f;
 	static float thumbnailSize = 192.0f;
 	float cellSize = thumbnailSize + padding;
@@ -57,7 +64,13 @@ void SED_ContentBrowserPanel::DrawFolderEntry(const char* aFolderName)
 
 	// Thumbnail
 	{
-		ImGui::ImageButton(mThumbnailGenerator.GetFolderThumbnail().get(), itemSize);
+		ImGui::ImageButton(mThumbnailGenerator.GetFolderThumbnail().get(), itemSize); 
+		if (ImGui::BeginPopupContextItem())
+		{
+			ImGui::Selectable("Right Click Folder");
+
+			ImGui::EndPopup();
+		}
 	}
 	// Label
 	{
@@ -85,6 +98,14 @@ void SED_ContentBrowserPanel::DrawAssetEntry(const char* aAssetName, const SED_A
 	{
 		SR_Texture* thumbnailTexture = mThumbnailGenerator.GetDefaultThumbnail(aType).get();
 		ImGui::ImageButton(thumbnailTexture, itemSize);
+
+		if (ImGui::BeginPopupContextItem())
+		{
+			ImGui::Selectable("Right Click Item");
+
+			ImGui::EndPopup();
+		}
+
 		if (ImGui::BeginDragDropSource())
 		{
 			const char* dataTag = nullptr;

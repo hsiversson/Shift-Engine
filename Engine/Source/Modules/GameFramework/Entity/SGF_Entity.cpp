@@ -65,6 +65,17 @@ SGF_Component* SGF_Entity::AddComponent(const char* aComponentName)
 	return AddComponent(SGF_Component::GetIdFromName(aComponentName));
 }
 
+void SGF_Entity::RemoveComponent(const SGF_ComponentId& aComponentId)
+{
+	if (!HasComponent(aComponentId))
+		return;
+
+	uint32 index = mMappedComponents.at(aComponentId);
+	mComponents[index]->OnDestroy();
+	mComponents.RemoveAt(index);
+	mMappedComponents.erase(aComponentId);
+}
+
 const SC_Array<SC_Ref<SGF_Component>>& SGF_Entity::GetComponents() const
 {
 	return mComponents;

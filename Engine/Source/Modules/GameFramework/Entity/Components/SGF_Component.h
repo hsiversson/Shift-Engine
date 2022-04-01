@@ -216,9 +216,10 @@ public:
 	SGF_Component();
 	virtual ~SGF_Component();
 
-	virtual void OnCreate() {};
-	virtual void OnStart() {};
-	virtual void OnUpdate() {};
+	virtual void OnCreate() {}
+	virtual void OnStart() {}
+	virtual void OnUpdate() {}
+	virtual void OnDestroy() {}
 
 	virtual bool Save(SC_Json& aOutSaveData) const;
 	virtual bool Load(const SC_Json& aSavedData);

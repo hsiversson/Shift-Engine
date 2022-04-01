@@ -29,6 +29,8 @@ public:
 	SGF_Component* AddComponent(const SGF_ComponentId& aComponentId);
 	SGF_Component* AddComponent(const char* aComponentName);
 
+	void RemoveComponent(const SGF_ComponentId& aComponentId);
+
 	const SC_Array<SC_Ref<SGF_Component>>& GetComponents() const;
 
 	bool Is(const SC_UUID& aId) const;
