@@ -37,8 +37,17 @@ void SED_WorldHierarchyPanel::OnRender()
 	{
 		ImGui::TableNextRow();
 
-		ImGui::TableSetColumnIndex(0);
-		ImGui::ImageButton(SED_Icons::Get()->GetIconByType(SED_Icons::IconType::Visible), { 20.f, 20.f });
+		ImGui::TableSetColumnIndex(0); 
+		if (level->IsVisible())
+		{
+			if (ImGui::ImageButton(SED_Icons::Get()->GetIconByType(SED_Icons::IconType::Visible), { 20.f, 20.f }))
+				level->SetVisible(false);
+		}
+		else
+		{
+			if (ImGui::ImageButton(SED_Icons::Get()->GetIconByType(SED_Icons::IconType::NonVisible), { 20.f, 20.f }))
+				level->SetVisible(true);
+		}
 		ImGui::TableSetColumnIndex(1);
 
 		bool open = ImGui::TreeNodeEx("Unnamed Level", ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth);

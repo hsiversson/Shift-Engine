@@ -3,6 +3,7 @@
 
 SGF_Level::SGF_Level()
     : mParentWorld(nullptr)
+    , mIsVisible(true)
 {
 
 }
@@ -95,4 +96,16 @@ void SGF_Level::SetWorld(SGF_World* aWorld)
 SGF_World* SGF_Level::GetWorld() const
 {
     return mParentWorld;
+}
+
+void SGF_Level::SetVisible(bool aValue)
+{
+    mIsVisible = aValue;
+    for (SC_Ref<SGF_Entity>& entity : mEntities)
+        entity->SetVisible(aValue);
+}
+
+bool SGF_Level::IsVisible() const
+{
+    return mIsVisible;
 }

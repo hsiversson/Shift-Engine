@@ -21,9 +21,14 @@ public:
 
 	void SetWorld(SGF_World* aWorld);
 	SGF_World* GetWorld() const;
+
+	void SetVisible(bool aValue);
+	bool IsVisible() const;
+
 private:
 	SC_Mutex mEntitiesMutex;
 	SC_Array<SC_Ref<SGF_Entity>> mEntities;
 
 	SGF_World* mParentWorld;
+	bool mIsVisible;
 };
