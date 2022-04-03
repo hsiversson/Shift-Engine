@@ -14,6 +14,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include "GameFramework/Entity/Components/SGF_EntityIdComponent.h"
 
 SED_AssimpMaterial::SED_AssimpMaterial(aiMaterial* aMaterial, const SC_FilePath& aSourceFile)
 	: mImportedMaterial(aMaterial)
@@ -458,6 +459,7 @@ void SED_AssimpScene::VisitNode(aiNode* aNode, SGF_Level& aOutLevel)
 		uint32 meshIdx = aNode->mMeshes[i];
 		SED_AssimpMesh& importedMesh = mMeshes[meshIdx];
 
+		entity->AddComponent<SGF_EntityIdComponent>();
 		SGF_TransformComponent* transform = entity->AddComponent<SGF_TransformComponent>();
 		transform->mPosition = position;
 		transform->mRotation = rotation;

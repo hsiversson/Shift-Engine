@@ -9,8 +9,8 @@ public:
 
 	const SC_UUID& GetUUID() const;
 
-	//bool Save(SC_Json& aOutSaveData) const override;
-	//bool Load(const SC_Json& aSavedData) override;
+	bool Save(SC_Json& aOutSaveData) const override;
+	bool Load(const SC_Json& aSavedData) override;
 private:
 	SC_UUID mUUID;
 };

@@ -12,7 +12,6 @@ public:
 
 	void AsString(std::string& aOutString) const;
 
-private:
 	struct Components
 	{
 		uint64 mLowComp;
