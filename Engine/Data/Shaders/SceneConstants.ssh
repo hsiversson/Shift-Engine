@@ -75,14 +75,15 @@ struct EnvironmentConstants
     float mSunLightIntensity;
 
     float3 mSunLightColor;
-    uint mEnvironmentalIrradianceMapDescriptorIndex;
-
-    uint mPreFilteredEnvironmentMapDescriptorIndex;
-	uint mEnvironmentBrdfLUTDescriptorIndex;
-	uint mPreFilteredEnvironmentMapMips;
     uint _unused0;
 
 	ScatteringConstants mScatteringConstants;
+
+	// Irradiance Constants
+	uint mIrradianceBrdfLUTDescriptorIndex;
+	uint mDiffuseIrradianceMapDescriptorIndex;
+	uint mPreFilteredSpecularIrradianceMapDescriptorIndex;
+	uint mNumPreFilteredIrradianceMapMips;
 };
 
 // Must reflect SGfx_ShadowConstants in SGfx_ShadowConstants.h

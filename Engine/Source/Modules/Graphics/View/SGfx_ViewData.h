@@ -93,7 +93,7 @@ public:
 
 	void Clear()
 	{
-		mSkysphere = nullptr;
+		mSky = nullptr;
 
 		mRenderSettings.Clear();
 		mSceneConstants.Clear();
@@ -117,7 +117,7 @@ public:
 		mPostEffectsEvent->Reset();
 	}
 
-	SGfx_Skysphere* mSkysphere;
+	SGfx_Sky* mSky;
 
 	SGfx_ViewRenderSettings mRenderSettings;
 	SGfx_SceneConstants mSceneConstants;

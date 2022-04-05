@@ -5,7 +5,7 @@
 
 // D3D12 Agility SDK
 extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 700; }
-extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8"./"; }
+extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = "./"; }
 ////////////////////
 
 #include "SR_SwapChain_DX12.h"

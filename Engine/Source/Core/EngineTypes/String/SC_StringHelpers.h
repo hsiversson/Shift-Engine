@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <memory>
 
 std::wstring SC_UTF8ToUTF16(const char* aStr);
 std::wstring SC_UTF8ToUTF16(const std::string& aStr);
@@ -17,7 +18,8 @@ std::string SC_FormatStr(const std::string& aFormat, Args ... aArgs)
 	size_t size = static_cast<size_t>(snprintf(nullptr, (size_t)0, aFormat.c_str(), aArgs ...) + (size_t)1);
 	if (size <= 0)
 	{
-		throw std::runtime_error("Error during formatting.");
+		SC_ASSERT(false, "Could not parse string fmt.");
+		return std::string();
 	}
 
 	std::unique_ptr<char[]> buf(new char[size]);

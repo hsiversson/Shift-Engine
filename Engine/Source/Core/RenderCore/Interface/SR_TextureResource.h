@@ -123,4 +123,8 @@ inline uint32 SC_GetMaximumNumMips(const SC_IntVector& aResolution)
 {
 	return 1 + static_cast<uint32>(SC_Math::Floor(SC_Math::Log2(static_cast<float>(SC_Max(aResolution.x, aResolution.y, aResolution.z)))));
 }
+inline uint32 SC_GetMaximumNumMips(const SC_IntVector2& aResolution)
+{
+	return 1 + static_cast<uint32>(SC_Math::Floor(SC_Math::Log2(static_cast<float>(SC_Max(aResolution.x, aResolution.y)))));
+}
 

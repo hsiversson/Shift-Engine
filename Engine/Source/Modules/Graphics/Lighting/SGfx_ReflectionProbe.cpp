@@ -163,8 +163,8 @@ void SGfx_ReflectionProbe::RenderFace(SR_CommandList* aCmdList, uint32 aFaceInde
 		aCmdList->DispatchMesh(groupCount);
 		++i;
 	}
-	if (aRenderData.mSkysphere)
-		aRenderData.mSkysphere->Render(aCmdList);
+	if (aRenderData.mSky)
+		aRenderData.mSky->Render(aCmdList);
 
 	aCmdList->EndEvent();
 }

@@ -13,7 +13,6 @@ class SR_RenderTarget;
 class SGfx_View;
 class SGfx_ShadowSystem;
 class SGfx_Raytracing;
-class SGfx_Sky;
 class SGfx_LightCulling;
 class SGfx_ReflectionProbe;
 class SGfx_AmbientOcclusion;
@@ -102,7 +101,6 @@ private:
 	SC_UniquePtr<SGfx_LightCulling> mLightCulling;
 	SC_UniquePtr<SGfx_ShadowSystem> mShadowMapSystem;
 	SC_UniquePtr<SGfx_Raytracing> mRaytracingSystem; 
-	SC_UniquePtr<SGfx_Sky> mSky;
 	SC_UniquePtr<SGfx_AmbientOcclusion> mAmbientOcclusion;
 	SC_UniquePtr<SGfx_PostEffects> mPostEffects;
 	SC_UniquePtr<SGfx_DebugRenderer> mDebugRenderer;

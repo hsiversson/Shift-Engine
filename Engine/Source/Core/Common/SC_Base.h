@@ -2,6 +2,7 @@
 
 // Platform
 #include "Platform/Platform/SC_Platform.h"
+#include "Platform/Misc/SC_CppRuntimeIncludes.h"
 #include "Platform/Atomics/SC_Atomics.h"
 #include "Platform/Time/SC_Time.h"
 #include "Platform/Async/SC_Mutex.h"

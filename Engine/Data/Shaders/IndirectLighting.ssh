@@ -28,9 +28,9 @@ float3 CalculateEnvironmentalIBL(in const MaterialData aMaterialData, in const f
     const EnvironmentConstants environmentConstants = gSceneConstants.mEnvironmentConstants;
     const float3 V = -aViewDirection; // ToSurface -> ToEye
     
-    TextureCube environmentalIrradianceMap = GetTextureCube(environmentConstants.mEnvironmentalIrradianceMapDescriptorIndex);
-    TextureCube preFilteredEnvironmentCubeMap = GetTextureCube(environmentConstants.mPreFilteredEnvironmentMapDescriptorIndex);
-    Texture2D<float2> environmentBrdfLUT = GetTexture2D<float2>(environmentConstants.mEnvironmentBrdfLUTDescriptorIndex);
+    TextureCube environmentalIrradianceMap = GetTextureCube(environmentConstants.mDiffuseIrradianceMapDescriptorIndex);
+    TextureCube preFilteredEnvironmentCubeMap = GetTextureCube(environmentConstants.mPreFilteredSpecularIrradianceMapDescriptorIndex);
+    Texture2D<float2> environmentBrdfLUT = GetTexture2D<float2>(environmentConstants.mIrradianceBrdfLUTDescriptorIndex);
 
     float nDotV = saturate(dot(aMaterialData.mWorldNormal, V));
     float3 F = F_Schlick(aMaterialData.mSpecularColor, nDotV);
@@ -41,7 +41,7 @@ float3 CalculateEnvironmentalIBL(in const MaterialData aMaterialData, in const f
     float3 kd = lerp(1.0f - F, 0.0f, aMaterialData.mMetallic);
     float3 diffuseIBL = kd * aMaterialData.mColor * irradiance;
 
-    float mip = ComputeIBLMipFromRoughness(aMaterialData.mRoughness, environmentConstants.mPreFilteredEnvironmentMapMips);
+    float mip = ComputeIBLMipFromRoughness(aMaterialData.mRoughness, environmentConstants.mNumPreFilteredIrradianceMapMips);
     float3 reflectionVector = reflect(aViewDirection, aMaterialData.mWorldNormal);
     float3 preFilteredIrradiance = preFilteredEnvironmentCubeMap.SampleLevel(gBilinearWrap, reflectionVector, mip).rgb;
     float2 specularBRDF = environmentBrdfLUT.SampleLevel(gBilinearClamp, float2(nDotV, aMaterialData.mRoughness), 0);

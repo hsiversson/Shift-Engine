@@ -12,6 +12,10 @@
 		#define WIN32_LEAN_AND_MEAN
 	#endif
 
+	#if !defined(NOMINMAX)
+		#define NOMINMAX
+	#endif
+
 	#include <windows.h>
 #endif
 
@@ -32,6 +36,7 @@
 	#pragma warning(disable: 4201) // nonstandard extension used : nameless struct/union
 	#pragma warning(disable: 4324) // 'struct_name' : structure was padded due to __declspec(align())
 	#pragma warning(disable: 4577) // 'noexcept' used with no exception handling mode specified; termination on exception is not guaranteed.
+	#pragma warning(disable: 26812) // The enum type is unscoped. Prefer 'enum class' over 'enum'.
 
 	#define SC_FORCEINLINE			__forceinline
 	#define SC_NOINLINE				__declspec(noinline)

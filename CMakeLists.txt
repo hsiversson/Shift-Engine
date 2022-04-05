@@ -8,8 +8,8 @@ project(ShiftEngine VERSION 1.0)
 
 ##################################
 # Set various C++ config variables
-set(CMAKE_CXX_STANDARD 17)                  ## C++17 Standard
-set(CMAKE_CXX_STANDARD_REQUIRED True)       ## Enforce the C++17 Standard
+set(CMAKE_CXX_STANDARD 20)                  ## C++20 Standard
+set(CMAKE_CXX_STANDARD_REQUIRED True)       ## Enforce the C++20 Standard
 
 ##################################
 # Repository folder structure setup

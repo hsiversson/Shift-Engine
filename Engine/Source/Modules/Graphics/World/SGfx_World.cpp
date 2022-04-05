@@ -85,7 +85,7 @@ void SGfx_World::PrepareView(SGfx_View* aView)
 
 	mRenderer->GetLightCulling()->Prepare(prepareData);
 
-	prepareData.mSkysphere = mEnvironment->GetSkysphere();
+	prepareData.mSky = mEnvironment->GetSky();
 }
 
 void SGfx_World::RenderView(SGfx_View* aView)

@@ -2,30 +2,30 @@
 #include <unordered_set>
 #include <algorithm>
 
+struct PackedTriangle
+{
+	PackedTriangle()
+		: mIndex0(0)
+		, mIndex1(0)
+		, mIndex2(0)
+		, __pad(0)
+	{}
+	PackedTriangle(const PackedTriangle& aOther)
+		: mIndex0(aOther.mIndex0)
+		, mIndex1(aOther.mIndex1)
+		, mIndex2(aOther.mIndex2)
+		, __pad(aOther.__pad)
+	{}
+
+	uint32 mIndex0 : 10;
+	uint32 mIndex1 : 10;
+	uint32 mIndex2 : 10;
+	uint32 __pad : 2;
+};
+
 template<class IndexType>
 struct InlineMeshlet
 {
-	struct PackedTriangle
-	{
-		PackedTriangle()
-			: mIndex0(0)
-			, mIndex1(0)
-			, mIndex2(0)
-			, __pad(0) 
-		{}
-		PackedTriangle(const PackedTriangle& aOther) 
-			: mIndex0(aOther.mIndex0)
-			, mIndex1(aOther.mIndex1)
-			, mIndex2(aOther.mIndex2) 
-			, __pad(aOther.__pad)
-		{}
-
-		uint32 mIndex0 : 10;
-		uint32 mIndex1 : 10;
-		uint32 mIndex2 : 10;
-		uint32 __pad : 2;
-	};
-
 	SC_Array<IndexType> mUniqueVertexIndices;
 	SC_Array<PackedTriangle> mPrimitiveIndices;
 };
@@ -534,10 +534,10 @@ static bool AddCandidateToMeshlet(uint32 aMaxVertices, uint32 aMaxPrimitives, In
 		}
 	}
 
-	InlineMeshlet<IndexType>::PackedTriangle& primitive = aMeshlet.mPrimitiveIndices.Add();
-	primitive.mIndex0 = indices[0];
-	primitive.mIndex1 = indices[1];
-	primitive.mIndex2 = indices[2];
+	PackedTriangle& primitiveTriangle = aMeshlet.mPrimitiveIndices.Add();
+	primitiveTriangle.mIndex0 = indices[0];
+	primitiveTriangle.mIndex1 = indices[1];
+	primitiveTriangle.mIndex2 = indices[2];
 	return true;
 }
 

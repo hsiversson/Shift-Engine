@@ -5,7 +5,6 @@
 #include "Graphics/Lighting/SGfx_LightCulling.h"
 #include "Graphics/Lighting/SGfx_ReflectionProbe.h"
 #include "Graphics/Lighting/SGfx_AmbientOcclusion.h"
-#include "Graphics/Environment/SGfx_Sky.h"
 #include "Graphics/View/SGfx_View.h"
 #include "Graphics/Material/SGfx_MaterialCache.h"
 #include "Graphics/Misc/SGfx_DefaultTextures.h"
@@ -108,10 +107,6 @@ bool SGfx_Renderer::Init(SGfx_Environment* aEnvironment)
 	mShadowMapSystem = SC_MakeUnique<SGfx_ShadowSystem>();
 	SGfx_CascadedShadowMap::Settings csmSettings;
 	mShadowMapSystem->GetCSM()->Init(csmSettings);
-
-	mSky = SC_MakeUnique<SGfx_Sky>();
-	if (!mSky->Init())
-		return false;
 
 	mReflectionProbe = SC_MakeRef<SGfx_ReflectionProbe>();
 
@@ -288,7 +283,7 @@ void SGfx_Renderer::PreRenderUpdates()
 
 	SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
 	cmdList->SetRootConstantBuffer(mViewConstantsBuffer.get(), 1);
-	mEnvironment->ComputeScatteringLUTs(cmdList.get());
+	mEnvironment->ComputeSkyAtmosphereLUTs(cmdList.get());
 }
 
 #if ENABLE_RAYTRACING
@@ -475,8 +470,8 @@ void SGfx_Renderer::RenderOpaque()
 		++i;
 	}
 
-	if (renderData.mSkysphere)
-		renderData.mSkysphere->Render(cmdList.get());
+	if (renderData.mSky)
+		renderData.mSky->Render(cmdList.get());
 
 	cmdList->EndEvent(); // Render Opaque
 }

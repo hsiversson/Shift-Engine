@@ -27,40 +27,14 @@ protected:
 	SGfx_MaterialNode* mParentNode;
 };
 
-struct SGfx_MaterialNodeInputPin : public SGfx_MaterialNodePin
-{
-public:
-	SGfx_MaterialNodeInputPin(SGfx_MaterialNode* aParentNode) : SGfx_MaterialNodePin(aParentNode) {}
-	~SGfx_MaterialNodeInputPin() {}
-
-	template<class T>
-	inline const T* Read() const
-	{
-		if (!mConnection.mSource)
-			return nullptr;
-
-		const SC_Array<uint8>& data = mConnection.mSource->mData;
-		SC_ASSERT(data.GetByteSize() == sizeof(T), "Trying to read invalid type");
-
-		return reinterpret_cast<const T*>(data.GetBuffer());
-	}
-
-	bool IsConnected() const override
-	{
-		return (mConnection.mSource != nullptr);
-	}
-
-	SGfx_MaterialNodeConnection mConnection;
-};
-
 struct SGfx_MaterialNodeOutputPin : public SGfx_MaterialNodePin
 {
 	friend struct SGfx_MaterialNodeInputPin;
 public:
 	SGfx_MaterialNodeOutputPin(SGfx_MaterialNode* aParentNode) : SGfx_MaterialNodePin(aParentNode) {}
-	~SGfx_MaterialNodeOutputPin() 
+	~SGfx_MaterialNodeOutputPin()
 	{
-		if (mDataDestructor) 
+		if (mDataDestructor)
 			mDataDestructor();
 	}
 
@@ -88,6 +62,32 @@ public:
 private:
 	SC_Array<uint8> mData;
 	std::function<void()> mDataDestructor;
+};
+
+struct SGfx_MaterialNodeInputPin : public SGfx_MaterialNodePin
+{
+public:
+	SGfx_MaterialNodeInputPin(SGfx_MaterialNode* aParentNode) : SGfx_MaterialNodePin(aParentNode) {}
+	~SGfx_MaterialNodeInputPin() {}
+
+	template<class T>
+	inline const T* Read() const
+	{
+		if (!mConnection.mSource)
+			return nullptr;
+
+		const SC_Array<uint8>& data = mConnection.mSource->mData;
+		SC_ASSERT(data.GetByteSize() == sizeof(T), "Trying to read invalid type");
+
+		return reinterpret_cast<const T*>(data.GetBuffer());
+	}
+
+	bool IsConnected() const override
+	{
+		return (mConnection.mSource != nullptr);
+	}
+
+	SGfx_MaterialNodeConnection mConnection;
 };
 
 class SGfx_MaterialNode

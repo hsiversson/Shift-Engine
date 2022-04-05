@@ -9,6 +9,10 @@ float3 CalculateLighting(in MaterialData aMaterialData, in const float3 aWorldPo
 {
     float3 directLighting = CalculateDirectLighting(aMaterialData, aWorldPosition, aViewDirection, aPixelDepth);
     float3 indirectLighting = CalculateIndirectLighting(aMaterialData, aViewDirection) * aMaterialData.mAmbientOcclusion;
+
+    // Apply AmbientOcclusion
+    // Apply Reflections
+
     return (directLighting + indirectLighting);
 }
 
