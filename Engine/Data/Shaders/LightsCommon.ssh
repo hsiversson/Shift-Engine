@@ -20,11 +20,12 @@ struct SR_LocalLight
 	uint mType;
 
 	float2 mSpotAngles;
-	uint mShadowMapDescriptorIndex;
+	float mSourceRadius;
 	float mSoftSourceRadius;
 
-	float mSourceRadius;
-	float _unused0[3];
+	uint mCastShadow;
+	uint mShadowMapDescriptorIndex;
+	float _unused0[2];
 };
 
 struct SR_AreaLight

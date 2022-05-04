@@ -8,5 +8,8 @@ public:
 	SGF_ECSModule();
 	~SGF_ECSModule();
 
+	bool OnLoad() override;
+	bool OnUnload() override;
+
 	static void RegisterComponents();
 };

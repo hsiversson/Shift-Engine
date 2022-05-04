@@ -1,4 +1,4 @@
-#include "SED_PropertiesPanel.h"
+#include "SED_PropertiesWindow.h"
 
 #include "GameFramework/GameWorld/SGF_World.h"
 #include "GameFramework/Entity/SGF_Entity.h"
@@ -9,98 +9,92 @@
 #include "RenderCore/Interface/SR_Texture.h"
 #include "imgui_internal.h"
 
-SED_PropertiesPanel::SED_PropertiesPanel()
-	: mSelectedEntity(nullptr)
-	, mWorld(nullptr)
+SED_PropertiesWindow::SED_PropertiesWindow()
+	: mWorld(nullptr)
 	, mPropertyNameColumnWidth(50.f)
 {
 
 }
 
-SED_PropertiesPanel::SED_PropertiesPanel(const SC_Ref<SGF_World>& aWorld)
-	: mSelectedEntity(nullptr)
-	, mWorld(aWorld)
+SED_PropertiesWindow::SED_PropertiesWindow(const SC_Ref<SGF_World>& aWorld)
+	: mWorld(aWorld)
 	, mPropertyNameColumnWidth(50.f)
 {
 }
 
-SED_PropertiesPanel::~SED_PropertiesPanel()
+SED_PropertiesWindow::~SED_PropertiesWindow()
 {
 
 }
 
-void SED_PropertiesPanel::OnRender()
+void SED_PropertiesWindow::SetSelectedEntity(const SGF_Entity& aEntity)
 {
-	ImGui::Begin("Properties");
+	mSelectedEntity = aEntity;
+}
 
-	if (mSelectedEntity != nullptr)
+const SGF_Entity& SED_PropertiesWindow::GetSelectedEntity() const
+{
+	return mSelectedEntity;
+}
+
+void SED_PropertiesWindow::OnDraw()
+{
+	if (mSelectedEntity != SGF_InvalidEntityHandle)
 	{
-		ImGui::BeginTable("##entityNameTable", 2); 
+		ImGui::BeginTable("##entityNameTable", 2);
 		ImGui::TableSetupColumn("##0", ImGuiTableColumnFlags_WidthFixed, 64.0f);
 		ImGui::TableSetupColumn("##1", ImGuiTableColumnFlags_WidthStretch);
 		ImGui::TableNextColumn();
-		ImGui::Text("Name"); 
+		ImGui::Text("Name");
 		ImGui::TableNextColumn();
 
-		std::string name(mSelectedEntity->GetName());
+		std::string name;
 		name.reserve(256);
 
 		ImGui::PushItemWidth(ImGui::CalcItemWidth());
 		if (ImGui::InputText("##entityName", name.data(), 256, ImGuiInputTextFlags_EnterReturnsTrue))
 		{
-			mSelectedEntity->SetName(name);
+			//mSelectedEntity->SetName(name);
 		}
 		ImGui::PopItemWidth();
 
 		ImGui::EndTable();
 		ImGui::Separator();
 
-		const SGF_ComponentFactory::RegistryMap& componentRegistry = SGF_ComponentFactory::GetComponentRegistryMap();
+		//const SGF_ComponentFactory::RegistryMap& componentRegistry = SGF_ComponentFactory::GetComponentRegistryMap();
 
-		if (ImGui::BeginCombo("##addComp", "Add Component"))
-		{
-			for (auto& pair : componentRegistry)
-			{
-				if (!mSelectedEntity->HasComponent(pair.second))
-				{
-					if (ImGui::Button(pair.first.c_str()))
-						mSelectedEntity->AddComponent(pair.second);
-				}
-			}
-			ImGui::EndCombo();
-		}
+		//if (ImGui::BeginCombo("##addComp", "Add Component"))
+		//{
+		//	for (auto& pair : componentRegistry)
+		//	{
+		//		if (!mSelectedEntity.HasComponent(pair.second))
+		//		{
+		//			if (ImGui::Button(pair.first.c_str()))
+		//				mSelectedEntity.AddComponent(pair.second);
+		//		}
+		//	}
+		//	ImGui::EndCombo();
+		//}
 
 		ImGui::Separator();
 
-		DrawComponent(SGF_TransformComponent::Id(), mSelectedEntity);
+		//DrawComponent(SGF_TransformComponent::Id(), mSelectedEntity);
 
-		for (const SC_Ref<SGF_Component>& comp : mSelectedEntity->GetComponents())
-		{
-			SGF_ComponentId id = comp->GetId();
-			if (id != SGF_TransformComponent::Id())
-				DrawComponent(id, mSelectedEntity);
-		}
+		//for (const SC_Ref<SGF_Component>& comp : mSelectedEntity->GetComponents())
+		//{
+		//	SGF_ComponentId id = comp->GetId();
+		//	if (id != SGF_TransformComponent::Id())
+		//		DrawComponent(id, mSelectedEntity);
+		//}
 	}
-
-	ImGui::End();
 }
 
-void SED_PropertiesPanel::SetSelectedEntity(SGF_Entity* aEntity)
-{
-	mSelectedEntity = aEntity;
-}
-
-SGF_Entity* SED_PropertiesPanel::GetSelectedEntity() const
-{
-	return mSelectedEntity;
-}
-
-void SED_PropertiesPanel::DrawComponent(const SGF_ComponentId& aComponentId, SGF_Entity* aEntity)
+void SED_PropertiesWindow::DrawComponent(const SGF_ComponentId& aComponentId, const SGF_Entity& aEntity)
 {
 	if (aComponentId == SGF_EntityIdComponent::Id())
 		return;
 
-	if (SGF_Component* component = aEntity->GetComponent(aComponentId))
+	if (SGF_Component* component = aEntity.GetComponent(aComponentId))
 	{
 		static constexpr ImGuiTreeNodeFlags treeNodeFlags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowItemOverlap | ImGuiTreeNodeFlags_FramePadding;
 
@@ -108,11 +102,11 @@ void SED_PropertiesPanel::DrawComponent(const SGF_ComponentId& aComponentId, SGF
 		bool isOpen = ImGui::TreeNodeEx(&aComponentId, treeNodeFlags, component->GetName());
 		if (aComponentId != SGF_TransformComponent::Id() && ImGui::BeginPopupContextItem(component->GetName()))
 		{
-			if (ImGui::MenuItem("Remove"))
-			{
-				aEntity->RemoveComponent(aComponentId);
-				return;
-			}
+			//if (ImGui::MenuItem("Remove"))
+			//{
+			//	aEntity.RemoveComponent(aComponentId);
+			//	return;
+			//}
 
 			ImGui::EndPopup();
 		}
@@ -140,7 +134,7 @@ void SED_PropertiesPanel::DrawComponent(const SGF_ComponentId& aComponentId, SGF
 	}
 }
 
-void SED_PropertiesPanel::DrawProperty(SGF_PropertyHelperBase& aProperty) const
+void SED_PropertiesWindow::DrawProperty(SGF_PropertyHelperBase& aProperty) const
 {
 	ImGui::PushID(aProperty.GetName());
 	ImGui::Text(aProperty.GetName());
@@ -158,7 +152,7 @@ void SED_PropertiesPanel::DrawProperty(SGF_PropertyHelperBase& aProperty) const
 	case SGF_PropertyHelperBase::Type::Texture:		DrawPropertyInternal(static_cast<SGF_PropertyHelper<SC_Ref<SR_Texture>>&>(aProperty)); break;
 	case SGF_PropertyHelperBase::Type::Material:	DrawPropertyInternal(static_cast<SGF_PropertyHelper<SC_Ref<SGfx_MaterialInstance>>&>(aProperty)); break;
 	case SGF_PropertyHelperBase::Type::Mesh:		DrawPropertyInternal(static_cast<SGF_PropertyHelper<SC_Ref<SGfx_MeshInstance>>&>(aProperty)); break;
-	case SGF_PropertyHelperBase::Type::EntityRef:	DrawPropertyInternal(static_cast<SGF_PropertyHelper<SC_Ref<SGF_Entity>>&>(aProperty)); break;
+	case SGF_PropertyHelperBase::Type::EntityRef:	DrawPropertyInternal(static_cast<SGF_PropertyHelper<SGF_EntityHandle>&>(aProperty)); break;
 	}
 
 	ImGui::TableNextColumn();
@@ -167,28 +161,28 @@ void SED_PropertiesPanel::DrawProperty(SGF_PropertyHelperBase& aProperty) const
 
 ////////////////////////////////
 // Native Types
-void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<bool>& aProperty) const
+void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<bool>& aProperty) const
 {
 	std::string label("##_bool_");
 	label += aProperty.GetName();
 	ImGui::Checkbox(label.c_str(), &aProperty.Get());
 }
 
-void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<int32>& aProperty) const
+void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<int32>& aProperty) const
 {
 	std::string label("##_int_");
 	label += aProperty.GetName();
 	ImGui::DragInt(label.c_str(), &aProperty.Get());
 }
 
-void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<uint32>& aProperty) const
+void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<uint32>& aProperty) const
 {
 	std::string label("##_uint_");
 	label += aProperty.GetName();
 	ImGui::DragScalar(label.c_str(), ImGuiDataType_U32, &aProperty.Get());
 }
 
-void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<float>& aProperty) const
+void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<float>& aProperty) const
 {
 	std::string label("##_float_");
 	label += aProperty.GetName();
@@ -217,7 +211,7 @@ static void DrawPropertyVectorComponent(const char* aName, const ImVec2& aButton
 	ImGui::PopStyleVar();
 }
 
-void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<SC_Vector>& aProperty) const
+void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<SC_Vector>& aProperty) const
 {
 	ImGui::PushMultiItemsWidths(3, ImGui::CalcItemWidth());
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 4, 6 });
@@ -264,7 +258,7 @@ void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<SC_Vector>& aP
 	ImGui::PopStyleVar();
 }
 
-void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<SC_Color>& aProperty) const
+void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<SC_Color>& aProperty) const
 {
 	SC_Color& col = aProperty.Get();
 	SC_LinearColor linear = SC_ConvertColorToLinear(col);
@@ -276,7 +270,7 @@ void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<SC_Color>& aPr
 
 ////////////////////////////////
 //	Quaternion / Rotation
-void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<SC_Quaternion>& aProperty) const
+void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<SC_Quaternion>& aProperty) const
 {
 	SC_Quaternion& quat = aProperty.Get();
 	SC_Vector angles = quat.AsEulerAngles();
@@ -328,7 +322,7 @@ void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<SC_Quaternion>
 
 ////////////////////////////////
 //	Asset
-void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SR_Texture>>& aProperty) const
+void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SR_Texture>>& aProperty) const
 {
 	SC_Ref<SR_Texture>& texture = aProperty.Get();
 	std::string label("##_texture_");
@@ -348,7 +342,7 @@ void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SR_Text
 	}
 }
 
-void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SGfx_MaterialInstance>>& aProperty) const
+void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SGfx_MaterialInstance>>& aProperty) const
 {
 	SC_Ref<SGfx_MaterialInstance>& material = aProperty.Get();
 	std::string label("##_material_");
@@ -368,7 +362,7 @@ void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SGfx_Ma
 	}
 }
 
-void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SGfx_MeshInstance>>& aProperty) const
+void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SGfx_MeshInstance>>& aProperty) const
 {
 	SC_Ref<SGfx_MeshInstance>& mesh = aProperty.Get();
 	std::string label("##_mesh_");
@@ -387,28 +381,28 @@ void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SGfx_Me
 	}
 }
 
-void SED_PropertiesPanel::DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SGF_Entity>>& aProperty) const
+void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<SGF_EntityHandle>& aProperty) const
 {
-	SC_Ref<SGF_Entity>& entity = aProperty.Get();
+	SGF_EntityHandle& entityHandle = aProperty.Get();
 	const char* name = aProperty.GetName();
 	std::string label("##_entity_");
 	label += name;
 
 	if (mWorld)
 	{
-		if (entity)
-			ImGui::Text("%s", entity->GetName().c_str());
+		if (entityHandle != SGF_InvalidEntityHandle)
+		{
+			// Get name
+			const char* name2 = "NAME";
+			ImGui::Text("%s", name2);
+		}
 		else
 			ImGui::Text("<None>");
 
 		if (ImGui::BeginDragDropTarget())
 		{
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("EntityDrag", ImGuiDragDropFlags_None))
-			{
-				SGF_Entity* newEntity;
-				SC_Memcpy(&newEntity, payload->Data, payload->DataSize);
-				entity.reset(newEntity);
-			}
+				SC_Memcpy(&entityHandle, payload->Data, payload->DataSize);
 
 			ImGui::EndDragDropTarget();
 		}

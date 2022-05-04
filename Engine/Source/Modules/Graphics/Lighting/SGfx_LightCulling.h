@@ -1,6 +1,5 @@
 #pragma once
 
-
 struct SGfx_LightCullingConstants
 {
 	SC_Vector2u mNumTiles;
@@ -11,8 +10,11 @@ struct SGfx_LightCullingConstants
 	uint32 _unused0[3];
 };
 
-class SR_Buffer;
 struct SGfx_ViewData;
+class SR_Buffer;
+class SR_CommandList;
+class SR_BufferResource;
+class SR_ShaderState;
 class SGfx_LightCulling
 {
 public:

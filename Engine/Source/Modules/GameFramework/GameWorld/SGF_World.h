@@ -10,9 +10,12 @@
 */
 
 class SGfx_World;
+class SGF_EntityManager;
+class SGF_GameSystemManager;
+class SGF_RenderSystem;
 class SGF_World
 {
-	friend class SED_WorldHierarchyPanel;
+	friend class SED_WorldHierarchyWindow;
 public:
 	SGF_World();
 	~SGF_World();
@@ -29,8 +32,16 @@ public:
 	SGF_Entity* FindEntityWithId(const SC_UUID& aId) const;
 
 	SGfx_World* GetGraphicsWorld() const;
+	SGF_EntityManager* GetEntityManager() const;
+	SGF_GameSystemManager* GetGameSystemManager() const;
 
 private:
+	void RegisterComponents();
+
 	SC_Array<SC_Ref<SGF_Level>> mLevels;
-	SC_UniquePtr<SGfx_World> mGraphicsWorld;
+
+	SC_UniquePtr<SGF_ComponentManager> mComponentManager;
+	SC_UniquePtr<SGF_EntityManager> mEntityManager;
+	SC_UniquePtr<SGF_GameSystemManager> mGameSystemManager;
+	SC_Ref<SGF_RenderSystem> mRenderSystem;
 };

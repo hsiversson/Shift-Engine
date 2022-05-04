@@ -112,13 +112,18 @@ bool SR_BufferResource_DX12::Init(const void* aInitialData)
 
 		uploadBuffer->UpdateData(0, aInitialData, resourceDesc.Width);
 
-		SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->CreateCommandList(SR_CommandListType::Copy);
-		cmdList->Begin();
-		cmdList->CopyResource(this, uploadBuffer);
-		cmdList->End();
+		auto UploadData = [this, uploadBuffer]()
+		{
+			SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
+			cmdList->CopyResource(this, uploadBuffer);
+		};
 
-		SR_Fence fence = SR_RenderDevice::gInstance->GetCommandQueue(SR_CommandListType::Copy)->SubmitCommandList(cmdList.get());
-		SR_RenderDevice::gInstance->WaitForFence(fence);
+		SC_Ref<SR_TaskEvent> taskEvent = SC_MakeRef<SR_TaskEvent>();
+		SR_RenderDevice::gInstance->GetCommandQueueManager()->SubmitTask(UploadData, SR_CommandListType::Copy, taskEvent.get());
+
+		taskEvent->mCPUEvent.Wait();
+		taskEvent->mFence.Wait();
+
 		delete uploadBuffer;
 	}
 

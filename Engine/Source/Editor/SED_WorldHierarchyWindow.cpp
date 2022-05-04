@@ -1,26 +1,28 @@
-#include "SED_WorldHierarchyPanel.h"
+#include "SED_WorldHierarchyWindow.h"
 
 #include "SED_Icons.h"
 
 #include "GameFramework/GameWorld/SGF_World.h"
 #include "GameFramework/Entity/Components/SGF_EntityIdComponent.h"
 
-SED_WorldHierarchyPanel::SED_WorldHierarchyPanel(const SC_Ref<SGF_World>& aWorld)
+SED_WorldHierarchyWindow::SED_WorldHierarchyWindow(const SC_Ref<SGF_World>& aWorld)
 	: mWorld(aWorld)
-	, mSelectedEntity(nullptr)
 {
 
 }
 
-SED_WorldHierarchyPanel::~SED_WorldHierarchyPanel()
+SED_WorldHierarchyWindow::~SED_WorldHierarchyWindow()
 {
 
 }
 
-void SED_WorldHierarchyPanel::OnRender()
+const SGF_Entity& SED_WorldHierarchyWindow::GetSelected() const
 {
-	ImGui::Begin("World Hierarchy");
+	return mSelectedEntity;
+}
 
+void SED_WorldHierarchyWindow::OnDraw()
+{
 	if (ImGui::BeginPopupContextWindow())
 	{
 		ImGui::Button("New Entity");
@@ -37,7 +39,7 @@ void SED_WorldHierarchyPanel::OnRender()
 	{
 		ImGui::TableNextRow();
 
-		ImGui::TableSetColumnIndex(0); 
+		ImGui::TableSetColumnIndex(0);
 		if (level->IsVisible())
 		{
 			if (ImGui::ImageButton(SED_Icons::Get()->GetIconByType(SED_Icons::IconType::Visible), { 20.f, 20.f }))
@@ -62,44 +64,38 @@ void SED_WorldHierarchyPanel::OnRender()
 
 		if (open)
 		{
-			for (SC_Ref<SGF_Entity>& entity : level->mEntities)
-			{
-				if (!entity->GetParent())
-					DrawEntityNode(entity.get());
-			}
+			//for (SC_Ref<SGF_Entity>& entity : level->mEntities)
+			//{
+			//	if (!entity->GetParent())
+			//		DrawEntityNode(entity.get());
+			//}
 			ImGui::TreePop();
 		}
 	}
 	ImGui::EndTable();
-
-	ImGui::End();
 }
 
-SGF_Entity* SED_WorldHierarchyPanel::GetSelected() const
-{
-	return mSelectedEntity;
-}
-
-void SED_WorldHierarchyPanel::DrawEntityNode(SGF_Entity* aEntity)
+void SED_WorldHierarchyWindow::DrawEntityNode(const SGF_Entity& aEntity)
 {
 	ImGui::TableNextRow();
 
-	SGF_EntityIdComponent* id = aEntity->GetComponent<SGF_EntityIdComponent>();
+	SGF_EntityIdComponent* id = aEntity.GetComponent<SGF_EntityIdComponent>();
 	std::string uuid;
 	id->GetUUID().AsString(uuid);
 	ImGui::PushID(uuid.c_str());
 
 	ImGui::TableSetColumnIndex(0);
 
-	if (aEntity->IsVisible())
+	//if (aEntity->IsVisible())
+	//{
+	//	if (ImGui::ImageButton(SED_Icons::Get()->GetIconByType(SED_Icons::IconType::Visible), { 20.f, 20.f }))
+	//		aEntity->SetVisible(false);
+	//}
+	//else
 	{
-		if (ImGui::ImageButton(SED_Icons::Get()->GetIconByType(SED_Icons::IconType::Visible), { 20.f, 20.f }))
-			aEntity->SetVisible(false);
-	}
-	else
-	{
-		if (ImGui::ImageButton(SED_Icons::Get()->GetIconByType(SED_Icons::IconType::NonVisible), { 20.f, 20.f }))
-			aEntity->SetVisible(true);
+		ImGui::ImageButton(SED_Icons::Get()->GetIconByType(SED_Icons::IconType::NonVisible), { 20.f, 20.f });
+			//if (ImGui::ImageButton(SED_Icons::Get()->GetIconByType(SED_Icons::IconType::NonVisible), { 20.f, 20.f }))
+			//	aEntity.SetVisible(true);
 	}
 
 	ImGui::TableSetColumnIndex(1);
@@ -107,27 +103,29 @@ void SED_WorldHierarchyPanel::DrawEntityNode(SGF_Entity* aEntity)
 	ImGuiTreeNodeFlags treeNodeFlags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanFullWidth;
 	if (aEntity == mSelectedEntity)
 		treeNodeFlags |= ImGuiTreeNodeFlags_Selected;
-	if (aEntity->GetChildren().IsEmpty())
+	//if (aEntity->GetChildren().IsEmpty())
 		treeNodeFlags |= ImGuiTreeNodeFlags_Leaf;
 
-	bool opened = ImGui::TreeNodeEx(aEntity->GetName().c_str(), treeNodeFlags); 
+	bool opened = ImGui::TreeNodeEx("test", treeNodeFlags); 
 	
 	if (ImGui::BeginDragDropSource())
 	{
-		ImGui::SetDragDropPayload("EntityDrag", &aEntity, sizeof(aEntity));
-		ImGui::Text("%s", aEntity->GetName().c_str());
+		SGF_EntityHandle handle;
+		ImGui::SetDragDropPayload("EntityDrag", &handle, sizeof(handle));
+		const char* name = "NAME";
+		ImGui::Text("%s", name);
 		ImGui::EndDragDropSource();
 	}
 	if (ImGui::BeginDragDropTarget())
 	{
 		if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("EntityDrag", ImGuiDragDropFlags_None))
 		{
-			SGF_Entity* entity;
+			SGF_EntityHandle entity;
 			SC_Memcpy(&entity, payload->Data, payload->DataSize);
 
-			if (entity != aEntity)
+			if (entity != SGF_InvalidEntityHandle)
 			{
-				aEntity->AddChild(entity);
+				//aEntity->AddChild(entity);
 			}
 		}
 		ImGui::EndDragDropTarget();
@@ -152,8 +150,8 @@ void SED_WorldHierarchyPanel::DrawEntityNode(SGF_Entity* aEntity)
 
 	if (opened)
 	{
-		for (SGF_Entity* child : aEntity->mChildren)
-			DrawEntityNode(child);
+		//for (SGF_Entity* child : aEntity->mChildren)
+		//	DrawEntityNode(child);
 
 		ImGui::TreePop();
 	}

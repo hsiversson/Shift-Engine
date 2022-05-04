@@ -82,7 +82,7 @@ void SR_SwapChain_DX12::Present()
 		flags |= DXGI_PRESENT_ALLOW_TEARING;
 
 	hr = mDXGISwapChain->Present(0, flags);
-	mFrameFence[mCurrentIndex] = SR_RenderDevice::gInstance->GetGraphicsCommandQueue()->InsertFence();
+	mFrameFence[mCurrentIndex] = SR_RenderDevice::gInstance->GetCommandQueueManager()->InsertFence(SR_CommandListType::Graphics);
 
 	mCurrentIndex = (uint8)mDXGISwapChain4->GetCurrentBackBufferIndex();
 	mCurrentResource = &mBackbufferResources[mCurrentIndex];
@@ -195,7 +195,6 @@ void SR_SwapChain_DX12::DestroyResources()
 {
 	if (!SR_RenderDevice_DX12::gD3D12Instance)
 		return;
-
 
 	for (uint32 i = 0; i < 3; ++i)
 	{

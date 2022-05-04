@@ -32,12 +32,12 @@ bool SGfx_MaterialNode_TextureSample::Compile(SGfx_MaterialCompiler* aCompiler)
 	{
 		std::string sampleFuncCode;
 		if (mInputs[InMip].IsConnected())
-			sampleFuncCode = SC_FormatStr("SampleLevel(%s, %s, %s)", inSampler->mName.c_str(), inUV->mName.c_str(), inMip->mName.c_str());
+			sampleFuncCode = SC_FormatStr("SampleLevel({}, {}, {})", inSampler->mName.c_str(), inUV->mName.c_str(), inMip->mName.c_str());
 		else
-			sampleFuncCode = SC_FormatStr("Sample(%s, %s)", inSampler->mName.c_str(), inUV->mName.c_str());
+			sampleFuncCode = SC_FormatStr("Sample({}, {})", inSampler->mName.c_str(), inUV->mName.c_str());
 
 		std::string code = SC_FormatStr(
-			"float4 textureSample_%i = %s.%s;\n",
+			"float4 textureSample_{} = {}.{};\n",
 			mNodeId,
 			inTexture->mName.c_str(),
 			sampleFuncCode.c_str()
@@ -50,9 +50,9 @@ bool SGfx_MaterialNode_TextureSample::Compile(SGfx_MaterialCompiler* aCompiler)
 	{
 		SR_ShaderVariableProperties outVariable;
 		outVariable.mType = "float3";
-		outVariable.mName = SC_FormatStr("textureSampleRGB_%i", mNodeId);
+		outVariable.mName = SC_FormatStr("textureSampleRGB_{}", mNodeId);
 		std::string code = SC_FormatStr(
-			"%s %s = textureSample_%i.rgb;\n",
+			"{} {} = textureSample_{}.rgb;\n",
 			outVariable.mType.c_str(),
 			outVariable.mName.c_str(),
 			mNodeId
@@ -64,9 +64,9 @@ bool SGfx_MaterialNode_TextureSample::Compile(SGfx_MaterialCompiler* aCompiler)
 	{
 		SR_ShaderVariableProperties outVariable;
 		outVariable.mType = "float";
-		outVariable.mName = SC_FormatStr("textureSampleR_%i", mNodeId);
+		outVariable.mName = SC_FormatStr("textureSampleR_{}", mNodeId);
 		std::string code = SC_FormatStr(
-			"%s %s = textureSample_%i.r;\n",
+			"{} {} = textureSample_{}.r;\n",
 			outVariable.mType.c_str(),
 			outVariable.mName.c_str(),
 			mNodeId
@@ -78,9 +78,9 @@ bool SGfx_MaterialNode_TextureSample::Compile(SGfx_MaterialCompiler* aCompiler)
 	{
 		SR_ShaderVariableProperties outVariable;
 		outVariable.mType = "float";
-		outVariable.mName = SC_FormatStr("textureSampleG_%i", mNodeId);
+		outVariable.mName = SC_FormatStr("textureSampleG_{}", mNodeId);
 		std::string code = SC_FormatStr(
-			"%s %s = textureSample_%i.g;\n",
+			"{} {} = textureSample_{}.g;\n",
 			outVariable.mType.c_str(),
 			outVariable.mName.c_str(),
 			mNodeId
@@ -92,9 +92,9 @@ bool SGfx_MaterialNode_TextureSample::Compile(SGfx_MaterialCompiler* aCompiler)
 	{
 		SR_ShaderVariableProperties outVariable;
 		outVariable.mType = "float";
-		outVariable.mName = SC_FormatStr("textureSampleB_%i", mNodeId);
+		outVariable.mName = SC_FormatStr("textureSampleB_{}", mNodeId);
 		std::string code = SC_FormatStr(
-			"%s %s = textureSample_%i.b;\n",
+			"{} {} = textureSample_{}.b;\n",
 			outVariable.mType.c_str(),
 			outVariable.mName.c_str(),
 			mNodeId
@@ -106,9 +106,9 @@ bool SGfx_MaterialNode_TextureSample::Compile(SGfx_MaterialCompiler* aCompiler)
 	{
 		SR_ShaderVariableProperties outVariable;
 		outVariable.mType = "float";
-		outVariable.mName = SC_FormatStr("textureSampleA_%i", mNodeId);
+		outVariable.mName = SC_FormatStr("textureSampleA_{}", mNodeId);
 		std::string code = SC_FormatStr(
-			"%s %s = textureSample_%i.a;\n",
+			"{} {} = textureSample_{}.a;\n",
 			outVariable.mType.c_str(),
 			outVariable.mName.c_str(),
 			mNodeId

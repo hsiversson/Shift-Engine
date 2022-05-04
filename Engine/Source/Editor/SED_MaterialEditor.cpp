@@ -1,5 +1,5 @@
 #include "SED_MaterialEditor.h"
-#include "SED_ViewportPanel.h"
+#include "SED_ViewportWindow.h"
 #include "SED_NodeGraphTools.h"
 
 #include "Graphics/World/SGfx_World.h"
@@ -21,7 +21,7 @@ SED_MaterialEditor::~SED_MaterialEditor()
 bool SED_MaterialEditor::Init()
 {
     mGfxWorld = SC_MakeUnique<SGfx_World>();
-    mViewport = SC_MakeUnique<SED_ViewportPanel>(mGfxWorld.get(), nullptr, "Material Editor Viewport");
+    mViewport = SC_MakeUnique<SED_ViewportWindow>(mGfxWorld.get(), nullptr, "Material Editor Viewport");
 
     return true;
 }
@@ -70,7 +70,7 @@ void SED_MaterialEditor::OnRender()
         // Draw connections
 
 		SED_NodeGraphTools::EndEditor();
-		mViewport->OnRender();
+		mViewport->Draw();
     }
 	ImGui::End();
 	//if (ImGui::Begin("Material Properties"))

@@ -18,29 +18,29 @@ bool SGfx_MaterialNode_Constant::Compile(SGfx_MaterialCompiler* aCompiler)
 		break;
 	case Type::Float:
 		type = "float";
-		value = SC_FormatStr("%f", mValue.mFloat4.x);
+		value = SC_FormatStr("{}", mValue.mFloat4.x);
 		break;
 	case Type::Float2:
 		type = "float2";
-		value = SC_FormatStr("float2(%f, %f)", mValue.mFloat4.x, mValue.mFloat4.y);
+		value = SC_FormatStr("float2({}, {})", mValue.mFloat4.x, mValue.mFloat4.y);
 		break;
 	case Type::Float3:
 		type = "float3";
-		value = SC_FormatStr("float3(%f, %f, %f)", mValue.mFloat4.x, mValue.mFloat4.y, mValue.mFloat4.z);
+		value = SC_FormatStr("float3({}, {}, {})", mValue.mFloat4.x, mValue.mFloat4.y, mValue.mFloat4.z);
 		break;
 	case Type::Float4:
 		type = "float4";
-		value = SC_FormatStr("float4(%f, %f, %f, %f)", mValue.mFloat4.x, mValue.mFloat4.y, mValue.mFloat4.z, mValue.mFloat4.w);
+		value = SC_FormatStr("float4({}, {}, {}, {})", mValue.mFloat4.x, mValue.mFloat4.y, mValue.mFloat4.z, mValue.mFloat4.w);
 		break;
 	default:
 		SC_ASSERT(false, "Invalid type");
 		return false;
 	}
 
-	mVariableProps.mName = SC_FormatStr("constant_%s_%i", type.c_str(), mNodeId);
+	mVariableProps.mName = SC_FormatStr("constant_{}_{}", type.c_str(), mNodeId);
 	mVariableProps.mType = type;
 
-	std::string code = SC_FormatStr("%s %s = %s;\n", mVariableProps.mType.c_str(), mVariableProps.mName.c_str(), value.c_str());
+	std::string code = SC_FormatStr("{} {} = {};\n", mVariableProps.mType.c_str(), mVariableProps.mName.c_str(), value.c_str());
 	aCompiler->AddCode(code);
 
 	mOutputs[Out].Write(mVariableProps);
@@ -93,9 +93,9 @@ bool SGfx_MaterialNode_Add::Compile(SGfx_MaterialCompiler* aCompiler)
 
 	SR_ShaderVariableProperties outVariable;
 	outVariable.mType = type;
-	outVariable.mName = SC_FormatStr("add_%i", mNodeId);
+	outVariable.mName = SC_FormatStr("add_{}", mNodeId);
 
-	std::string code = SC_FormatStr("%s %s = %s + %s;\n", outVariable.mType.c_str(), outVariable.mName.c_str(), in1->mName.c_str(), in2->mName.c_str());
+	std::string code = SC_FormatStr("{} {} = {} + {};\n", outVariable.mType.c_str(), outVariable.mName.c_str(), in1->mName.c_str(), in2->mName.c_str());
 	aCompiler->AddCode(code);
 
 	mOutputs[Out].Write(outVariable);
@@ -118,9 +118,9 @@ bool SGfx_MaterialNode_Subtract::Compile(SGfx_MaterialCompiler* aCompiler)
 
 	SR_ShaderVariableProperties outVariable;
 	outVariable.mType = type;
-	outVariable.mName = SC_FormatStr("sub_%i", mNodeId);
+	outVariable.mName = SC_FormatStr("sub_{}", mNodeId);
 
-	std::string code = SC_FormatStr("%s %s = %s - %s;\n", outVariable.mType.c_str(), outVariable.mName.c_str(), in1->mName.c_str(), in2->mName.c_str());
+	std::string code = SC_FormatStr("{} {} = {} - {};\n", outVariable.mType.c_str(), outVariable.mName.c_str(), in1->mName.c_str(), in2->mName.c_str());
 	aCompiler->AddCode(code);
 
 	mOutputs[Out].Write(outVariable);
@@ -143,9 +143,9 @@ bool SGfx_MaterialNode_Multiply::Compile(SGfx_MaterialCompiler* aCompiler)
 
 	SR_ShaderVariableProperties outVariable;
 	outVariable.mType = type;
-	outVariable.mName = SC_FormatStr("mul_%i", mNodeId);
+	outVariable.mName = SC_FormatStr("mul_{}", mNodeId);
 
-	std::string code = SC_FormatStr("%s %s = %s * %s;\n", outVariable.mType.c_str(), outVariable.mName.c_str(), in1->mName.c_str(), in2->mName.c_str());
+	std::string code = SC_FormatStr("{} {} = {} * {};\n", outVariable.mType.c_str(), outVariable.mName.c_str(), in1->mName.c_str(), in2->mName.c_str());
 	aCompiler->AddCode(code);
 
 	mOutputs[Out].Write(outVariable);
@@ -168,9 +168,9 @@ bool SGfx_MaterialNode_Divide::Compile(SGfx_MaterialCompiler* aCompiler)
 
 	SR_ShaderVariableProperties outVariable;
 	outVariable.mType = type;
-	outVariable.mName = SC_FormatStr("div_%i", mNodeId);
+	outVariable.mName = SC_FormatStr("div_{}", mNodeId);
 
-	std::string code = SC_FormatStr("%s %s = %s / %s;\n", outVariable.mType.c_str(), outVariable.mName.c_str(), in1->mName.c_str(), in2->mName.c_str());
+	std::string code = SC_FormatStr("{} {} = {} / {};\n", outVariable.mType.c_str(), outVariable.mName.c_str(), in1->mName.c_str(), in2->mName.c_str());
 	aCompiler->AddCode(code);
 
 	mOutputs[Out].Write(outVariable);
@@ -191,9 +191,9 @@ bool SGfx_MaterialNode_Reciprocal::Compile(SGfx_MaterialCompiler* aCompiler)
 
 	SR_ShaderVariableProperties outVariable;
 	outVariable.mType = type;
-	outVariable.mName = SC_FormatStr("rcp_%i", mNodeId);
+	outVariable.mName = SC_FormatStr("rcp_{}", mNodeId);
 
-	std::string code = SC_FormatStr("%s %s = rcp(%s);\n", outVariable.mType.c_str(), outVariable.mName.c_str(), input->mName.c_str());
+	std::string code = SC_FormatStr("{} {} = rcp({});\n", outVariable.mType.c_str(), outVariable.mName.c_str(), input->mName.c_str());
 	aCompiler->AddCode(code);
 
 	mOutputs[Out].Write(outVariable);
@@ -214,9 +214,9 @@ bool SGfx_MaterialNode_Abs::Compile(SGfx_MaterialCompiler* aCompiler)
 
 	SR_ShaderVariableProperties outVariable;
 	outVariable.mType = type;
-	outVariable.mName = SC_FormatStr("abs_%i", mNodeId);
+	outVariable.mName = SC_FormatStr("abs_{}", mNodeId);
 
-	std::string code = SC_FormatStr("%s %s = abs(%s);\n", outVariable.mType.c_str(), outVariable.mName.c_str(), input->mName.c_str());
+	std::string code = SC_FormatStr("{} {} = abs({});\n", outVariable.mType.c_str(), outVariable.mName.c_str(), input->mName.c_str());
 	aCompiler->AddCode(code);
 
 	mOutputs[Out].Write(outVariable);
@@ -237,9 +237,9 @@ bool SGfx_MaterialNode_Length::Compile(SGfx_MaterialCompiler* aCompiler)
 
 	SR_ShaderVariableProperties outVariable;
 	outVariable.mType = type;
-	outVariable.mName = SC_FormatStr("len_%i", mNodeId);
+	outVariable.mName = SC_FormatStr("len_{}", mNodeId);
 
-	std::string code = SC_FormatStr("%s %s = length(%s);\n", outVariable.mType.c_str(), outVariable.mName.c_str(), input->mName.c_str());
+	std::string code = SC_FormatStr("{} {} = length({});\n", outVariable.mType.c_str(), outVariable.mName.c_str(), input->mName.c_str());
 	aCompiler->AddCode(code);
 
 	mOutputs[Out].Write(outVariable);
@@ -260,9 +260,9 @@ bool SGfx_MaterialNode_Normalize::Compile(SGfx_MaterialCompiler* aCompiler)
 
 	SR_ShaderVariableProperties outVariable;
 	outVariable.mType = type;
-	outVariable.mName = SC_FormatStr("normalize_%i", mNodeId);
+	outVariable.mName = SC_FormatStr("normalize_{}", mNodeId);
 
-	std::string code = SC_FormatStr("%s %s = normalize(%s);\n", outVariable.mType.c_str(), outVariable.mName.c_str(), input->mName.c_str());
+	std::string code = SC_FormatStr("{} {} = normalize({});\n", outVariable.mType.c_str(), outVariable.mName.c_str(), input->mName.c_str());
 	aCompiler->AddCode(code);
 
 	mOutputs[Out].Write(outVariable);
@@ -283,9 +283,9 @@ bool SGfx_MaterialNode_Saturate::Compile(SGfx_MaterialCompiler* aCompiler)
 
 	SR_ShaderVariableProperties outVariable;
 	outVariable.mType = type;
-	outVariable.mName = SC_FormatStr("saturate_%i", mNodeId);
+	outVariable.mName = SC_FormatStr("saturate_{}", mNodeId);
 
-	std::string code = SC_FormatStr("%s %s = saturate(%s);\n", outVariable.mType.c_str(), outVariable.mName.c_str(), input->mName.c_str());
+	std::string code = SC_FormatStr("{} {} = saturate({});\n", outVariable.mType.c_str(), outVariable.mName.c_str(), input->mName.c_str());
 	aCompiler->AddCode(code);
 
 	mOutputs[Out].Write(outVariable);
@@ -308,9 +308,9 @@ bool SGfx_MaterialNode_Dot::Compile(SGfx_MaterialCompiler* aCompiler)
 
 	SR_ShaderVariableProperties outVariable;
 	outVariable.mType = type;
-	outVariable.mName = SC_FormatStr("dot_%i", mNodeId);
+	outVariable.mName = SC_FormatStr("dot_{}", mNodeId);
 
-	std::string code = SC_FormatStr("%s %s = dot(%s, %s);\n", outVariable.mType.c_str(), outVariable.mName.c_str(), in1->mName.c_str(), in2->mName.c_str());
+	std::string code = SC_FormatStr("{} {} = dot({}, {});\n", outVariable.mType.c_str(), outVariable.mName.c_str(), in1->mName.c_str(), in2->mName.c_str());
 	aCompiler->AddCode(code);
 
 	mOutputs[Out].Write(outVariable);
@@ -333,9 +333,9 @@ bool SGfx_MaterialNode_Min::Compile(SGfx_MaterialCompiler* aCompiler)
 
 	SR_ShaderVariableProperties outVariable;
 	outVariable.mType = type;
-	outVariable.mName = SC_FormatStr("min_%i", mNodeId);
+	outVariable.mName = SC_FormatStr("min_{}", mNodeId);
 
-	std::string code = SC_FormatStr("%s %s = min(%s, %s);\n", outVariable.mType.c_str(), outVariable.mName.c_str(), in1->mName.c_str(), in2->mName.c_str());
+	std::string code = SC_FormatStr("{} {} = min({}, {});\n", outVariable.mType.c_str(), outVariable.mName.c_str(), in1->mName.c_str(), in2->mName.c_str());
 	aCompiler->AddCode(code);
 
 	mOutputs[Out].Write(outVariable);
@@ -358,9 +358,9 @@ bool SGfx_MaterialNode_Max::Compile(SGfx_MaterialCompiler* aCompiler)
 
 	SR_ShaderVariableProperties outVariable;
 	outVariable.mType = type;
-	outVariable.mName = SC_FormatStr("max_%i", mNodeId);
+	outVariable.mName = SC_FormatStr("max_{}", mNodeId);
 
-	std::string code = SC_FormatStr("%s %s = max(%s, %s);\n", outVariable.mType.c_str(), outVariable.mName.c_str(), in1->mName.c_str(), in2->mName.c_str());
+	std::string code = SC_FormatStr("{} {} = max({}, {});\n", outVariable.mType.c_str(), outVariable.mName.c_str(), in1->mName.c_str(), in2->mName.c_str());
 	aCompiler->AddCode(code);
 
 	mOutputs[Out].Write(outVariable);
@@ -385,9 +385,9 @@ bool SGfx_MaterialNode_Clamp::Compile(SGfx_MaterialCompiler* aCompiler)
 
 	SR_ShaderVariableProperties outVariable;
 	outVariable.mType = type;
-	outVariable.mName = SC_FormatStr("clamp_%i", mNodeId);
+	outVariable.mName = SC_FormatStr("clamp_{}", mNodeId);
 
-	std::string code = SC_FormatStr("%s %s = clamp(%s, %s, %s);\n", outVariable.mType.c_str(), outVariable.mName.c_str(), inValue->mName.c_str(), minClamp->mName.c_str(), maxClamp->mName.c_str());
+	std::string code = SC_FormatStr("{} {} = clamp({}, {}, {});\n", outVariable.mType.c_str(), outVariable.mName.c_str(), inValue->mName.c_str(), minClamp->mName.c_str(), maxClamp->mName.c_str());
 	aCompiler->AddCode(code);
 
 	mOutputs[Out].Write(outVariable);

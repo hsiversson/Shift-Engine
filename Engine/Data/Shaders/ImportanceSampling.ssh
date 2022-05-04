@@ -56,6 +56,29 @@ float4 UniformSampleSphere(float2 E)
 	return float4(H, PDF);
 }
 
+float2 UniformSampleDisk(float2 E)
+{
+	float theta = 2 * PI * E.x;
+	float radius = sqrt(E.y);
+	return radius * float2(cos(theta), sin(theta));
+}
+
+float4 UniformSampleCone(float2 E, float CosThetaMax)
+{
+	float phi = 2.0f * PI * E.x;
+	float cosTheta = lerp(CosThetaMax, 1.0f, E.y);
+	float sinTheta = sqrt(1.0f - cosTheta * cosTheta);
+
+	float3 L;
+	L.x = sinTheta * cos(phi);
+	L.y = sinTheta * sin(phi);
+	L.z = cosTheta;
+
+	float PDF = 1.0f / (2.0f * PI * (1.0f - CosThetaMax));
+
+	return float4(L, PDF);
+}
+
 float4 CosineSampleHemisphere( float2 E )
 {
 	float phi = 2 * PI * E.x;

@@ -146,7 +146,7 @@ void SGfx_Renderer::RenderView(SGfx_View* aView)
 
 	SubmitComputeTask(std::bind(&SGfx_Renderer::ComputeAmbientOcclusion, this), prepareData.mAmbientOcclusionEvent);
 
-	SubmitGraphicsTask(std::bind(&SGfx_Renderer::RenderShadows, this), prepareData.mShadowsEvent);
+	//SubmitGraphicsTask(std::bind(&SGfx_Renderer::RenderShadows, this), prepareData.mShadowsEvent);
 
 	SubmitGraphicsTask(std::bind(&SGfx_Renderer::RenderOpaque, this), prepareData.mRenderOpaqueEvent);
 	SubmitGraphicsTask(std::bind(&SGfx_Renderer::RenderDebugObjects, this), prepareData.mRenderDebugObjectsEvent);
@@ -156,7 +156,7 @@ void SGfx_Renderer::RenderView(SGfx_View* aView)
 		taskEvent->Wait();
 	mSubmittedTaskEvents.RemoveAll();
 
-	lastFrameFence = SR_RenderDevice::gInstance->GetGraphicsCommandQueue()->InsertFence();
+	lastFrameFence = SR_RenderDevice::gInstance->GetCommandQueueManager()->InsertFence(SR_CommandListType::Graphics);
 	mCurrentView = nullptr;
 }
 
@@ -225,10 +225,7 @@ const SGfx_Renderer::Settings& SGfx_Renderer::GetSettings() const
 
 void SGfx_Renderer::SubmitGraphicsTask(SR_RenderTaskFunctionSignature aTask, SR_TaskEvent* aEvent)
 {
-	SR_RenderTaskManager* renderTaskManager = SR_RenderDevice::gInstance->GetRenderTaskManager(); 
-
-	if (SR_RenderDevice::gInstance->GetSupportCaps().mEnableAsyncCompute)
-		renderTaskManager->SubmitSplit(SR_CommandListType::Compute); // Insert a split in the async queue batches to allow for more precise fences
+	SR_CommandQueueManager* renderTaskManager = SR_RenderDevice::gInstance->GetCommandQueueManager(); 
 
 	renderTaskManager->SubmitTask(aTask, SR_CommandListType::Graphics, aEvent);
 	mSubmittedTaskEvents.Add(&aEvent->mCPUEvent);
@@ -242,12 +239,10 @@ void SGfx_Renderer::SubmitGraphicsTask(SR_RenderTaskFunctionSignature aTask, con
 
 void SGfx_Renderer::SubmitComputeTask(SR_RenderTaskFunctionSignature aTask, SR_TaskEvent* aEvent)
 {
-	SR_RenderTaskManager* renderTaskManager = SR_RenderDevice::gInstance->GetRenderTaskManager();
+	SR_CommandQueueManager* renderTaskManager = SR_RenderDevice::gInstance->GetCommandQueueManager();
 
-	if (SR_RenderDevice::gInstance->GetSupportCaps().mEnableAsyncCompute) 
-		renderTaskManager->SubmitSplit(SR_CommandListType::Graphics); // Insert a split in the graphics queue batches to allow for more precise fences
-
-	renderTaskManager->SubmitTask(aTask, (SR_RenderDevice::gInstance->GetSupportCaps().mEnableAsyncCompute) ? SR_CommandListType::Compute : SR_CommandListType::Graphics, aEvent);
+	const SR_CommandListType type = (SR_RenderDevice::gInstance->GetSupportCaps().mEnableAsyncCompute) ? SR_CommandListType::Compute : SR_CommandListType::Graphics;
+	renderTaskManager->SubmitTask(aTask, type, aEvent);
 	mSubmittedTaskEvents.Add(&aEvent->mCPUEvent);
 	mLatestTaskEvent = &aEvent->mCPUEvent;
 }
@@ -259,7 +254,7 @@ void SGfx_Renderer::SubmitComputeTask(SR_RenderTaskFunctionSignature aTask, cons
 
 void SGfx_Renderer::SubmitCopyTask(SR_RenderTaskFunctionSignature aTask, SR_TaskEvent* aEvent)
 {
-	SR_RenderTaskManager* renderTaskManager = SR_RenderDevice::gInstance->GetRenderTaskManager();
+	SR_CommandQueueManager* renderTaskManager = SR_RenderDevice::gInstance->GetCommandQueueManager();
 	renderTaskManager->SubmitTask(aTask, SR_CommandListType::Copy, aEvent);
 	mSubmittedTaskEvents.Add(&aEvent->mCPUEvent);
 	mLatestTaskEvent = &aEvent->mCPUEvent;

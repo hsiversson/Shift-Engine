@@ -1,0 +1,50 @@
+#ifndef RTSHADOWS_HEADER
+#define RTSHADOWS_HEADER
+
+#include "Raytracing.ssh"
+
+#define NUM_RAYS (4)
+#define NUM_RAYS_RCP (1.0f / NUM_RAYS)
+
+float TraceShadow(in const MaterialData aMaterialData, float3 aWorldPosition, float3 aToLightDirection, float aMaxDistance, float aSourceRadius)
+{
+    RaytracingAccelerationStructure raytracingScene = GetRaytracingScene();
+
+	float noise = InterleavedGradientNoise(aMaterialData.mClipPosition.xy, gSceneConstants.mFrameIndex);
+	uint2 random = uint2(asuint(noise), 0x1813 * noise);
+
+    float3x3 ToViewBasis = GetTangentBasis(aToLightDirection);
+    float radius = aSourceRadius * (PI / 180.f);
+
+    RayQuery<RAY_FLAG_CULL_NON_OPAQUE|RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES|RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> rayQuery;
+
+    RayDesc ray;
+    ray.Origin = aWorldPosition;
+    ray.TMin = 0.0001f;
+    ray.TMax = aMaxDistance;
+    uint rayFlags = 0;
+
+    float outShadowFactor = 0.0f;
+
+    float stepAccum = NUM_RAYS_RCP;
+
+    for (uint i = 0; i < NUM_RAYS; ++i)
+    {
+        float2 E = Hammersley16(i, NUM_RAYS, random);
+        const float4 ViewSample = UniformSampleCone(E, cos(radius));
+        const float3 JitteredV = mul(ViewSample.xyz, ToViewBasis);
+
+        ray.Direction = JitteredV;
+
+        rayQuery.TraceRayInline(raytracingScene, rayFlags, ~0, ray);
+        rayQuery.Proceed();
+
+        if (rayQuery.CommittedStatus() == COMMITTED_TRIANGLE_HIT)
+        {
+            outShadowFactor += stepAccum;
+        }
+    }
+
+    return 1.0f - (outShadowFactor);
+}
+#endif //RTSHADOWS_HEADER

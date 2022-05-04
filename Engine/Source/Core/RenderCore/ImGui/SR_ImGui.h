@@ -70,7 +70,7 @@ private:
 	SC_Array<SC_Ref<SR_BufferResource>> mConstantBuffers;
 	SC_Ref<SR_RootSignature> mRootSignature;
 	SC_Ref<SR_ShaderState> mShaderState;
-	SC_Ref<SR_CommandList> mCommandList;
+	SC_Ref<SR_TaskEvent> mLastTaskEvent;
 	SC_Ref<SR_Texture> mFontTexture;
 
 	SR_Fence mLastFence;

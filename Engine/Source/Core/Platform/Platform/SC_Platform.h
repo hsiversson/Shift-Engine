@@ -87,4 +87,4 @@
 
 #define SC_ARRAY_SIZE(aArray)				(sizeof(aArray) / sizeof(*aArray));
 
-#define SC_OVERLOAD_NEW_DELETE_OPERATORS	(1)
+#define SC_OVERLOAD_NEW_DELETE_OPERATORS	(0)

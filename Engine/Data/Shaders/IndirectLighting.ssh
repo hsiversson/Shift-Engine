@@ -2,9 +2,11 @@
 #define INDIRECT_LIGHTING_HEADER
 
 #include "ShadingModels.ssh"
-
+#include "RTGI.ssh"
 //#include "Raytracing_GI.ssh"
 //#include "SkyCapture.ssh"
+
+#define USE_RTGI (1)
 
 /////////////////////////////////////////////////
 /**
@@ -23,7 +25,7 @@ float ComputeIBLMipFromRoughness(in float aRoughness, in float aMipCount)
     return aRoughness * aMipCount;
 }
 
-float3 CalculateEnvironmentalIBL(in const MaterialData aMaterialData, in const float3 aViewDirection)
+float3 CalculateEnvironmentalIBL(in const MaterialData aMaterialData, in const float3 aWorldPosition, in const float3 aViewDirection)
 {
     const EnvironmentConstants environmentConstants = gSceneConstants.mEnvironmentConstants;
     const float3 V = -aViewDirection; // ToSurface -> ToEye
@@ -63,18 +65,16 @@ float3 CalculateGlobalIllumination()
 }
 
 
-float3 CalculateIndirectLighting(in const MaterialData aMaterialData, in const float3 aViewDirection)
+float3 CalculateIndirectLighting(in const MaterialData aMaterialData, in const float3 aWorldPosition, in const float3 aViewDirection)
 {
     float3 indirectLighting = (float3)0;
 
+#if USE_RTGI
+    return TraceGI(aMaterialData, aWorldPosition, aViewDirection);
+#else
     // Environmental IBL
-    float3 ibl = CalculateEnvironmentalIBL(aMaterialData, aViewDirection);
-
-    //// Global Illumination -- Fallback to Environmental IBL when out of range
-    //float3 globalIllumination = CalculateGlobalIllumination();
-
-
-    return ibl;
+    return CalculateEnvironmentalIBL(aMaterialData, aViewDirection);
+#endif
 }
 
 #endif //INDIRECT_LIGHTING_HEADER

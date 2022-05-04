@@ -6,9 +6,13 @@
 #include "LightsCommon.ssh"
 #include "LightCullingCommon.ssh"
 #include "Shadows.ssh"
+#include "RTShadows.ssh"
 
-#define DEBUG_CASCADE_COLOR (0)
-#define DEBUG_LIGHT_CULLING (0)
+#define DEBUG_CASCADE_COLOR     (0)
+#define DEBUG_LIGHT_CULLING     (0)
+
+#define USE_RT_SHADOWS          (1)
+#define USE_RT_LOCAL_SHADOWS    (1)
 
 float3 CalculateDirectionalLightContribution(in const MaterialData aMaterialData, in const float3 aWorldPosition, in const float3 aViewDirection, in float aPixelDepth)
 {
@@ -19,12 +23,16 @@ float3 CalculateDirectionalLightContribution(in const MaterialData aMaterialData
 
     float3 lighting = (float3)0.0f;
 
+#if USE_RT_SHADOWS
+    float shadowFactor = TraceShadow(aMaterialData, aWorldPosition, lightDirection, 1000.f, 1.0f);
+#else
 #if DEBUG_CASCADE_COLOR
     float3 debugColor = (float3)0.0f;
     float shadowFactor = CalculateCascadedShadowFactor(aWorldPosition, aPixelDepth, debugColor);
     lighting = debugColor;
 #else
     float shadowFactor = CalculateCascadedShadowFactor(aWorldPosition, aPixelDepth);
+#endif
 #endif
 
     if (shadowFactor <= 0.0f)
@@ -95,13 +103,16 @@ float3 CalculateLocalLightContribution(in const MaterialData aMaterialData, in c
 
     float attenuation = GetLocalLightAttenuation(aLight, aWorldPosition, L, distSqr);
 
+    float shadowFactor = 1.0f;
+#if USE_RT_LOCAL_SHADOWS
+    if (aLight.mCastShadow)
+        shadowFactor = TraceShadow(aMaterialData, aWorldPosition, L, length(toLight), aLight.mSourceRadius);
+#endif
+
     float3 contribution = (float3)0;
     [branch]
-    if (attenuation > 0.0f)
+    if (attenuation > 0.0f && shadowFactor > 0.0f)
     {
-        // GetShadowFactor
-        // Branch if shadow is > 0
-
         float3 lightColor = aLight.mColoredIntensity;
 
 	    SR_AreaLight areaLight;
@@ -123,7 +134,7 @@ float3 CalculateLocalLightContribution(in const MaterialData aMaterialData, in c
         }
 
         float3 shading = CalculateShading(aMaterialData, areaLight, areaLight.mLightVector, areaLight.mNdotL, areaLight.mFalloff, aViewDirection);
-        return shading * aLight.mColoredIntensity * attenuation;
+        return shading * aLight.mColoredIntensity * attenuation * shadowFactor;
     }
 
     return contribution;

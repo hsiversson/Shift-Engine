@@ -1,17 +1,17 @@
-#include "SED_ViewportPanel.h"
+#include "SED_ViewportWindow.h"
 #include "Graphics/World/SGfx_World.h"
 #include "Graphics/View/SGfx_View.h"
 #include "Graphics/Renderer/SGfx_Renderer.h"
 #include "SED_TransformationGizmo.h"
 
-SED_ViewportToolbar::SED_ViewportToolbar(SED_ViewportPanel& aViewportPanel, SED_TransformationGizmo* aGizmo)
+SED_ViewportToolbar::SED_ViewportToolbar(SED_ViewportWindow& aViewportPanel, SED_TransformationGizmo* aGizmo)
 	: mViewportParent(aViewportPanel)
 	, mGizmo(aGizmo)
 {
 
 }
 
-void SED_ViewportToolbar::OnRender()
+void SED_ViewportToolbar::OnDraw()
 {
 	DrawGizmoOptions();
 }
@@ -83,7 +83,7 @@ void SED_ViewportToolbar::DrawGizmoOptions()
 	}
 }
 
-SED_ViewportPanel::SED_ViewportPanel(SGfx_World* aGfxWorld, SED_TransformationGizmo* aGizmo, const char* aId)
+SED_ViewportWindow::SED_ViewportWindow(SGfx_World* aGfxWorld, SED_TransformationGizmo* aGizmo, const char* aId)
 	: mToolbar(*this, aGizmo)
 	, mEditorCamera(this)
 	, mGfxWorld(aGfxWorld)
@@ -100,27 +100,42 @@ SED_ViewportPanel::SED_ViewportPanel(SGfx_World* aGfxWorld, SED_TransformationGi
 	mActiveCamera = &mEditorCamera;
 }
 
-SED_ViewportPanel::~SED_ViewportPanel()
+SED_ViewportWindow::~SED_ViewportWindow()
 {
 	mGfxWorld->DestroyView(mView);
 }
 
-const SC_Vector4& SED_ViewportPanel::GetViewportBounds() const
+const SC_Vector4& SED_ViewportWindow::GetViewportBounds() const
 {
 	return mViewportBounds;
 }
 
-const SC_Vector2& SED_ViewportPanel::GetViewportSize() const
+const SC_Vector2& SED_ViewportWindow::GetViewportSize() const
 {
 	return mViewportSize;
 }
 
-const SGfx_Camera& SED_ViewportPanel::GetCamera() const
+const SGfx_Camera& SED_ViewportWindow::GetCamera() const
 {
 	return *mActiveCamera;
 }
 
-void SED_ViewportPanel::Update()
+void SED_ViewportWindow::SetCamera(SGfx_Camera* aCamera)
+{
+	mActiveCamera = aCamera;
+}
+
+SGfx_Camera* SED_ViewportWindow::GetEditorCamera()
+{
+	return &mEditorCamera;
+}
+
+const char* SED_ViewportWindow::GetWindowName() const
+{
+	return mId;
+}
+
+void SED_ViewportWindow::OnUpdate()
 {
 	if (mIsFocused && mActiveCamera == &mEditorCamera)
 	{
@@ -142,11 +157,8 @@ void SED_ViewportPanel::Update()
 	mGfxWorld->RenderView(mView.get());
 }
 
-void SED_ViewportPanel::OnRender()
+void SED_ViewportWindow::OnDraw()
 {
-	ImGui::SetNextWindowSize(ImVec2(100, 100), ImGuiCond_FirstUseEver);
-	ImGui::Begin(mId);
-
 	ImVec2 viewportMinRegion = ImGui::GetWindowContentRegionMin();
 	ImVec2 viewportMaxRegion = ImGui::GetWindowContentRegionMax();
 	ImVec2 viewportOffset = ImGui::GetWindowPos();
@@ -160,24 +172,13 @@ void SED_ViewportPanel::OnRender()
 
 	const SC_IntVector& textureSize = mGfxWorld->GetRenderer()->GetScreenColor()->GetResource()->GetProperties().mSize;
 
-	ImGui::Image(mGfxWorld->GetRenderer()->GetScreenColor().get(), viewportPanelSize, ImVec2(0,0), ImVec2(viewportPanelSize.x / (float)textureSize.x, viewportPanelSize.y / (float)textureSize.y));
+	ImGui::Image(mGfxWorld->GetRenderer()->GetScreenColor().get(), viewportPanelSize, ImVec2(0, 0), ImVec2(viewportPanelSize.x / (float)textureSize.x, viewportPanelSize.y / (float)textureSize.y));
 
-	mToolbar.OnRender();
+	mToolbar.OnDraw();
 	mIsFocused = ImGui::IsWindowFocused();
-	ImGui::End();
 }
 
-void SED_ViewportPanel::SetCamera(SGfx_Camera* aCamera)
-{
-	mActiveCamera = aCamera;
-}
-
-SGfx_Camera* SED_ViewportPanel::GetEditorCamera()
-{
-	return &mEditorCamera;
-}
-
-void SED_ViewportPanel::RecieveMessage(const SC_Message& aMsg)
+void SED_ViewportWindow::RecieveMessage(const SC_Message& aMsg)
 {
 	if (mIsFocused && aMsg.mType == SC_MessageType::Scroll)
 	{

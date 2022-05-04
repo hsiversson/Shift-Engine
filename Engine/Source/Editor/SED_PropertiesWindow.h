@@ -1,24 +1,27 @@
 #pragma once
-#include "SED_Panel.h"
+#include "SED_Window.h"
+#include "GameFramework/Entity/SGF_Entity.h"
 #include "GameFramework/Entity/Components/SGF_Component.h"
 
 class SGF_World;
 class SGF_Entity;
 
-class SED_PropertiesPanel : public SED_Panel
+class SED_PropertiesWindow : public SED_Window
 {
 public:
-	SED_PropertiesPanel();
-	SED_PropertiesPanel(const SC_Ref<SGF_World>& aWorld);
-	~SED_PropertiesPanel();
+	SED_PropertiesWindow();
+	SED_PropertiesWindow(const SC_Ref<SGF_World>& aWorld);
+	~SED_PropertiesWindow();
 
-	void OnRender() override;
+	void SetSelectedEntity(const SGF_Entity& aEntity);
+	const SGF_Entity& GetSelectedEntity() const;
 
-	void SetSelectedEntity(SGF_Entity* aEntity);
-	SGF_Entity* GetSelectedEntity() const;
+	const char* GetWindowName() const override { return "Properties"; }
+protected:
+	void OnDraw() override;
 
 private:
-	void DrawComponent(const SGF_ComponentId& aComponentId, SGF_Entity* aEntity);
+	void DrawComponent(const SGF_ComponentId& aComponentId, const SGF_Entity& aEntity);
 
 	void DrawProperty(SGF_PropertyHelperBase& aProperty) const;
 	void DrawPropertyInternal(SGF_PropertyHelper<bool>& aProperty) const;
@@ -31,9 +34,9 @@ private:
 	void DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SR_Texture>>& aProperty) const;
 	void DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SGfx_MaterialInstance>>& aProperty) const;
 	void DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SGfx_MeshInstance>>& aProperty) const;
-	void DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SGF_Entity>>& aProperty) const;
+	void DrawPropertyInternal(SGF_PropertyHelper<SGF_EntityHandle>& aProperty) const;
 
-	SGF_Entity* mSelectedEntity;
+	SGF_Entity mSelectedEntity;
 
 	SC_Ref<SGF_World> mWorld;
 	float mPropertyNameColumnWidth;

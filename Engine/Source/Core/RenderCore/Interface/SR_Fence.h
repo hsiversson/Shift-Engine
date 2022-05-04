@@ -2,23 +2,22 @@
 #include "Platform/Types/SC_TypeDefines.h"
 #include "SR_CommandList.h"
 
+struct SR_Fence;
 class SR_FenceResource
 {
 public:
-	SR_FenceResource() : mType(SR_CommandListType::Unknown) {}
+	SR_FenceResource() {}
 	virtual ~SR_FenceResource() {}
 
 	virtual bool IsPending(uint64 /*aValue*/) { return true; }
 	virtual bool Wait(uint64 /*aValue*/, bool /*aBlock*/ = true) {  return true; }
-
-	const SR_CommandListType& GetType() const { return mType; }
-protected:
-	SR_CommandListType mType;
+	virtual SR_Fence GetNextFence() = 0;
 };
 
 struct SR_Fence
 {
-	SR_Fence() : mType(SR_CommandListType::Unknown), mValue(0) {}
+	SR_Fence() : mResource(nullptr), mValue(0), mType(SR_CommandListType::Unknown) {}
+	~SR_Fence() {}
 
 	bool IsPending() { return (mResource) ? mResource->IsPending(mValue) : false; }
 	bool Wait(bool aBlock = true) { return (mResource) ? mResource->Wait(mValue, aBlock) : true; }
@@ -41,7 +40,7 @@ struct SR_Fence
 		return !(*this == aOther);
 	}
 
-	SR_CommandListType mType;
+	SR_FenceResource* mResource;
 	uint64 mValue;
-	SC_Ref<SR_FenceResource> mResource;
+	SR_CommandListType mType;
 };

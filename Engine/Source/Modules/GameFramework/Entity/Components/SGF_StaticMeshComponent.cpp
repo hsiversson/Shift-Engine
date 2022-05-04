@@ -24,7 +24,7 @@ void SGF_StaticMeshComponent::OnUpdate()
 {
 	if (mMeshInstance)
 	{
-		SGF_TransformComponent* transformComp = GetParentEntity()->GetComponent<SGF_TransformComponent>();
+		SGF_TransformComponent* transformComp = GetParentEntity().GetComponent<SGF_TransformComponent>();
 		if (transformComp)
 		{
 			mMeshInstance->SetTransform(transformComp->GetTransform());
@@ -74,16 +74,17 @@ void SGF_StaticMeshComponent::SetVisible(bool aValue)
 
 	mIsVisible = aValue;
 
-	if (SGF_Entity* entity = GetParentEntity())
+	const SGF_Entity& entity = GetParentEntity();
+	if (entity)
 	{
-		if (SGF_World* world = entity->GetWorld())
+		if (SGF_World* world = entity.GetWorld())
 		{
 			SGfx_World* graphicsWorld = world->GetGraphicsWorld();
 			if (graphicsWorld && mMeshInstance)
 			{
 				if (mIsVisible)
 				{
-					SGF_TransformComponent* transformComp = entity->GetComponent<SGF_TransformComponent>();
+					SGF_TransformComponent* transformComp = entity.GetComponent<SGF_TransformComponent>();
 					if (transformComp)
 					{
 						SC_Matrix transform = SC_ScaleMatrix(transformComp->mScale);

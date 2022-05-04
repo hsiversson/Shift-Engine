@@ -87,7 +87,7 @@ void SC_Logger::SC_LoggerThread::ThreadMain()
 
 			struct tm buf;
 			localtime_s(&buf, &msg.mTime);
-			timeStr << std::put_time(&buf, "%Y-%m-%d %X");
+			timeStr << std::put_time(&buf, "%Y-%m-{} %X");
 			std::wstringstream sstr;
 			sstr << L"[" << SC_UTF8ToUTF16(timeStr.str()) << L"] - " << SC_UTF8ToUTF16(msg.mMessage.c_str()) << std::endl;
 

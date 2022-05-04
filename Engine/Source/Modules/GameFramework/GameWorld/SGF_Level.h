@@ -5,7 +5,7 @@ class SGF_World;
 
 class SGF_Level
 {
-	friend class SED_WorldHierarchyPanel;
+	friend class SED_WorldHierarchyWindow;
 public:
 	SGF_Level();
 	~SGF_Level();

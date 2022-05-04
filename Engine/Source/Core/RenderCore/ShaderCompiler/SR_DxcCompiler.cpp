@@ -144,7 +144,7 @@ SR_ShaderCompilerCache::QueryResult SR_ShaderCompilerCache::QueryShaderEntry(con
 	}
 	hashedFileName += ".bytecode";
 
-	aOutShaderCacheEntry.mFilePath = SC_FormatStr("%s/%s", gShaderCacheFolder, hashedFileName.c_str());
+	aOutShaderCacheEntry.mFilePath = SC_FormatStr("{}/{}", gShaderCacheFolder, hashedFileName.c_str());
 
 	if (SC_FilePath::Exists(aOutShaderCacheEntry.mFilePath.c_str()))
 		return QueryResult::Found;
@@ -316,7 +316,7 @@ bool SR_DxcCompiler::CompileFromString(const std::string& aShadercode, const SR_
 
 			if (errors && errors->GetStringLength() > 0)
 			{
-				SC_ERROR("Shader compilation error: %s", errors->GetStringPointer());
+				SC_ERROR("Shader compilation error: {}", errors->GetStringPointer());
 				return false;
 			}
 		}

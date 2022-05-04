@@ -76,6 +76,14 @@ struct SGfx_MeshCreateParams
 	bool mIsMeshletData;
 };
 
+struct SGfx_MeshletBuffers
+{
+	SC_Ref<SR_Buffer> mVertexBuffer;
+	SC_Ref<SR_Buffer> mMeshletBuffer;
+	SC_Ref<SR_Buffer> mVertexIndexBuffer;
+	SC_Ref<SR_Buffer> mPrimitiveIndexBuffer;
+};
+
 class SGfx_Mesh
 {
 	friend class SGfx_MeshCache;
@@ -91,13 +99,12 @@ public:
 	const SR_VertexLayout& GetVertexLayout() const;
 
 	SR_BufferResource* GetVertexBufferResource() const;
+	SR_Buffer* GetVertexBuffer() const;
 	SR_BufferResource* GetIndexBufferResource() const;
 
 #if ENABLE_MESH_SHADERS
-	SR_Buffer* GetVertexBuffer() const;
-	SR_Buffer* GetMeshletBuffer() const;
-	SR_Buffer* GetVertexIndexBuffer() const;
-	SR_Buffer* GetPrimitiveIndexBuffer() const;
+	const SGfx_MeshletBuffers& GetMeshletBuffers() const;
+	bool IsUsingMeshlets() const;
 #endif
 
 #if ENABLE_RAYTRACING
@@ -125,17 +132,16 @@ private:
 	SR_VertexLayout mVertexLayout;
 
 	SC_Ref<SR_BufferResource> mVertexBufferResource;
+	SC_Ref<SR_Buffer> mVertexBuffer;
 	SC_Ref<SR_BufferResource> mIndexBufferResource;
 #if ENABLE_MESH_SHADERS
-	SC_Ref<SR_Buffer> mVertexBuffer;
-	SC_Ref<SR_Buffer> mMeshletBuffer;
-	SC_Ref<SR_Buffer> mPrimitiveIndexBuffer;
-	SC_Ref<SR_Buffer> mVertexIndexBuffer;
+	SGfx_MeshletBuffers mMeshletBuffers;
 #endif
 #if ENABLE_RAYTRACING
 	SC_Ref<SR_BufferResource> mAccelerationStructure;
 #endif
 
 	bool mIsMeshletMesh;
+	bool mUsingMeshlets;
 };
 

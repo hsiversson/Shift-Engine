@@ -158,7 +158,8 @@ void SGfx_SceneGraph::CullMeshes(SGfx_View* aView)
 #if ENABLE_RAYTRACING
 		if (!depthOnly && mesh->IncludeInRaytracingScene() && distanceToCamera < 200.0f) // TODO: FIX THIS CULLING
 		{
-			prepareData.mRaytracingInstances.Add(mesh->GetRaytracingData());
+			SR_RaytracingInstanceData& rtInstanceData = prepareData.mRaytracingInstances.Add(mesh->GetRaytracingData());
+			rtInstanceData.mInstanceId = mesh->GetMaterialInstance()->GetMaterialIndex();
 		}
 #endif
 
@@ -178,18 +179,34 @@ void SGfx_SceneGraph::CullMeshes(SGfx_View* aView)
 
 			// Add to render queues because this mesh is visible inside our current view
 			SGfx_RenderObject renderObject;
+			SGfx_RenderQueueItem renderQueueItem;
 
-			if (SR_RenderDevice::gInstance->GetSupportCaps().mEnableMeshShaders)
+#if ENABLE_MESH_SHADERS
+			if (SR_RenderDevice::gInstance->GetSupportCaps().mEnableMeshShaders && meshTemplate->IsUsingMeshlets())
 			{
-				renderObject.mVertexBuffer = meshTemplate->GetVertexBuffer();
-				renderObject.mMeshletBuffer = meshTemplate->GetMeshletBuffer();
-				renderObject.mVertexIndexBuffer = meshTemplate->GetVertexIndexBuffer();
-				renderObject.mPrimitiveIndexBuffer = meshTemplate->GetPrimitiveIndexBuffer();
+				const SGfx_MeshletBuffers& meshletBuffers = meshTemplate->GetMeshletBuffers();
+				renderObject.mVertexBuffer = meshletBuffers.mVertexBuffer.get();
+				renderObject.mMeshletBuffer = meshletBuffers.mMeshletBuffer.get();
+				renderObject.mVertexIndexBuffer = meshletBuffers.mVertexIndexBuffer.get();
+				renderObject.mPrimitiveIndexBuffer = meshletBuffers.mPrimitiveIndexBuffer.get();
+
+				renderQueueItem.mMeshletData.mVertexBuffer = meshletBuffers.mVertexBuffer.get();
+				renderQueueItem.mMeshletData.mMeshletBuffer = meshletBuffers.mMeshletBuffer.get();
+				renderQueueItem.mMeshletData.mVertexIndexBuffer = meshletBuffers.mVertexIndexBuffer.get();
+				renderQueueItem.mMeshletData.mPrimitiveIndexBuffer = meshletBuffers.mPrimitiveIndexBuffer.get();
+
+				renderQueueItem.mUsingMeshlets = true;
 			}
 			else
+#endif
 			{
 				renderObject.mVertexBufferResource = meshTemplate->GetVertexBufferResource();
 				renderObject.mIndexBufferResource = meshTemplate->GetIndexBufferResource();
+
+				renderQueueItem.mVertexBuffer = meshTemplate->GetVertexBufferResource();
+				renderQueueItem.mIndexBuffer = meshTemplate->GetIndexBufferResource();
+
+				renderQueueItem.mUsingMeshlets = false;
 			}
 
 
@@ -200,6 +217,7 @@ void SGfx_SceneGraph::CullMeshes(SGfx_View* aView)
 			renderObject.mOutputVelocity = mesh->GetMaterialInstance()->GetMaterialTemplate()->OutputVelocity();
 
 			renderObject.mSortDistance = distanceToCamera;
+			renderQueueItem.mSortDistance = distanceToCamera;
 
 			SR_ShaderState* depthShader = mesh->GetMaterialInstance()->GetMaterialTemplate()->GetShaderState(meshTemplate->GetVertexLayout(), (depthOnly) ? SGfx_MaterialShaderType::ShadowDepth : SGfx_MaterialShaderType::Depth);
 			SR_ShaderState* defaultShader = mesh->GetMaterialInstance()->GetMaterialTemplate()->GetShaderState(meshTemplate->GetVertexLayout(), SGfx_MaterialShaderType::Default);
@@ -207,15 +225,21 @@ void SGfx_SceneGraph::CullMeshes(SGfx_View* aView)
 				continue;
 
 			renderObject.mShader = depthShader;
+			renderQueueItem.mShader = depthShader;
 			prepareData.mDepthQueue.Add(renderObject);
+			prepareData._mDepthQueue.AddItem(renderQueueItem);
 
 			if (!depthOnly)
 			{
 				renderObject.mShader = defaultShader;
+				renderQueueItem.mShader = defaultShader;
 				prepareData.mOpaqueQueue.Add(renderObject);
+				prepareData._mOpaqueQueue.AddItem(renderQueueItem);
 			}
 		}
 	}
+	prepareData._mDepthQueue.Prepare();
+	prepareData._mOpaqueQueue.Prepare();
 }
 
 void SGfx_SceneGraph::CullLights(SGfx_View* aView)

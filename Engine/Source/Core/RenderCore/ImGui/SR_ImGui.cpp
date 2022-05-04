@@ -198,7 +198,8 @@ bool SR_ImGui::Init(void* aNativeWindowHandle, float aDPIScale)
 
 void SR_ImGui::BeginFrame()
 {
-	SR_RenderDevice::gInstance->WaitForFence(mLastFence);
+	mLastTaskEvent->mFence.Wait();
+	mLastTaskEvent->Reset();
 
 #if IS_WINDOWS_PLATFORM
 	NewFrameWin64();
@@ -206,8 +207,6 @@ void SR_ImGui::BeginFrame()
 #error Platform not supported!
 #endif
 	ImGui::NewFrame();
-
-	mCommandList->Begin();
 }
 
 void SR_ImGui::Render(SR_RenderTarget* aRenderTarget)
@@ -217,144 +216,146 @@ void SR_ImGui::Render(SR_RenderTarget* aRenderTarget)
 	if (drawData->DisplaySize.x <= 0.0f || drawData->DisplaySize.y <= 0.0f)
 		return;
 
-
-	ImGuiIO& io = ImGui::GetIO();
-	drawData->ScaleClipRects(io.DisplayFramebufferScale);
-
-	SR_ImGuiViewportData* renderData = (SR_ImGuiViewportData*)drawData->OwnerViewport->RendererUserData;
-	++renderData->mFrameIndex;
-	SR_ImGuiRenderBuffers& renderBuffer = renderData->mRenderbuffers[renderData->mFrameIndex % SR_ImGuiViewportData::gNumFramesInFlight];
-
-	if (renderBuffer.mVertexBuffer == nullptr || renderBuffer.mVertexBuffer->GetProperties().mElementCount < (uint32)drawData->TotalVtxCount)
+	auto Task = [&]()
 	{
-		uint32 newSize = drawData->TotalVtxCount + 5000;
+		SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
+		ImGuiIO& io = ImGui::GetIO();
+		drawData->ScaleClipRects(io.DisplayFramebufferScale);
 
-		SR_BufferResourceProperties newVertexBufferProps = (renderBuffer.mVertexBuffer) ? renderBuffer.mVertexBuffer->GetProperties() : SR_BufferResourceProperties();
-		newVertexBufferProps.mElementCount = newSize;
-		newVertexBufferProps.mElementSize = sizeof(ImDrawVert);
-		newVertexBufferProps.mBindFlags = SR_BufferBindFlag_VertexBuffer;
-		newVertexBufferProps.mIsUploadBuffer = true;
-		renderBuffer.mVertexBuffer = SR_RenderDevice::gInstance->CreateBufferResource(newVertexBufferProps, nullptr);
-	}
-	if (renderBuffer.mIndexBuffer == nullptr || renderBuffer.mIndexBuffer->GetProperties().mElementCount < (uint32)drawData->TotalIdxCount)
-	{
-		uint32 newSize = drawData->TotalIdxCount + 10000;
+		SR_ImGuiViewportData* renderData = (SR_ImGuiViewportData*)drawData->OwnerViewport->RendererUserData;
+		++renderData->mFrameIndex;
+		SR_ImGuiRenderBuffers& renderBuffer = renderData->mRenderbuffers[renderData->mFrameIndex % SR_ImGuiViewportData::gNumFramesInFlight];
 
-		SR_BufferResourceProperties newIndexBufferProps = (renderBuffer.mIndexBuffer) ? renderBuffer.mIndexBuffer->GetProperties() : SR_BufferResourceProperties();
-		newIndexBufferProps.mElementCount = newSize;
-		newIndexBufferProps.mElementSize = sizeof(ImDrawIdx);
-		newIndexBufferProps.mBindFlags = SR_BufferBindFlag_IndexBuffer;
-		newIndexBufferProps.mIsUploadBuffer = true;
-		renderBuffer.mIndexBuffer = SR_RenderDevice::gInstance->CreateBufferResource(newIndexBufferProps, nullptr);
-	}
-
-	ImDrawVert* vtxDst = (ImDrawVert*)renderBuffer.mVertexBuffer->GetDataPtr();
-	ImDrawIdx* idxDst = (ImDrawIdx*)renderBuffer.mIndexBuffer->GetDataPtr();
-	for (int n = 0; n < drawData->CmdListsCount; n++)
-	{
-		const ImDrawList* cmdList = drawData->CmdLists[n];
-		SC_Memcpy(vtxDst, cmdList->VtxBuffer.Data, cmdList->VtxBuffer.Size * sizeof(ImDrawVert));
-		SC_Memcpy(idxDst, cmdList->IdxBuffer.Data, cmdList->IdxBuffer.Size * sizeof(ImDrawIdx));
-		vtxDst += cmdList->VtxBuffer.Size;
-		idxDst += cmdList->IdxBuffer.Size;
-	}
-
-	// RenderState
-	SR_ImGuiVertexConstants vertexConstants;
-	{
-		float L = drawData->DisplayPos.x;
-		float R = drawData->DisplayPos.x + drawData->DisplaySize.x;
-		float T = drawData->DisplayPos.y;	   
-		float B = drawData->DisplayPos.y + drawData->DisplaySize.y;
-		vertexConstants.mMVP = SC_Matrix(
-			2.0f / (R - L), 0.0f, 0.0f, 0.0f,
-			0.0f, 2.0f / (T - B), 0.0f, 0.0f,
-			0.0f, 0.0f, 0.5f, 0.0f,
-			(R + L) / (L - R), (T + B) / (B - T), 0.5f, 1.0f
-		);
-		vertexConstants.mTextureIndex = mFontTexture->GetDescriptorHeapIndex();
-		vertexConstants.mDPIScale = mDPIScale;
-	}
-
-	mCommandList->TransitionBarrier(SR_ResourceState_RenderTarget, aRenderTarget->GetResource());
-	mCommandList->SetRenderTargets(1, &aRenderTarget, nullptr);
-
-	SR_Rect r = { 0, 0, (uint32)drawData->DisplaySize.x, (uint32)drawData->DisplaySize.y };
-
-	mCommandList->SetViewport(r);
-	mCommandList->SetScissorRect(r);
-	mCommandList->SetPrimitiveTopology(SR_PrimitiveTopology::TriangleList);
-	mCommandList->SetVertexBuffer(renderBuffer.mVertexBuffer.get());
-	mCommandList->SetIndexBuffer(renderBuffer.mIndexBuffer.get());
-	mCommandList->SetShaderState(mShaderState.get());
-	mCommandList->SetBlendFactor(SC_Vector4(0.0f));
-
-	int globalVtxOffset = 0;
-	int globalIdxOffset = 0;
-	ImVec2 clipOffset = drawData->DisplayPos;
-	uint32 i = 0;
-	int cb = 0;
-	for (int n = 0; n < drawData->CmdListsCount; n++)
-	{
-		const ImDrawList* cmdList = drawData->CmdLists[n];
-		for (const ImDrawCmd& cmd : cmdList->CmdBuffer)
+		if (renderBuffer.mVertexBuffer == nullptr || renderBuffer.mVertexBuffer->GetProperties().mElementCount < (uint32)drawData->TotalVtxCount)
 		{
-			if (cmd.UserCallback != nullptr)
+			uint32 newSize = drawData->TotalVtxCount + 5000;
+
+			SR_BufferResourceProperties newVertexBufferProps = (renderBuffer.mVertexBuffer) ? renderBuffer.mVertexBuffer->GetProperties() : SR_BufferResourceProperties();
+			newVertexBufferProps.mElementCount = newSize;
+			newVertexBufferProps.mElementSize = sizeof(ImDrawVert);
+			newVertexBufferProps.mBindFlags = SR_BufferBindFlag_VertexBuffer;
+			newVertexBufferProps.mIsUploadBuffer = true;
+			renderBuffer.mVertexBuffer = SR_RenderDevice::gInstance->CreateBufferResource(newVertexBufferProps, nullptr);
+		}
+		if (renderBuffer.mIndexBuffer == nullptr || renderBuffer.mIndexBuffer->GetProperties().mElementCount < (uint32)drawData->TotalIdxCount)
+		{
+			uint32 newSize = drawData->TotalIdxCount + 10000;
+
+			SR_BufferResourceProperties newIndexBufferProps = (renderBuffer.mIndexBuffer) ? renderBuffer.mIndexBuffer->GetProperties() : SR_BufferResourceProperties();
+			newIndexBufferProps.mElementCount = newSize;
+			newIndexBufferProps.mElementSize = sizeof(ImDrawIdx);
+			newIndexBufferProps.mBindFlags = SR_BufferBindFlag_IndexBuffer;
+			newIndexBufferProps.mIsUploadBuffer = true;
+			renderBuffer.mIndexBuffer = SR_RenderDevice::gInstance->CreateBufferResource(newIndexBufferProps, nullptr);
+		}
+
+		ImDrawVert* vtxDst = (ImDrawVert*)renderBuffer.mVertexBuffer->GetDataPtr();
+		ImDrawIdx* idxDst = (ImDrawIdx*)renderBuffer.mIndexBuffer->GetDataPtr();
+		for (int n = 0; n < drawData->CmdListsCount; n++)
+		{
+			const ImDrawList* imguiCmdList = drawData->CmdLists[n];
+			SC_Memcpy(vtxDst, imguiCmdList->VtxBuffer.Data, imguiCmdList->VtxBuffer.Size * sizeof(ImDrawVert));
+			SC_Memcpy(idxDst, imguiCmdList->IdxBuffer.Data, imguiCmdList->IdxBuffer.Size * sizeof(ImDrawIdx));
+			vtxDst += imguiCmdList->VtxBuffer.Size;
+			idxDst += imguiCmdList->IdxBuffer.Size;
+		}
+
+		// RenderState
+		SR_ImGuiVertexConstants vertexConstants;
+		{
+			float L = drawData->DisplayPos.x;
+			float R = drawData->DisplayPos.x + drawData->DisplaySize.x;
+			float T = drawData->DisplayPos.y;
+			float B = drawData->DisplayPos.y + drawData->DisplaySize.y;
+			vertexConstants.mMVP = SC_Matrix(
+				2.0f / (R - L), 0.0f, 0.0f, 0.0f,
+				0.0f, 2.0f / (T - B), 0.0f, 0.0f,
+				0.0f, 0.0f, 0.5f, 0.0f,
+				(R + L) / (L - R), (T + B) / (B - T), 0.5f, 1.0f
+			);
+			vertexConstants.mTextureIndex = mFontTexture->GetDescriptorHeapIndex();
+			vertexConstants.mDPIScale = mDPIScale;
+		}
+
+		cmdList->TransitionBarrier(SR_ResourceState_RenderTarget, aRenderTarget->GetResource());
+		cmdList->SetRenderTargets(1, &aRenderTarget, nullptr);
+
+		SR_Rect r = { 0, 0, (uint32)drawData->DisplaySize.x, (uint32)drawData->DisplaySize.y };
+
+		cmdList->SetViewport(r);
+		cmdList->SetScissorRect(r);
+		cmdList->SetPrimitiveTopology(SR_PrimitiveTopology::TriangleList);
+		cmdList->SetVertexBuffer(renderBuffer.mVertexBuffer.get());
+		cmdList->SetIndexBuffer(renderBuffer.mIndexBuffer.get());
+		cmdList->SetShaderState(mShaderState.get());
+		cmdList->SetBlendFactor(SC_Vector4(0.0f));
+
+		int globalVtxOffset = 0;
+		int globalIdxOffset = 0;
+		ImVec2 clipOffset = drawData->DisplayPos;
+		uint32 i = 0;
+		int cb = 0;
+		for (int n = 0; n < drawData->CmdListsCount; n++)
+		{
+			const ImDrawList* imguiCmdList = drawData->CmdLists[n];
+			for (const ImDrawCmd& cmd : imguiCmdList->CmdBuffer)
 			{
-				if (cmd.UserCallback == ImDrawCallback_ResetRenderState)
+				if (cmd.UserCallback != nullptr)
 				{
-					mCommandList->SetViewport(SR_Rect{ 0, 0, (uint32)drawData->DisplaySize.x, (uint32)drawData->DisplaySize.y });
-					mCommandList->SetPrimitiveTopology(SR_PrimitiveTopology::TriangleList);
-					mCommandList->SetVertexBuffer(renderBuffer.mVertexBuffer.get());
-					mCommandList->SetIndexBuffer(renderBuffer.mIndexBuffer.get());
-					mCommandList->SetShaderState(mShaderState.get());
-					mCommandList->SetBlendFactor(SC_Vector4(0.0f));
+					if (cmd.UserCallback == ImDrawCallback_ResetRenderState)
+					{
+						cmdList->SetViewport(SR_Rect{ 0, 0, (uint32)drawData->DisplaySize.x, (uint32)drawData->DisplaySize.y });
+						cmdList->SetPrimitiveTopology(SR_PrimitiveTopology::TriangleList);
+						cmdList->SetVertexBuffer(renderBuffer.mVertexBuffer.get());
+						cmdList->SetIndexBuffer(renderBuffer.mIndexBuffer.get());
+						cmdList->SetShaderState(mShaderState.get());
+						cmdList->SetBlendFactor(SC_Vector4(0.0f));
+					}
+					else
+						cmd.UserCallback(imguiCmdList, &cmd);
 				}
 				else
-					cmd.UserCallback(cmdList, &cmd);
+				{
+					// Apply Scissor, Bind texture, Draw
+					const SC_Vector2 clipMin(cmd.ClipRect.x - clipOffset.x, cmd.ClipRect.y - clipOffset.y);
+					const SC_Vector2 clipMax(cmd.ClipRect.z - clipOffset.x, cmd.ClipRect.w - clipOffset.y);
+					if (clipMax.x < clipMin.x || clipMax.y < clipMin.y)
+						continue;
+
+					SR_Texture* texture = (SR_Texture*)cmd.TextureId; // use this for accessing through bindless
+					if (texture)
+						vertexConstants.mTextureIndex = texture->GetDescriptorHeapIndex();
+					else
+						vertexConstants.mTextureIndex = mFontTexture->GetDescriptorHeapIndex();
+
+					SR_BufferResourceProperties cbDesc;
+					cbDesc.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
+					cbDesc.mElementCount = 1;
+					cbDesc.mElementSize = sizeof(SR_ImGuiVertexConstants);
+					if (cb > (mConstantBuffers.ICount() - 1))
+						mConstantBuffers.Add(SR_RenderDevice::gInstance->CreateBufferResource(cbDesc));
+					else if (!mConstantBuffers[cb])
+						mConstantBuffers[cb] = SR_RenderDevice::gInstance->CreateBufferResource(cbDesc);
+
+					mConstantBuffers[cb]->UpdateData(0, &vertexConstants, sizeof(SR_ImGuiVertexConstants));
+					cmdList->SetRootConstantBuffer(mConstantBuffers[cb].get(), 0);
+
+					const SR_Rect scissorRect = { (uint32)clipMin.x, (uint32)clipMin.y, (uint32)clipMax.x, (uint32)clipMax.y };
+					cmdList->SetScissorRect(scissorRect);
+
+					cmdList->DrawIndexedInstanced(cmd.ElemCount, 1, cmd.IdxOffset + globalIdxOffset, cmd.VtxOffset + globalVtxOffset, 0);
+					++cb;
+				}
+				++i;
 			}
-			else
-			{
-				// Apply Scissor, Bind texture, Draw
-				const SC_Vector2 clipMin(cmd.ClipRect.x - clipOffset.x, cmd.ClipRect.y - clipOffset.y);
-				const SC_Vector2 clipMax(cmd.ClipRect.z - clipOffset.x, cmd.ClipRect.w - clipOffset.y);
-				if (clipMax.x < clipMin.x || clipMax.y < clipMin.y)
-					continue;
-
-				SR_Texture* texture = (SR_Texture*)cmd.TextureId; // use this for accessing through bindless
-				if (texture)
-					vertexConstants.mTextureIndex = texture->GetDescriptorHeapIndex();
-				else
-					vertexConstants.mTextureIndex = mFontTexture->GetDescriptorHeapIndex();
-
-				SR_BufferResourceProperties cbDesc;
-				cbDesc.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
-				cbDesc.mElementCount = 1;
-				cbDesc.mElementSize = sizeof(SR_ImGuiVertexConstants);
-				if (cb > (mConstantBuffers.ICount() - 1))
-					mConstantBuffers.Add(SR_RenderDevice::gInstance->CreateBufferResource(cbDesc));
-				else if (!mConstantBuffers[cb])
-					mConstantBuffers[cb] = SR_RenderDevice::gInstance->CreateBufferResource(cbDesc);
-
-				mConstantBuffers[cb]->UpdateData(0, &vertexConstants, sizeof(SR_ImGuiVertexConstants));
-				mCommandList->SetRootConstantBuffer(mConstantBuffers[cb].get(), 0);
-
-				const SR_Rect scissorRect = { (uint32)clipMin.x, (uint32)clipMin.y, (uint32)clipMax.x, (uint32)clipMax.y };
-				mCommandList->SetScissorRect(scissorRect);
-
-				mCommandList->DrawIndexedInstanced(cmd.ElemCount, 1, cmd.IdxOffset + globalIdxOffset, cmd.VtxOffset + globalVtxOffset, 0);
-				++cb;
-			}
-			++i;
+			globalVtxOffset += imguiCmdList->VtxBuffer.Size;
+			globalIdxOffset += imguiCmdList->IdxBuffer.Size;
 		}
-		globalVtxOffset += cmdList->VtxBuffer.Size;
-		globalIdxOffset += cmdList->IdxBuffer.Size;
-	}
-	mCommandList->TransitionBarrier(SR_ResourceState_Present, aRenderTarget->GetResource());
-	mCommandList->End();
+		cmdList->TransitionBarrier(SR_ResourceState_Present, aRenderTarget->GetResource());
+	};
 
-	SR_CommandQueue* cmdQueue = SR_RenderDevice::gInstance->GetCommandQueue(SR_CommandListType::Graphics);
-	mLastFence = cmdQueue->SubmitCommandList(mCommandList.get(), "Render ImGui");
+	SR_RenderDevice::gInstance->GetCommandQueueManager()->SubmitTask(Task, SR_CommandListType::Graphics, mLastTaskEvent.get());
+	mLastTaskEvent->mCPUEvent.Wait();
 }
 
 void SR_ImGui::SetDPIScale(float aScale)
@@ -362,11 +363,6 @@ void SR_ImGui::SetDPIScale(float aScale)
 	ImGuiIO& io = ImGui::GetIO();
 	io.FontGlobalScale = aScale;
 	mDPIScale = aScale;
-}
-
-SR_CommandList* SR_ImGui::GetCommandList() const
-{
-	return mCommandList.get();
 }
 
 bool SR_ImGui::InitRenderObjects()
@@ -377,7 +373,7 @@ bool SR_ImGui::InitRenderObjects()
 	if (!CreateFontTexture())
 		return false;
 
-	mCommandList = SR_RenderDevice::gInstance->CreateCommandList(SR_CommandListType::Graphics);
+	mLastTaskEvent = SC_MakeRef<SR_TaskEvent>();
 	return true;
 }
 

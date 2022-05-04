@@ -45,6 +45,8 @@ public:
 
 	SC_Ref<SR_Heap> CreateHeap(const SR_HeapProperties& aHeapProperties);
 
+	SC_Ref<SR_FenceResource> CreateFenceResource() override;
+
 	bool CompileShader(const SR_ShaderCompileArgs& aArgs, SR_ShaderByteCode& aOutByteCode, SR_ShaderMetaData* aOutMetaData = nullptr) override;
 	bool CompileShader(const std::string& aShadercode, const SR_ShaderCompileArgs& aArgs, SR_ShaderByteCode& aOutByteCode, SR_ShaderMetaData* aOutMetaData = nullptr) override;
 	SC_Ref<SR_ShaderState> CreateShaderState(const SR_ShaderStateProperties& aProperties) override;
@@ -67,6 +69,9 @@ public:
 	void OutputDredDebugData();
 #endif
 
+	SC_SizeT GetAvailableVRAM() const override;
+	SC_SizeT GetUsedVRAM() const override;
+
 	static SR_RenderDevice_DX12* gD3D12Instance;
 
 private:
@@ -84,6 +89,10 @@ private:
 
 	SC_Ref<SR_Texture> LoadTextureInternal(const SC_FilePath& aTextureFilePath) override;
 	SC_Ref<SR_Texture> LoadTextureFromFile(const char* aTextureFilePath);
+
+	SR_ComPtr<IDXGIFactory1> mDXGIFactory;
+	SR_ComPtr<IDXGIAdapter1> mDXGIAdapter;
+	SR_ComPtr<IDXGIAdapter3> mDXGIAdapter3;
 
 	SR_ComPtr<ID3D12Device> mD3D12Device;
 	SR_ComPtr<ID3D12Device5> mD3D12Device5;

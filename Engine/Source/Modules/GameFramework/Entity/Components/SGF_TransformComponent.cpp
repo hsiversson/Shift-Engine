@@ -20,11 +20,11 @@ SC_Matrix SGF_TransformComponent::GetTransform() const
 	SC_TranslationMatrix translation(mPosition);
 
 	SC_Matrix fullMatrix;
-	if (SGF_Entity* parent = GetParentEntity()->GetParent())
-	{
-		fullMatrix = parent->GetComponent<SGF_TransformComponent>()->GetTransform() * ((scale * rotation) * translation);
-	}
-	else
+	//if (SGF_Entity* parent = GetParentEntity().GetParent())
+	//{
+	//	fullMatrix = parent->GetComponent<SGF_TransformComponent>()->GetTransform() * ((scale * rotation) * translation);
+	//}
+	//else
 		fullMatrix = (scale * rotation) * translation;
 
 	return fullMatrix;

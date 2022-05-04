@@ -8,7 +8,7 @@ project(ShiftEngine VERSION 1.0)
 
 ##################################
 # Set various C++ config variables
-set(CMAKE_CXX_STANDARD 20)                  ## C++20 Standard
+set(CMAKE_CXX_STANDARD 23)                  ## C++20 Standard
 set(CMAKE_CXX_STANDARD_REQUIRED True)       ## Enforce the C++20 Standard
 
 ##################################
@@ -69,6 +69,12 @@ set(D3D12_SDK_PATH "${ENGINE_EXTERNAL_DIRECTORY}/D3D12")
 set(D3D12_BIN_PATH "${D3D12_SDK_PATH}/bin")
 set(D3D12_INCLUDE_PATH "${D3D12_SDK_PATH}/include")
 
+## DirectStorage SDK
+set(DIRECTSTORAGE_SDK_PATH "${ENGINE_EXTERNAL_DIRECTORY}/DirectStorage")
+set(DIRECTSTORAGE_BIN_PATH "${DIRECTSTORAGE_SDK_PATH}/bin")
+set(DIRECTSTORAGE_INCLUDE_PATH "${DIRECTSTORAGE_SDK_PATH}/Include")
+set(DIRECTSTORAGE_LIB "${DIRECTSTORAGE_BIN_PATH}/dstorage.lib")
+
 ## DirectX Shader Compiler
 set(DXC_SDK_PATH "${ENGINE_EXTERNAL_DIRECTORY}/DirectXShaderCompiler")
 set(DXC_BIN_PATH "${DXC_SDK_PATH}/bin")
@@ -100,7 +106,7 @@ set(WINPIXEVENTRUNTIME_INCLUDE_PATH "${WINPIXEVENTRUNTIME_SDK_PATH}/Include")
 set(WINPIXEVENTRUNTIME_LIB "${WINPIXEVENTRUNTIME_BIN_PATH}/WinPixEventRuntime.lib")
 
 ## Gather all SDKs into one variable
-set(VENDOR_SDK_LIBS ${AGS_LIB} ${ASSIMP_LIB} ${DXC_LIB} ${NVAPI_LIB} ${AFTERMATH_LIB} ${WINPIXEVENTRUNTIME_LIB})
+set(VENDOR_SDK_LIBS ${AGS_LIB} ${ASSIMP_LIB} ${DIRECTSTORAGE_LIB} ${DXC_LIB} ${NVAPI_LIB} ${AFTERMATH_LIB} ${WINPIXEVENTRUNTIME_LIB})
 
 ##################################
 # Utility functions
@@ -127,7 +133,15 @@ function(ConfigTargetPostBuildLibInstall aTarget)
         COMMAND ${CMAKE_COMMAND} -E copy "${D3D12_BIN_PATH}/${D3D12_CORE_DLL}" "$<TARGET_FILE_DIR:${aTarget}>/${D3D12_CORE_DLL}"
         COMMENT "Copying [${D3D12_CORE_DLL}] and [${D3D12_SDK_LAYERS_DLL}] to output directory...\n"
     )
-
+    ## Direct Storage
+    set(DIRECTSTORAGE_DLL dstorage.dll)
+    set(DIRECTSTORAGECORE_DLL dstoragecore.dll)
+    add_custom_command(
+        TARGET ${aTarget} POST_BUILD 
+        COMMAND ${CMAKE_COMMAND} -E copy "${DIRECTSTORAGE_BIN_PATH}/${DIRECTSTORAGE_DLL}" "$<TARGET_FILE_DIR:${aTarget}>/${DIRECTSTORAGE_DLL}"
+        COMMAND ${CMAKE_COMMAND} -E copy "${DIRECTSTORAGE_BIN_PATH}/${DIRECTSTORAGECORE_DLL}" "$<TARGET_FILE_DIR:${aTarget}>/${DIRECTSTORAGECORE_DLL}"
+        COMMENT "Copying [${DIRECTSTORAGE_DLL}] and [${DIRECTSTORAGECORE_DLL}] to output directory...\n"
+    )
     ## DirectX Shader Compiler
     set(DXC_DXCOMPILER_DLL dxcompiler.dll)
     set(DXC_DXIL_DLL dxil.dll)

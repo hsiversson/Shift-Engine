@@ -7,6 +7,7 @@ struct ID3D12Fence;
 class SR_FenceResource_DX12 : public SR_FenceResource
 {
 	friend class SR_CommandQueue_DX12;
+	friend class SR_RenderDevice_DX12;
 public:
 	SR_FenceResource_DX12();
 	~SR_FenceResource_DX12();
@@ -14,10 +15,12 @@ public:
 	bool IsPending(uint64 aValue) override;
 	bool Wait(uint64 aValue, bool aBlock = true) override;
 
+	SR_Fence GetNextFence() override;
+
 	ID3D12Fence* GetD3D12Fence() const;
 
 private:
-	bool Init(const SR_CommandListType& aType);
+	bool Init();
 
 	SR_ComPtr<ID3D12Fence> mD3D12Fence;
 	volatile uint64 mFenceValue;

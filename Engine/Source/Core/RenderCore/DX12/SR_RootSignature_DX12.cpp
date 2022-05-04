@@ -185,7 +185,7 @@ bool SR_RootSignature_DX12::Init()
 	{
 		//if (signatureError)
 		//{
-		//	LOG_ERROR("%s", (char*)signatureError->GetBufferPointer());
+		//	LOG_ERROR("{}", (char*)signatureError->GetBufferPointer());
 		//}
 		return false;
 	}

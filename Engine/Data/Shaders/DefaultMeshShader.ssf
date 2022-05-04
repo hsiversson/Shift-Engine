@@ -111,11 +111,6 @@ void MainMS(in uint groupId : SV_GroupID, in uint groupThreadId : SV_GroupThread
 #ifdef PIXEL_SHADER
 float4 MainPS(in PixelShaderInput aInput) : SV_TARGET0
 {
-    const EnvironmentConstants environmentConstants = gSceneConstants.mEnvironmentConstants;
-
-    float3 lightDirection = environmentConstants.mSunLightDirection;
-    float3 lightColor = environmentConstants.mSunLightColor;
-
     float3 viewDirection = normalize(gSceneConstants.mViewConstants.mCameraPosition - aInput.mWorldPosition);
 
     SR_MaterialInfo materialInfo = SR_GetMaterialInfo(aInput.mMaterialIndex);

@@ -23,13 +23,13 @@ SGF_SpotLightComponent::~SGF_SpotLightComponent()
 
 void SGF_SpotLightComponent::OnCreate()
 {
-	if (SGF_Entity* entity = GetParentEntity())
-		entity->GetWorld()->GetGraphicsWorld()->AddLight(mSpotLight);
+	//if (SGF_EntityHandle entity = GetParentEntity())
+	//	entity->GetWorld()->GetGraphicsWorld()->AddLight(mSpotLight);
 }
 
 void SGF_SpotLightComponent::OnUpdate()
 {
-	SGF_TransformComponent* transformComp = GetParentEntity()->GetComponent<SGF_TransformComponent>();
+	SGF_TransformComponent* transformComp = GetParentEntity().GetComponent<SGF_TransformComponent>();
 	if (transformComp)
 	{
 		SC_Matrix mTransform = transformComp->GetTransform();
@@ -50,6 +50,6 @@ void SGF_SpotLightComponent::OnUpdate()
 
 void SGF_SpotLightComponent::OnDestroy()
 {
-	if (SGF_Entity* entity = GetParentEntity())
-		entity->GetWorld()->GetGraphicsWorld()->RemoveLight(mSpotLight);
+	//if (SGF_Entity* entity = GetParentEntity())
+	//	entity->GetWorld()->GetGraphicsWorld()->RemoveLight(mSpotLight);
 }

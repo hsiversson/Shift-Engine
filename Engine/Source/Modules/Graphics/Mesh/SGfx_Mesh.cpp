@@ -55,6 +55,8 @@ private:
 SGfx_MeshCache* SGfx_MeshCache::gInstance = nullptr;
 
 SGfx_Mesh::SGfx_Mesh()
+	: mIsMeshletMesh(false)
+	, mUsingMeshlets(false)
 {
 
 }
@@ -74,6 +76,11 @@ bool SGfx_Mesh::Init(const SGfx_MeshCreateParams& aCreateParams)
 
 	if (mVertexBufferResource = SR_RenderDevice::gInstance->CreateBufferResource(resourceProps, aCreateParams.mVertexData.GetBuffer()))
 	{
+		SR_BufferProperties bufferProps;
+		bufferProps.mElementCount = mVertexBufferResource->GetProperties().mElementCount;
+		bufferProps.mType = SR_BufferType::Bytes;
+		mVertexBuffer = SR_RenderDevice::gInstance->CreateBuffer(bufferProps, mVertexBufferResource);
+
 #if ENABLE_MESH_SHADERS
 		if (SR_RenderDevice::gInstance->GetSupportCaps().mEnableMeshShaders && aCreateParams.mIsMeshletData)
 		{
@@ -139,30 +146,24 @@ SR_BufferResource* SGfx_Mesh::GetVertexBufferResource() const
 	return mVertexBufferResource.get();
 }
 
+SR_Buffer* SGfx_Mesh::GetVertexBuffer() const
+{
+	return mVertexBuffer.get();
+}
+
 SR_BufferResource* SGfx_Mesh::GetIndexBufferResource() const
 {
 	return mIndexBufferResource.get();
 }
 
 #if ENABLE_MESH_SHADERS
-SR_Buffer* SGfx_Mesh::GetVertexBuffer() const
+const SGfx_MeshletBuffers& SGfx_Mesh::GetMeshletBuffers() const
 {
-	return mVertexBuffer.get();
+	return mMeshletBuffers;
 }
-
-SR_Buffer* SGfx_Mesh::GetMeshletBuffer() const
+bool SGfx_Mesh::IsUsingMeshlets() const
 {
-	return mMeshletBuffer.get();
-}
-
-SR_Buffer* SGfx_Mesh::GetVertexIndexBuffer() const
-{
-	return mVertexIndexBuffer.get();
-}
-
-SR_Buffer* SGfx_Mesh::GetPrimitiveIndexBuffer() const
-{
-	return mPrimitiveIndexBuffer.get();
+	return mUsingMeshlets;
 }
 #endif
 
@@ -201,7 +202,7 @@ bool SGfx_Mesh::InitForMeshShaders(const SGfx_MeshCreateParams& aCreateParams)
 	SR_BufferProperties bufferProps;
 	bufferProps.mElementCount = mVertexBufferResource->GetProperties().mElementCount;
 	bufferProps.mType = SR_BufferType::Structured;
-	mVertexBuffer = SR_RenderDevice::gInstance->CreateBuffer(bufferProps, mVertexBufferResource);
+	mMeshletBuffers.mVertexBuffer = SR_RenderDevice::gInstance->CreateBuffer(bufferProps, mVertexBufferResource);
 
 	SR_BufferResourceProperties bufferResourceProps;
 	bufferResourceProps.mBindFlags = SR_BufferBindFlag_Buffer;
@@ -210,7 +211,7 @@ bool SGfx_Mesh::InitForMeshShaders(const SGfx_MeshCreateParams& aCreateParams)
 	if (SC_Ref<SR_BufferResource> meshletBuffer = SR_RenderDevice::gInstance->CreateBufferResource(bufferResourceProps, aCreateParams.mMeshlets.GetBuffer()))
 	{
 		bufferProps.mElementCount = aCreateParams.mMeshlets.Count();
-		mMeshletBuffer = SR_RenderDevice::gInstance->CreateBuffer(bufferProps, meshletBuffer);
+		mMeshletBuffers.mMeshletBuffer = SR_RenderDevice::gInstance->CreateBuffer(bufferProps, meshletBuffer);
 	}
 	else
 		return false;
@@ -220,7 +221,7 @@ bool SGfx_Mesh::InitForMeshShaders(const SGfx_MeshCreateParams& aCreateParams)
 	if (SC_Ref<SR_BufferResource> primitiveIndexBuffer = SR_RenderDevice::gInstance->CreateBufferResource(bufferResourceProps, aCreateParams.mPrimitiveIndices.GetBuffer()))
 	{
 		bufferProps.mElementCount = aCreateParams.mPrimitiveIndices.Count();
-		mPrimitiveIndexBuffer = SR_RenderDevice::gInstance->CreateBuffer(bufferProps, primitiveIndexBuffer);
+		mMeshletBuffers.mPrimitiveIndexBuffer = SR_RenderDevice::gInstance->CreateBuffer(bufferProps, primitiveIndexBuffer);
 	}
 	else
 		return false;
@@ -232,11 +233,12 @@ bool SGfx_Mesh::InitForMeshShaders(const SGfx_MeshCreateParams& aCreateParams)
 		bufferProps.mType = SR_BufferType::Default;
 		bufferProps.mFormat = (aCreateParams.mVertexIndicesStride == sizeof(uint16)) ? SR_Format::R16_UINT : SR_Format::R32_UINT;
 		bufferProps.mElementCount = bufferResourceProps.mElementCount;
-		mVertexIndexBuffer = SR_RenderDevice::gInstance->CreateBuffer(bufferProps, vertexIndexBuffer);
+		mMeshletBuffers.mVertexIndexBuffer = SR_RenderDevice::gInstance->CreateBuffer(bufferProps, vertexIndexBuffer);
 	}
 	else
 		return false;
 
+	mUsingMeshlets = true;
 	return true;
 }
 #endif
@@ -284,13 +286,17 @@ bool SGfx_Mesh::InitAccelerationStructure(const SGfx_MeshCreateParams& aCreatePa
 	//else
 	inputs.mFlags |= SR_AccelerationStructureInputs::BuildFlag_OptimizeTraceSpeed;
 
-	SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->CreateCommandList(SR_CommandListType::Graphics);
-	cmdList->Begin();
-	mAccelerationStructure = cmdList->CreateAccelerationStructure(inputs, nullptr);
-	cmdList->End();
+	auto UploadData = [this, &inputs]()
+	{
+		SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
+		mAccelerationStructure = cmdList->CreateAccelerationStructure(inputs, nullptr);
+	};
 
-	SR_Fence fence = SR_RenderDevice::gInstance->GetGraphicsCommandQueue()->SubmitCommandList(cmdList.get(), "Build Mesh Acceleration Structure");
-	SR_RenderDevice::gInstance->WaitForFence(fence);
+	SC_Ref<SR_TaskEvent> taskEvent = SC_MakeRef<SR_TaskEvent>();
+	SR_RenderDevice::gInstance->GetCommandQueueManager()->SubmitTask(UploadData, SR_CommandListType::Graphics, taskEvent.get());
+
+	taskEvent->mCPUEvent.Wait();
+	taskEvent->mFence.Wait();
 
 	return (mAccelerationStructure != nullptr);
 }

@@ -1,9 +1,9 @@
 #include "SED_Editor.h"
 
-#include "SED_WorldHierarchyPanel.h"
-#include "SED_PropertiesPanel.h"
-#include "SED_ContentBrowserPanel.h"
-#include "SED_ViewportPanel.h"
+#include "SED_WorldHierarchyWindow.h"
+#include "SED_PropertiesWindow.h"
+#include "SED_ContentBrowserWindow.h"
+#include "SED_ViewportWindow.h"
 #include "SED_MaterialEditor.h"
 #include "SED_TransformationGizmo.h"
 #include "SED_Icons.h"
@@ -21,11 +21,10 @@
 
 #include "Platform/Time/SC_Time.h"
 #include "RenderCore/Interface/SR_RenderDevice.h"
+#include "SED_MetricsWindow.h"
 
 SED_Editor::SED_Editor()
-	: mSelectedEntity(nullptr)
-	, mIsDemoWindowOpen(false)
-	, mIsMetricsWindowOpen(false)
+	: mIsDemoWindowOpen(false)
 {
 }
 
@@ -46,20 +45,24 @@ bool SED_Editor::Init()
 	mActiveWorld = SC_MakeRef<SGF_World>();
 	mActiveWorld->Init();
 
-	mWorldHierarchy = SC_MakeRef<SED_WorldHierarchyPanel>(mActiveWorld);
-	mPropertiesPanel = SC_MakeRef<SED_PropertiesPanel>(mActiveWorld);
-	mViewport = SC_MakeRef<SED_ViewportPanel>(mActiveWorld->GetGraphicsWorld(), &mGizmo);
+	mWorldHierarchy = SC_MakeRef<SED_WorldHierarchyWindow>(mActiveWorld);
+	mPropertiesPanel = SC_MakeRef<SED_PropertiesWindow>(mActiveWorld);
+	mViewport = SC_MakeRef<SED_ViewportWindow>(mActiveWorld->GetGraphicsWorld(), &mGizmo);
 
-	mPanels.Add(mWorldHierarchy);
-	mPanels.Add(mPropertiesPanel);
-	mPanels.Add(mViewport);
-	mPanels.Add(SC_MakeRef<SED_ContentBrowserPanel>());
+	mWindows.Add(mWorldHierarchy);
+	mWindows.Add(mPropertiesPanel);
+	mWindows.Add(mViewport);
+	mWindows.Add(SC_MakeRef<SED_ContentBrowserWindow>());
 
-	auto WorldLoadingTask = [&]()
-	{
-		mActiveWorld->LoadLevel("");
-	};
-	SC_ThreadPool::Get().SubmitTask(WorldLoadingTask);
+	mMetricsWindow = SC_MakeRef<SED_MetricsWindow>();
+	mMetricsWindow->Close();
+	mWindows.Add(mMetricsWindow);
+
+	mActiveWorld->LoadLevel("");
+	//auto WorldLoadingTask = [&]()
+	//{
+	//};
+	//SC_ThreadPool::Get().SubmitTask(WorldLoadingTask);
 
 	//mMaterialEditor = SC_MakeUnique<SED_MaterialEditor>();
 	//if (!mMaterialEditor->Init())
@@ -72,7 +75,7 @@ bool SED_Editor::Update()
 {
 	mActiveWorld->Update();
 
-	for (auto& panel : mPanels)
+	for (auto& panel : mWindows)
 		panel->Update();
 
 	//mMaterialEditor->OnUpdate();
@@ -119,7 +122,7 @@ bool SED_Editor::Render()
 			if (ImGui::MenuItem("Demo Window"))
 				mIsDemoWindowOpen = true;
 			if (ImGui::MenuItem("Metrics Window"))
-				mIsMetricsWindowOpen = true;
+				mMetricsWindow->Open();
 
 			ImGui::EndMenu();
 		}
@@ -232,17 +235,15 @@ bool SED_Editor::Render()
 
 	if (mIsDemoWindowOpen)
 		ImGui::ShowDemoWindow(&mIsDemoWindowOpen);
-	if (mIsMetricsWindowOpen)
-		ImGui::ShowMetricsWindow(&mIsMetricsWindowOpen);
 
-	for (auto& panel : mPanels)
-		panel->OnRender();
+	for (auto& panel : mWindows)
+		panel->Draw();
 
 	//mMaterialEditor->OnRender();
 
 	if (mSelectedEntity)
 	{
-		SGF_TransformComponent* transformComp = mSelectedEntity->GetComponent<SGF_TransformComponent>();
+		SGF_TransformComponent* transformComp = mSelectedEntity.GetComponent<SGF_TransformComponent>();
 		if (transformComp)
 		{
 			const SGfx_ViewConstants constants = mViewport->GetCamera().GetViewConstants();

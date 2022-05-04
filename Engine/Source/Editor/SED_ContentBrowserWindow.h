@@ -1,18 +1,22 @@
 #pragma once
-#include "SED_Panel.h"
+#include "SED_Window.h"
 #include "SED_Thumbnail.h"
 
-class SED_ContentBrowserPanel : public SED_Panel
+class SED_ContentBrowserWindow : public SED_Window
 {
 public:
-	SED_ContentBrowserPanel();
-	~SED_ContentBrowserPanel();
+	SED_ContentBrowserWindow();
+	~SED_ContentBrowserWindow();
 
-	void OnRender() override;
+	const char* GetWindowName() const override { return "Content Browser"; }
+
+protected:
+	void OnDraw() override;
 
 private:
 	void DrawFolderEntry(const char* aFolderName);
 	void DrawAssetEntry(const char* aAssetName, const SED_AssetType& aType, void* aAssetPtr = nullptr, SC_SizeT aAssetDataSize = 0);
+
 private:
 	SED_Thumbnail mThumbnailGenerator;
 };

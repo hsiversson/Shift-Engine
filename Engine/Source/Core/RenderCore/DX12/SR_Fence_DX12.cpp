@@ -57,12 +57,20 @@ bool SR_FenceResource_DX12::Wait(uint64 aValue, bool aBlock)
 	return true;
 }
 
+SR_Fence SR_FenceResource_DX12::GetNextFence()
+{
+	SR_Fence fence;
+	fence.mResource = this;
+	fence.mValue = SC_Atomic::Increment_GetNew(mFenceValue);
+	return fence;
+}
+
 ID3D12Fence* SR_FenceResource_DX12::GetD3D12Fence() const
 {
 	return mD3D12Fence.Get();
 }
 
-bool SR_FenceResource_DX12::Init(const SR_CommandListType& aType)
+bool SR_FenceResource_DX12::Init()
 {
 	HRESULT hr = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&mD3D12Fence));
 	if (!VerifyHRESULT(hr))
@@ -71,7 +79,6 @@ bool SR_FenceResource_DX12::Init(const SR_CommandListType& aType)
 		return false;
 	}
 
-	mType = aType;
 	return true;
 }
 

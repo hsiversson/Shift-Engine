@@ -21,6 +21,7 @@ extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = "./"; }
 #include "SR_Buffer_DX12.h"
 #include "SR_RootSignature_DX12.h"
 #include "SR_TempResourceHeap_DX12.h"
+#include "SR_Fence_DX12.h"
 #include "RenderCore/Resources/SR_TextureLoading.h"
 #include "RenderCore/ShaderCompiler/SR_DxcCompiler.h"
 
@@ -42,6 +43,10 @@ extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = "./"; }
 		#include "GFSDK_Aftermath_GpuCrashDump.h"
 		#include "GFSDK_Aftermath_GpuCrashDumpDecoding.h"
 	#endif
+#endif
+
+#if ENABLE_DIRECTSTORAGE
+	#include "dstorage.h"
 #endif
 
 SR_RenderDevice_DX12* SR_RenderDevice_DX12::gD3D12Instance = nullptr;
@@ -162,6 +167,17 @@ SC_Ref<SR_Heap> SR_RenderDevice_DX12::CreateHeap(const SR_HeapProperties& aHeapP
 	}
 
 	return newHeap;
+}
+
+SC_Ref<SR_FenceResource> SR_RenderDevice_DX12::CreateFenceResource()
+{
+	SC_Ref<SR_FenceResource_DX12> dx12Fence = SC_MakeRef<SR_FenceResource_DX12>();
+	if (!dx12Fence->Init())
+	{
+		return nullptr;
+	}
+
+	return dx12Fence;
 }
 
 bool SR_RenderDevice_DX12::CompileShader(const SR_ShaderCompileArgs& aArgs, SR_ShaderByteCode& aOutByteCode, SR_ShaderMetaData* aOutMetaData)
@@ -359,7 +375,7 @@ void SR_RenderDevice_DX12::OutputDredDebugData()
 	const D3D12_DRED_ALLOCATION_NODE* resourcePage = dredPageFaultOutput.pHeadRecentFreedAllocationNode;
 	while (resourcePage)
 	{
-		SC_ERROR("\t>>[Type: %s] - %s", DREDGetAllocationType(resourcePage->AllocationType), SC_UTF16ToUTF8(resourcePage->ObjectNameW).c_str());
+		SC_ERROR("\t>>[Type: {}] - {}", DREDGetAllocationType(resourcePage->AllocationType), SC_UTF16ToUTF8(resourcePage->ObjectNameW).c_str());
 		resourcePage = resourcePage->pNext;
 	}
 	SC_ERROR("<----- RECENTLY FREED RESOURCES BEGIN ----->");
@@ -369,7 +385,7 @@ void SR_RenderDevice_DX12::OutputDredDebugData()
 	const D3D12_AUTO_BREADCRUMB_NODE1* node = dredAutoBreadcrumbsOutput.pHeadAutoBreadcrumbNode;
 	while (node)
 	{
-		SC_ERROR("\t---- BREADCRUMB NODE %i BEGIN ----", nodeIdx);
+		SC_ERROR("\t---- BREADCRUMB NODE {} BEGIN ----", nodeIdx);
 
 		const uint32 completedOp = *node->pLastBreadcrumbValue;
 
@@ -390,10 +406,10 @@ void SR_RenderDevice_DX12::OutputDredDebugData()
 			}
 
 			++count;
-			SC_ERROR("\t\t>>[Context: %s] - Command: %s", contextString.c_str(), DREDGetBreadcrumbOp(node->pCommandHistory[index]));
+			SC_ERROR("\t\t>>[Context: {}] - Command: {}", contextString.c_str(), DREDGetBreadcrumbOp(node->pCommandHistory[index]));
 		}
 
-		SC_ERROR("---- BREADCRUMB NODE %i END ----", nodeIdx);
+		SC_ERROR("---- BREADCRUMB NODE {} END ----", nodeIdx);
 		++nodeIdx;
 		node = node->pNext;
 	}
@@ -402,15 +418,26 @@ void SR_RenderDevice_DX12::OutputDredDebugData()
 }
 #endif //ENABLE_DRED
 
+SC_SizeT SR_RenderDevice_DX12::GetAvailableVRAM() const
+{
+	DXGI_ADAPTER_DESC1 adapterDesc = {};
+	mDXGIAdapter->GetDesc1(&adapterDesc);
+	return adapterDesc.DedicatedVideoMemory;
+}
+SC_SizeT SR_RenderDevice_DX12::GetUsedVRAM() const
+{
+	DXGI_QUERY_VIDEO_MEMORY_INFO videoMemoryInfo = {};
+	mDXGIAdapter3->QueryVideoMemoryInfo(0, DXGI_MEMORY_SEGMENT_GROUP_LOCAL, &videoMemoryInfo);
+	return videoMemoryInfo.CurrentUsage;
+}
+
 bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 {
-	SR_ComPtr<IDXGIFactory1> dxgiFactory;
-	HRESULT hr = CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory));
+	HRESULT hr = CreateDXGIFactory1(IID_PPV_ARGS(&mDXGIFactory));
 
-	SR_ComPtr<IDXGIAdapter1> dxgiAdapter;
 	SR_ComPtr<IDXGIAdapter1> tempAdapter;
 	DXGI_ADAPTER_DESC1 adapterDesc = {};
-	for (uint32 i = 0; dxgiFactory->EnumAdapters1(i, &tempAdapter) != DXGI_ERROR_NOT_FOUND; ++i)
+	for (uint32 i = 0; mDXGIFactory->EnumAdapters1(i, &tempAdapter) != DXGI_ERROR_NOT_FOUND; ++i)
 	{
 		DXGI_ADAPTER_DESC1 desc = {};
 		tempAdapter->GetDesc1(&desc);
@@ -421,7 +448,7 @@ bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 		if (desc.DedicatedVideoMemory > adapterDesc.DedicatedVideoMemory)
 		{
 			adapterDesc = desc;
-			dxgiAdapter = tempAdapter;
+			mDXGIAdapter = tempAdapter;
 		}
 	}
 
@@ -444,8 +471,8 @@ bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 
 		std::string deviceName = SC_UTF16ToUTF8(adapterDesc.Description);
 
-		SC_LOG("Graphics card: %s (id: %x rev: %x)", deviceName.c_str(), adapterDesc.DeviceId, adapterDesc.Revision);
-		SC_LOG("Video Memory: %lluMB", uint64(adapterDesc.DedicatedVideoMemory >> 20));
+		SC_LOG("Graphics card: {} (id: {} rev: {})", deviceName.c_str(), adapterDesc.DeviceId, adapterDesc.Revision);
+		SC_LOG("Video Memory: {}MB", uint64(adapterDesc.DedicatedVideoMemory >> 20));
 
 #if IS_DESKTOP_PLATFORM
 #if ENABLE_NVAPI
@@ -461,10 +488,10 @@ bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 				{
 					NvAPI_ShortString string;
 					NvAPI_GetErrorMessage(status, string);
-					SC_ERROR("NvAPI_SYS_GetDriverAndBranchVersion: %s", string);
+					SC_ERROR("NvAPI_SYS_GetDriverAndBranchVersion: {}", string);
 				}
 
-				SC_LOG("Nvidia Driver: %d (Driver String: %s)", driverVersion, driverString);
+				SC_LOG("Nvidia Driver: {} (Driver String: {})", driverVersion, driverString);
 			}
 		}
 #endif //ENABLE_NVAPI
@@ -502,8 +529,10 @@ bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 	}
 #endif
 
+	hr = mDXGIAdapter.As(&mDXGIAdapter3);
+
 	SC_LOG("Creating D3D12Device.");
-	hr = D3D12CreateDevice(dxgiAdapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&mD3D12Device));
+	hr = D3D12CreateDevice(mDXGIAdapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&mD3D12Device));
 
 
 #if IS_DESKTOP_PLATFORM
@@ -567,15 +596,15 @@ bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 	}
 
 	mCommandQueues[static_cast<uint32>(SR_CommandListType::Graphics)] = SC_MakeUnique<SR_CommandQueue_DX12>(this);
-	if (!mCommandQueues[static_cast<uint32>(SR_CommandListType::Graphics)]->Init(SR_CommandListType::Graphics))
+	if (!mCommandQueues[static_cast<uint32>(SR_CommandListType::Graphics)]->Init(SR_CommandListType::Graphics, SR_CommandQueue::GetTypeName(SR_CommandListType::Graphics)))
 		return false;
 
 	mCommandQueues[static_cast<uint32>(SR_CommandListType::Compute)] = SC_MakeUnique<SR_CommandQueue_DX12>(this);
-	if (!mCommandQueues[static_cast<uint32>(SR_CommandListType::Compute)]->Init(SR_CommandListType::Compute))
+	if (!mCommandQueues[static_cast<uint32>(SR_CommandListType::Compute)]->Init(SR_CommandListType::Compute, SR_CommandQueue::GetTypeName(SR_CommandListType::Compute)))
 		return false;
 
 	mCommandQueues[static_cast<uint32>(SR_CommandListType::Copy)] = SC_MakeUnique<SR_CommandQueue_DX12>(this);
-	if (!mCommandQueues[static_cast<uint32>(SR_CommandListType::Copy)]->Init(SR_CommandListType::Copy))
+	if (!mCommandQueues[static_cast<uint32>(SR_CommandListType::Copy)]->Init(SR_CommandListType::Copy, SR_CommandQueue::GetTypeName(SR_CommandListType::Copy)))
 		return false;
 
 	// Create Descriptor heaps
@@ -593,6 +622,20 @@ bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 	mTempResourceHeap = SC_MakeUnique<SR_TempResourceHeap_DX12>();
 	if (!mTempResourceHeap->Init())
 		return false;
+
+#if ENABLE_DIRECTSTORAGE
+	SR_ComPtr<IDStorageFactory> storageFactory;
+	DStorageGetFactory(IID_PPV_ARGS(&storageFactory));
+
+	DSTORAGE_QUEUE_DESC queueDesc = {};
+	queueDesc.Capacity = DSTORAGE_MAX_QUEUE_CAPACITY;
+	queueDesc.Priority = DSTORAGE_PRIORITY_NORMAL;
+	queueDesc.SourceType = DSTORAGE_REQUEST_SOURCE_FILE;
+	queueDesc.Device = mD3D12Device.Get();
+
+	SR_ComPtr<IDStorageQueue> storageQueue;
+	storageFactory->CreateQueue(&queueDesc, IID_PPV_ARGS(&storageQueue));
+#endif
 
 	return PostInit();
 }
@@ -806,7 +849,7 @@ void SR_RenderDevice_DX12::GatherSupportCaps()
 	mSupportCaps.mEnableAsyncCompute = true;
 	if (SC_CommandLine::HasCommand("noasynccompute"))
 		mSupportCaps.mEnableAsyncCompute = false;
-	SC_LOG("Asynchronous Compute: %s", mSupportCaps.mEnableAsyncCompute ? "true" : "false");
+	SC_LOG("Asynchronous Compute: {}", mSupportCaps.mEnableAsyncCompute ? "true" : "false");
 
 	D3D12_FEATURE_DATA_SHADER_MODEL shaderModel = {};
 	shaderModel.HighestShaderModel = D3D_SHADER_MODEL_6_7;
@@ -817,7 +860,7 @@ void SR_RenderDevice_DX12::GatherSupportCaps()
 		hr = mD3D12Device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &shaderModel, sizeof(shaderModel));
 	}
 	mSupportCaps.mHighestShaderModel = SR_D3D12ConvertShaderModel(shaderModel.HighestShaderModel);
-	SC_LOG("Shader Model: %s", GetShaderModelString(mSupportCaps.mHighestShaderModel));
+	SC_LOG("Shader Model: {}", GetShaderModelString(mSupportCaps.mHighestShaderModel));
 
 	D3D12_FEATURE_DATA_D3D12_OPTIONS dx12Options = {};
 	hr = mD3D12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &dx12Options, sizeof(dx12Options));
@@ -828,7 +871,7 @@ void SR_RenderDevice_DX12::GatherSupportCaps()
 	}
 
 	mSupportCaps.mEnableConservativeRasterization = dx12Options.ConservativeRasterizationTier > D3D12_CONSERVATIVE_RASTERIZATION_TIER_NOT_SUPPORTED;
-	SC_LOG("Conservative Rasterization: %s", mSupportCaps.mEnableConservativeRasterization ? "true" : "false");
+	SC_LOG("Conservative Rasterization: {}", mSupportCaps.mEnableConservativeRasterization ? "true" : "false");
 
 	D3D12_FEATURE_DATA_D3D12_OPTIONS5 dx12Options5 = {};
 	hr = mD3D12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &dx12Options5, sizeof(dx12Options5));
@@ -839,7 +882,7 @@ void SR_RenderDevice_DX12::GatherSupportCaps()
 	}
 
 	mSupportCaps.mEnableRaytracing = dx12Options5.RaytracingTier > D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
-	SC_LOG("Raytracing: %s", mSupportCaps.mEnableRaytracing ? "true" : "false");
+	SC_LOG("Raytracing: {}", mSupportCaps.mEnableRaytracing ? "true" : "false");
 
 	D3D12_FEATURE_DATA_D3D12_OPTIONS6 dx12Options6 = {};
 	hr = mD3D12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS6, &dx12Options6, sizeof(dx12Options6));
@@ -850,7 +893,7 @@ void SR_RenderDevice_DX12::GatherSupportCaps()
 	}
 
 	mSupportCaps.mEnableVRS = dx12Options6.VariableShadingRateTier > D3D12_VARIABLE_SHADING_RATE_TIER_NOT_SUPPORTED;
-	SC_LOG("Variable Rate Shading: %s", mSupportCaps.mEnableVRS ? "true" : "false");
+	SC_LOG("Variable Rate Shading: {}", mSupportCaps.mEnableVRS ? "true" : "false");
 
 	D3D12_FEATURE_DATA_D3D12_OPTIONS7 dx12Options7 = {};
 	hr = mD3D12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &dx12Options7, sizeof(dx12Options7));
@@ -863,8 +906,8 @@ void SR_RenderDevice_DX12::GatherSupportCaps()
 	mSupportCaps.mEnableMeshShaders = dx12Options7.MeshShaderTier > D3D12_MESH_SHADER_TIER_NOT_SUPPORTED;
 	mSupportCaps.mEnableSamplerFeedback = dx12Options7.SamplerFeedbackTier > D3D12_SAMPLER_FEEDBACK_TIER_NOT_SUPPORTED;
 	//float meshShadersTier = dx12Options7.MeshShaderTier / 10.f;
-	SC_LOG("Mesh Shaders: %s", mSupportCaps.mEnableMeshShaders ? "true" : "false");
-	SC_LOG("Sampler Feedback: %s", mSupportCaps.mEnableSamplerFeedback ? "true" : "false");
+	SC_LOG("Mesh Shaders: {}", mSupportCaps.mEnableMeshShaders ? "true" : "false");
+	SC_LOG("Sampler Feedback: {}", mSupportCaps.mEnableSamplerFeedback ? "true" : "false");
 }
 
 #if ENABLE_NVIDIA_AFTERMATH

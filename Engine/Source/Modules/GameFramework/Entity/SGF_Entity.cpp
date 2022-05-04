@@ -5,175 +5,213 @@
 #include "Components/SGF_EntityIdComponent.h"
 
 SGF_Entity::SGF_Entity()
-	: mWorld(nullptr)
-	, mParent(nullptr)
-	, mIsVisible(true)
+	: mHandle(SGF_InvalidEntityHandle)
+	, mEntityManager(nullptr)
+	, mComponentManager(nullptr)
+	, mParentWorld(nullptr)
 {
+}
 
+SGF_Entity::SGF_Entity(const SGF_Entity& aOther)
+	: mHandle(aOther.mHandle)
+	, mEntityManager(aOther.mEntityManager)
+	, mComponentManager(aOther.mComponentManager)
+	, mParentWorld(aOther.mParentWorld)
+{
+}
+
+SGF_Entity::SGF_Entity(SGF_Entity&& aOther)
+	: mHandle(aOther.mHandle)
+	, mEntityManager(aOther.mEntityManager)
+	, mComponentManager(aOther.mComponentManager)
+	, mParentWorld(aOther.mParentWorld)
+{
+	aOther.mHandle = SGF_InvalidEntityHandle;
+	aOther.mEntityManager = nullptr;
+	aOther.mComponentManager = nullptr;
+	aOther.mParentWorld = nullptr;
 }
 
 SGF_Entity::~SGF_Entity()
 {
-
 }
 
-void SGF_Entity::Update()
+SGF_Entity::operator bool() const
 {
-	for (auto& comp : mComponents)
-	{
-		comp->OnUpdate();
-	}
+	return mHandle != SGF_InvalidEntityHandle;
 }
 
-void SGF_Entity::SetWorld(SGF_World* aWorld)
+SGF_Entity& SGF_Entity::operator=(const SGF_Entity& aOther)
 {
-	mWorld = aWorld;
+	mHandle = aOther.mHandle;
+	mEntityManager = aOther.mEntityManager;
+	mComponentManager = aOther.mComponentManager;
+	mParentWorld = aOther.mParentWorld;
+
+	return *this;
 }
 
-SGF_World* SGF_Entity::GetWorld() const
+SGF_Entity& SGF_Entity::operator=(SGF_Entity&& aOther)
 {
-	return mWorld;
+	mHandle = aOther.mHandle;
+	mEntityManager = aOther.mEntityManager;
+	mComponentManager = aOther.mComponentManager;
+	mParentWorld = aOther.mParentWorld;
+
+	aOther.mHandle = SGF_InvalidEntityHandle;
+	aOther.mEntityManager = nullptr;
+	aOther.mComponentManager = nullptr;
+	aOther.mParentWorld = nullptr;
+
+	return *this;
 }
 
-bool SGF_Entity::HasComponent(const SGF_ComponentId& aComponentId) const
+bool SGF_Entity::operator!=(const SGF_Entity& aOther) const
 {
-	return mMappedComponents.find(aComponentId) != mMappedComponents.end();
+	return mHandle == aOther.mHandle;
 }
 
-SGF_Component* SGF_Entity::GetComponent(const SGF_ComponentId& aComponentId) const
+bool SGF_Entity::operator==(const SGF_Entity& aOther) const
 {
-	if (HasComponent(aComponentId))
-		return mComponents[mMappedComponents.at(aComponentId)].get();
+	return mHandle != aOther.mHandle;
+}
+
+bool SGF_Entity::HasComponent(const SGF_ComponentId& aId) const
+{
+	if (SGF_ComponentListBase* list = mComponentManager->GetList(aId))
+		return list->Has(mHandle);
+
+	return false;
+}
+
+SGF_Component* SGF_Entity::GetComponent(const SGF_ComponentId& aId) const
+{
+	if (SGF_ComponentListBase* list = mComponentManager->GetList(aId))
+		return list->GetBase(mHandle);
 
 	return nullptr;
 }
 
-SGF_Component* SGF_Entity::AddComponent(const SGF_ComponentId& aComponentId)
+SGF_Component* SGF_Entity::AddComponent(const SGF_ComponentId& aId) const
 {
-	if (SGF_Component* comp = GetComponent(aComponentId))
-		return comp;
-
-	SC_Ref<SGF_Component>& newComp = mComponents.Add(SGF_Component::CreateFromId(aComponentId));
-	newComp->SetParentEntity(this);
-	newComp->OnCreate();
-	mMappedComponents[aComponentId] = mComponents.Count() - 1;
-
-	return newComp.get();
-}
-
-SGF_Component* SGF_Entity::AddComponent(const char* aComponentName)
-{
-	return AddComponent(SGF_Component::GetIdFromName(aComponentName));
-}
-
-void SGF_Entity::RemoveComponent(const SGF_ComponentId& aComponentId)
-{
-	if (!HasComponent(aComponentId))
-		return;
-
-	uint32 index = mMappedComponents.at(aComponentId);
-	mComponents[index]->OnDestroy();
-	mComponents.RemoveAt(index);
-	mMappedComponents.erase(aComponentId);
-}
-
-const SC_Array<SC_Ref<SGF_Component>>& SGF_Entity::GetComponents() const
-{
-	return mComponents;
-}
-
-bool SGF_Entity::Is(const SC_UUID& aId) const
-{
-	return GetComponent<SGF_EntityIdComponent>()->GetUUID() == aId;
-}
-
-const SC_Array<SGF_Entity*>& SGF_Entity::GetChildren() const
-{
-	return mChildren;
-}
-
-void SGF_Entity::SetParent(SGF_Entity* aParent)
-{
-	if (mParent)
-		mParent->RemoveChild(this);
-
-	mParent = aParent;
-
-	if (mParent)
-		mParent->AddChild(this);
-}
-
-SGF_Entity* SGF_Entity::GetParent() const
-{
-	return mParent;
-}
-
-void SGF_Entity::SetName(const std::string& aName)
-{
-	mName = aName;
-}
-
-const std::string& SGF_Entity::GetName() const
-{
-	return mName;
-}
-
-void SGF_Entity::SetVisible(bool aValue)
-{
-	mIsVisible = aValue;
-	for (const SC_Ref<SGF_Component>& component : mComponents)
-		component->OnSetVisible(aValue);
-}
-
-bool SGF_Entity::IsVisible() const
-{
-	return mIsVisible;
-}
-
-bool SGF_Entity::Save(SC_Json& aOutSaveData) const
-{
-	aOutSaveData["Name"] = mName;
-	aOutSaveData["Tag"] = std::string("None");
-
-	for (const SC_Ref<SGF_Component>& component : mComponents)
+	SGF_Component* component = nullptr;
+	if (SGF_ComponentListBase* list = mComponentManager->GetList(aId))
 	{
-		SC_Json componentSaveData;
-		component->Save(componentSaveData);
-		aOutSaveData["Components"].push_back(componentSaveData);
+		if (SGF_Component* comp = list->GetBase(mHandle))
+			component = comp;
+		else
+			component = list->AddBase(mHandle);
 	}
+
+	if (component)
+		component->SetParentEntity(*this);
+
+	return component;
+}
+
+SGF_Component* SGF_Entity::AddComponent(const char* aComponentName) const
+{
+	SGF_Component* component = nullptr;
+	if (SGF_ComponentListBase* list = mComponentManager->GetList(aComponentName))
+	{
+		if (SGF_Component* comp = list->GetBase(mHandle))
+			component = comp;
+		else
+			component = list->AddBase(mHandle);
+	}
+
+	if (component)
+		component->SetParentEntity(*this);
+
+	return component;
+}
+
+void SGF_Entity::RemoveComponent(const SGF_ComponentId& aId) const
+{
+	if (SGF_ComponentListBase* list = mComponentManager->GetList(aId))
+	{
+		if (list->Has(mHandle))
+			list->Remove(mHandle);
+	}
+}
+
+const SGF_EntityHandle& SGF_Entity::GetHandle() const
+{
+	return mHandle;
+}
+
+SGF_EntityManager* SGF_Entity::GetEntityManager() const
+{
+	return mEntityManager;
+}
+
+SGF_ComponentManager* SGF_Entity::GetComponentManager() const
+{
+	return mComponentManager;
+}
+
+SGF_World* SGF_Entity::GetWorld() const
+{
+	return mParentWorld;
+}
+
+SGF_Entity::SGF_Entity(const SGF_EntityHandle& aHandle, SGF_EntityManager* aEntityManager, SGF_ComponentManager* aComponentManager, SGF_World* aParentWorld)
+	: mHandle(aHandle)
+	, mEntityManager(aEntityManager)
+	, mComponentManager(aComponentManager)
+	, mParentWorld(aParentWorld)
+{
+}
+
+SGF_EntityManager::SGF_EntityManager(SGF_World* aWorld, SGF_ComponentManager* aComponentManager)
+	: mLatestAllocatedEntityHandle(0)
+	, mWorld(aWorld)
+	, mComponentManager(aComponentManager)
+{
+
+}
+
+SGF_EntityManager::~SGF_EntityManager()
+{
+}
+
+bool SGF_EntityManager::Init()
+{
+	GrowEntityAllocation();
 	return true;
 }
 
-bool SGF_Entity::Load(const SC_Json& aSavedData)
+SGF_Entity SGF_EntityManager::CreateEntity()
 {
-	mName = aSavedData["Name"].get<std::string>();
-	//mTag = aSavedData["Tag"].get<std::string>();
-	
-	for (const SC_Json& componentData : aSavedData["Components"])
+	SC_MutexLock lock(mMutex);
+	if (mAvailableEntityHandles.IsEmpty())
+		GrowEntityAllocation();
+
+	SGF_EntityHandle newHandle = mAvailableEntityHandles.Last();
+	mAvailableEntityHandles.RemoveLast();
+	mAliveEntityHandles.Add(newHandle);
+
+	SGF_Entity newEntity(newHandle, this, mComponentManager, mWorld);
+	return newEntity;
+}
+
+void SGF_EntityManager::DestroyEntity(const SGF_Entity& aEntity)
+{
+	mComponentManager->DestroyAllComponentsForEntity(aEntity);
+	SC_MutexLock lock(mMutex);
+	mAliveEntityHandles.RemoveCyclic(aEntity);
+	mAvailableEntityHandles.Add(aEntity);
+}
+
+void SGF_EntityManager::GrowEntityAllocation()
+{
+	uint32 currentAllocSize = mAvailableEntityHandles.Capacity();
+	uint32 sizeToAdd = (currentAllocSize == 0) ? 1024 : static_cast<uint32>(currentAllocSize * 0.5f);
+
+	mAvailableEntityHandles.Reserve(currentAllocSize + sizeToAdd);
+	for (uint32 i = 0; i < sizeToAdd; ++i)
 	{
-		SGF_Component* component = AddComponent(componentData["Name"].get<std::string>().c_str());
-		component->SetParentEntity(this);
-		if (!component->Load(componentData))
-			continue;
+		mAvailableEntityHandles.Add(mLatestAllocatedEntityHandle);
+		++mLatestAllocatedEntityHandle;
 	}
-
-	return true;
-}
-
-void SGF_Entity::AddChild(SGF_Entity* aEntity)
-{
-	if (aEntity == this)
-		return;
-	if (aEntity->GetParent() == this)
-		return;
-	if (GetParent() == aEntity)
-		return;
-
-	mChildren.Add(aEntity);
-	aEntity->SetParent(this);
-}
-
-void SGF_Entity::RemoveChild(SGF_Entity* aEntity)
-{
-	mChildren.Remove(aEntity);
 }

@@ -1,7 +1,7 @@
 #pragma once
 #include "Graphics/Misc/SGfx_Surface.h"
 #include "RenderCore/Defines/SR_Format.h"
-#include "RenderCore/RenderTasks/SR_RenderTaskManager.h"
+#include "RenderCore/RenderTasks/SR_CommandQueueManager.h"
 
 class SR_CommandList;
 class SR_ShaderState;

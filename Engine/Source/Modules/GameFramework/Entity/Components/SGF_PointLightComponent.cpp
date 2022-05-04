@@ -22,13 +22,13 @@ SGF_PointLightComponent::~SGF_PointLightComponent()
 
 void SGF_PointLightComponent::OnCreate()
 {
-	if (SGF_Entity* entity = GetParentEntity())
-		entity->GetWorld()->GetGraphicsWorld()->AddLight(mPointLight);
+	//if (const SGF_Entity2& entity = GetParentEntity())
+	//	entity->GetWorld()->GetGraphicsWorld()->AddLight(mPointLight);
 }
 
 void SGF_PointLightComponent::OnUpdate()
 {
-	SGF_TransformComponent* transformComp = GetParentEntity()->GetComponent<SGF_TransformComponent>();
+	const SGF_TransformComponent* transformComp = SGF_Entity(GetParentEntity()).GetComponent<SGF_TransformComponent>();
 	if (transformComp)
 	{
 		SC_Matrix mTransform = transformComp->GetTransform();
@@ -42,10 +42,11 @@ void SGF_PointLightComponent::OnUpdate()
 	mPointLight->SetSourceRadiusSoft(mSourceRadiusSoft);
 	mPointLight->SetRange(mRange);
 	mPointLight->SetIntensity(mIntensity);
+	mPointLight->SetCastShadow(mCastShadow);
 }
 
 void SGF_PointLightComponent::OnDestroy()
 {
-	if (SGF_Entity* entity = GetParentEntity())
-		entity->GetWorld()->GetGraphicsWorld()->RemoveLight(mPointLight);
+	//if (SGF_Entity* entity = GetParentEntity())
+	//	entity->GetWorld()->GetGraphicsWorld()->RemoveLight(mPointLight);
 }

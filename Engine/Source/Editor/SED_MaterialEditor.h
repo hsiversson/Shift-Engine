@@ -1,5 +1,5 @@
 
-class SED_ViewportPanel;
+class SED_ViewportWindow;
 class SGfx_World;
 class SGfx_MaterialNodeGraph;
 
@@ -16,7 +16,7 @@ public:
 
 private:
 	SC_UniquePtr<SGfx_World> mGfxWorld;
-	SC_UniquePtr<SED_ViewportPanel> mViewport;
+	SC_UniquePtr<SED_ViewportWindow> mViewport;
 
 	SGfx_MaterialNodeGraph* mCurrentGraph;
 

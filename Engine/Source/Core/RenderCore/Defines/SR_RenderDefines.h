@@ -6,9 +6,9 @@
 	#define SR_ENABLE_DEBUG_NAMES		(1)
 #endif
 
-
 #if IS_WINDOWS_PLATFORM
 	#define ENABLE_DX12					(1)
+	#define ENABLE_DIRECTSTORAGE		(1)
 	#define ENABLE_VULKAN				(0)
 	#define ENABLE_RAYTRACING			(1)
 	#define ENABLE_MESH_SHADERS			(1)
@@ -31,7 +31,11 @@
 	#define ENABLE_DX12					(0)
 #endif
 
-#ifndef ENABLE_DX12
+#ifndef ENABLE_DIRECTSTORAGE
+	#define ENABLE_DIRECTSTORAGE		(0)
+#endif
+
+#ifndef ENABLE_VULKAN
 	#define ENABLE_VULKAN				(0)
 #endif
 

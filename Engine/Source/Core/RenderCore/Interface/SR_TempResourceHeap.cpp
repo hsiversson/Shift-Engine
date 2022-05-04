@@ -28,7 +28,7 @@ inline void EndFrameQueueAndList(SC_Array<T>& aList, SC_Queue<SC_Pair<SR_Fence, 
 
 void SR_TempResourceHeap::EndFrame()
 {
-	SR_Fence fence = SR_RenderDevice::gInstance->GetGraphicsCommandQueue()->InsertFence();
+	SR_Fence fence = SR_RenderDevice::gInstance->GetCommandQueueManager()->InsertFence(SR_CommandListType::Graphics);
 
 	EndFrameInternal();
 	EndFrameQueueAndList(mTextureKeepAliveList, mTempTextureRemovalQueue, fence);

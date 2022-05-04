@@ -2,10 +2,11 @@
 #include "SGfx_Camera.h"
 #include "Graphics/Lighting/SGfx_Light.h"
 #include "Graphics/Lighting/Shadows/SGfx_ShadowConstants.h"
+#include "Graphics/Lighting/SGfx_LightCulling.h"
 #include "Graphics/Environment/SGfx_Environment.h"
-#include "Platform/Async/SC_Future.h"
+#include "Graphics/View/SGfx_RenderQueue.h"
 #include "RenderCore/RenderTasks/SR_TaskEvent.h"
-#include "../Lighting/SGfx_LightCulling.h"
+#include "Platform/Async/SC_Future.h"
 
 class SGfx_MaterialInstance;
 class SR_Buffer;
@@ -97,6 +98,11 @@ public:
 
 		mRenderSettings.Clear();
 		mSceneConstants.Clear();
+
+		_mDepthQueue.Clear();
+		_mOpaqueQueue.Clear();
+		_mTransparentQueue.Clear();
+
 		mDepthQueue.RemoveAll();
 		mOpaqueQueue.RemoveAll();
 		mTranslucencyQueue.RemoveAll();
@@ -121,6 +127,10 @@ public:
 
 	SGfx_ViewRenderSettings mRenderSettings;
 	SGfx_SceneConstants mSceneConstants;
+
+	SGfx_RenderQueue_ByState _mDepthQueue;
+	SGfx_RenderQueue_ByState _mOpaqueQueue;
+	SGfx_RenderQueue_FarFirst _mTransparentQueue;
 
 	SC_Array<SGfx_RenderObject> mDepthQueue;		// Switch to a renderQueue
 	SC_Array<SGfx_RenderObject> mOpaqueQueue;		// Switch to a renderQueue

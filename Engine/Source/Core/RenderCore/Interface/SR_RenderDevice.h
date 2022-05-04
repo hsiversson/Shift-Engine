@@ -15,7 +15,7 @@
 #include "SR_RootSignature.h"
 #include "SR_TempResourceHeap.h"
 #include "RenderCore/Resources/SR_InstanceBuffer.h"
-#include "RenderCore/RenderTasks/SR_RenderTaskManager.h"
+#include "RenderCore/RenderTasks/SR_CommandQueueManager.h"
 
 struct RENDERDOC_API_1_4_1;
 
@@ -68,6 +68,8 @@ public:
 
 	virtual SC_Ref<SR_Heap> CreateHeap(const SR_HeapProperties& aHeapProperties);
 
+	virtual SC_Ref<SR_FenceResource> CreateFenceResource();
+
 	virtual bool CompileShader(const SR_ShaderCompileArgs& aArgs, SR_ShaderByteCode& aOutByteCode, SR_ShaderMetaData* aOutMetaData = nullptr);
 	virtual bool CompileShader(const std::string& aShadercode, const SR_ShaderCompileArgs& aArgs, SR_ShaderByteCode& aOutByteCode, SR_ShaderMetaData* aOutMetaData = nullptr);
 	virtual SC_Ref<SR_ShaderState> CreateShaderState(const SR_ShaderStateProperties& aProperties);
@@ -91,7 +93,7 @@ public:
 
 	SR_InstanceBuffer* GetPersistentResourceInfo() const;
 
-	SR_RenderTaskManager* GetRenderTaskManager() const;
+	SR_CommandQueueManager* GetCommandQueueManager() const;
 	SC_Ref<SR_CommandList> GetTaskCommandList(); // Returns the command list assigned to the current render task. Should only be called inside render tasks.
 
 	const SR_RenderSupportCaps& GetSupportCaps() const;
@@ -100,6 +102,9 @@ public:
 	void StartRenderDocCapture();
 	void EndRenderDocCapture();
 #endif
+
+	virtual SC_SizeT GetAvailableVRAM() const;
+	virtual SC_SizeT GetUsedVRAM() const;
 
 	const SR_API& GetAPI() const;
 
@@ -125,7 +130,7 @@ protected:
 
 	SC_UniquePtr<SR_InstanceBuffer> mPersistentResourceInfo;
 
-	SC_UniquePtr<SR_RenderTaskManager> mRenderTaskManager;
+	SC_UniquePtr<SR_CommandQueueManager> mCommandQueueManager;
 
 	SC_UniquePtr<SR_TempResourceHeap> mTempResourceHeap;
 

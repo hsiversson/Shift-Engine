@@ -67,6 +67,17 @@ struct SR_VertexLayout
 		return mAttributeFormats[static_cast<uint32>(aAttribute)];
 	}
 
+	uint32 GetAttributeByteOffset(const SR_VertexAttribute& aAttribute) const
+	{
+		uint32 offset = 0;
+		for (uint32 i = 0; i < static_cast<uint32>(aAttribute); ++i)
+		{
+			uint32 attributeBytes = SR_GetFormatBitsPerPixel(mAttributeFormats[i]) / 8;
+			offset += attributeBytes;
+		}
+		return offset;
+	}
+
 	bool operator==(const SR_VertexLayout& aOther) const 
 	{
 		for (uint32 i = 0; i < static_cast<uint32>(SR_VertexAttribute::COUNT); ++i)

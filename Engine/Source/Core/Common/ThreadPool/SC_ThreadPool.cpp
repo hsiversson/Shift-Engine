@@ -117,6 +117,8 @@ void SC_ThreadPool::WorkerThread::SetThreadPool(SC_ThreadPool* aThreadPool)
 
 void SC_ThreadPool::WorkerThread::ThreadMain()
 {
+    SC_Thread::gIsTaskThread = true;
+
 	while (mIsRunning)
 	{
         mThreadPool->mHasWorkEvent.Wait();

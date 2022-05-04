@@ -29,8 +29,15 @@ public:
 	template<class Func>
 	void QueueTask(const Func& aTask)
 	{
-		++mTotalTaskCount;
+		// Should perhaps assert. Do we want to allow task threads to schedule more task work? 
+		// Maybe yes, but only if the work is not waited for in the task thread.
+		if (SC_Thread::gIsTaskThread) 
 		{
+			aTask();
+		}
+		else
+		{
+			++mTotalTaskCount;
 			SC_MutexLock lock(mQueueMutex);
 			mTasks.push(SC_Function<void()>(aTask));
 			mHasWorkEvent.Signal();

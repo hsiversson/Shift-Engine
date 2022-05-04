@@ -29,11 +29,12 @@ public:
 		uint32 mType;
 
 		SC_Vector2 mSpotAngles;
-		uint32 mShadowMapDescriptorIndex;
+		float mSourceRadius;
 		float mSoftSourceRadius;
 
-		float mSourceRadius;
-		float _unused0[3];
+		uint32 mCastShadow;
+		uint32 mShadowMapDescriptorIndex;
+		uint32 _unused0[2];
 	};
 
 public:
@@ -46,6 +47,9 @@ public:
 
 	const SC_Vector4& GetColor() const;
 	void SetColor(const SC_Vector4& aColor);
+
+	void SetCastShadow(bool aValue) { mCastShadow = aValue; }
+	bool IsCastingShadow() const { return mCastShadow; }
 
 	void SetLightUnit(const SGfx_LightUnit& aLightUnit);
 	const SGfx_LightUnit& GetLightUnit() const;
@@ -60,6 +64,8 @@ protected:
 
 	SC_Vector4 mColor;
 	float mIntensity; // Stored using the mLightUnit uint.
+
+	bool mCastShadow;
 
 	SGfx_LightUnit mLightUnit;
 	SGfx_LightType mType;

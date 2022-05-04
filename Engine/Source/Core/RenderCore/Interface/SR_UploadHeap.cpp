@@ -26,7 +26,7 @@ bool SR_UploadHeap::Init()
 
 void SR_UploadHeap::CopyTexture(SR_TextureResource* aTargetResource, const void* aData, uint64 aSize, uint64 aOffset)
 {
-	SR_RenderTaskManager* taskManager = SR_RenderDevice::gInstance->GetRenderTaskManager();
+	SR_CommandQueueManager* taskManager = SR_RenderDevice::gInstance->GetCommandQueueManager();
 
 	auto task = [aTargetResource, aData, aSize, aOffset]()
 	{

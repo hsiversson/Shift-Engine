@@ -24,6 +24,8 @@ public:
 
 	const SC_AABB& GetBoundingBox() const;
 
+	void UpdateInstanceData() const;
+
 #if ENABLE_RAYTRACING
 	bool IncludeInRaytracingScene() const;
 	const SR_RaytracingInstanceData& GetRaytracingData();

@@ -1,21 +1,19 @@
-#include "SED_ContentBrowserPanel.h"
+#include "SED_ContentBrowserWindow.h"
 #include "Graphics/Material/SGfx_MaterialInstance.h"
 #include "imgui_internal.h"
 
-SED_ContentBrowserPanel::SED_ContentBrowserPanel()
+SED_ContentBrowserWindow::SED_ContentBrowserWindow()
 {
 	mThumbnailGenerator.Init();
 }
 
-SED_ContentBrowserPanel::~SED_ContentBrowserPanel()
+SED_ContentBrowserWindow::~SED_ContentBrowserWindow()
 {
 
 }
 
-void SED_ContentBrowserPanel::OnRender()
+void SED_ContentBrowserWindow::OnDraw()
 {
-	ImGui::Begin("Content Browser");
-
 	if (ImGui::BeginPopupContextWindow())
 	{
 		ImGui::Selectable("Right Click Menu");
@@ -45,10 +43,9 @@ void SED_ContentBrowserPanel::OnRender()
 	DrawAssetEntry("TestMaterial0", SED_AssetType::Material);
 
 	ImGui::Columns(1);
-	ImGui::End();
 }
 
-void SED_ContentBrowserPanel::DrawFolderEntry(const char* aFolderName)
+void SED_ContentBrowserWindow::DrawFolderEntry(const char* aFolderName)
 {
 	static const ImVec2 itemSize(192.f, 192.f);
 	const ImVec2 currentPos = ImGui::GetCursorScreenPos();
@@ -80,7 +77,7 @@ void SED_ContentBrowserPanel::DrawFolderEntry(const char* aFolderName)
 	ImGui::PopID();
 }
 
-void SED_ContentBrowserPanel::DrawAssetEntry(const char* aAssetName, const SED_AssetType& aType, void* aAssetPtr, SC_SizeT aAssetDataSize)
+void SED_ContentBrowserWindow::DrawAssetEntry(const char* aAssetName, const SED_AssetType& aType, void* aAssetPtr, SC_SizeT aAssetDataSize)
 {
 	static const ImVec2 itemSize(192.f, 192.f);
 	const ImVec2 currentPos = ImGui::GetCursorScreenPos();

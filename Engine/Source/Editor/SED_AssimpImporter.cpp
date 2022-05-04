@@ -452,24 +452,24 @@ void SED_AssimpScene::VisitNode(aiNode* aNode, SGF_Level& aOutLevel)
 
 	for (uint32 i = 0; i < aNode->mNumMeshes; ++i)
 	{
-		SC_Ref<SGF_Entity> entity = SC_MakeRef<SGF_Entity>();
-		entity->SetName(aNode->mName.C_Str());
-		entity->SetWorld(aOutLevel.GetWorld());
-
-		uint32 meshIdx = aNode->mMeshes[i];
-		SED_AssimpMesh& importedMesh = mMeshes[meshIdx];
-
-		entity->AddComponent<SGF_EntityIdComponent>();
-		SGF_TransformComponent* transform = entity->AddComponent<SGF_TransformComponent>();
-		transform->mPosition = position;
-		transform->mRotation = rotation;
-		transform->mScale = scale;
-
-		SGF_StaticMeshComponent* meshComponent = entity->AddComponent<SGF_StaticMeshComponent>();
-		meshComponent->SetMesh(SGfx_MeshInstance::Create(importedMesh.GetMesh()));
-		meshComponent->SetMaterial(SGfx_MaterialInstance::Create(mMaterials[importedMesh.GetMaterialIndex()].GetMaterial()));
-
-		aOutLevel.AddEntity(entity);
+		//SC_Ref<SGF_Entity> entity = SC_MakeRef<SGF_Entity>();
+		//entity->SetName(aNode->mName.C_Str());
+		//entity->SetWorld(aOutLevel.GetWorld());
+		//
+		//uint32 meshIdx = aNode->mMeshes[i];
+		//SED_AssimpMesh& importedMesh = mMeshes[meshIdx];
+		//
+		//entity->AddComponent<SGF_EntityIdComponent>();
+		//SGF_TransformComponent* transform = entity->AddComponent<SGF_TransformComponent>();
+		//transform->mPosition = position;
+		//transform->mRotation = rotation;
+		//transform->mScale = scale;
+		//
+		//SGF_StaticMeshComponent* meshComponent = entity->AddComponent<SGF_StaticMeshComponent>();
+		//meshComponent->SetMesh(SGfx_MeshInstance::Create(importedMesh.GetMesh()));
+		//meshComponent->SetMaterial(SGfx_MaterialInstance::Create(mMaterials[importedMesh.GetMaterialIndex()].GetMaterial()));
+		//
+		//aOutLevel.AddEntity(entity);
 	}
 
 	SC_Array<SC_Future<bool>> futures;

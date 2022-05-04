@@ -28,12 +28,12 @@ bool SGfx_MaterialNode_Result::Compile(SGfx_MaterialCompiler* aCompiler)
 	const SR_ShaderVariableProperties* inSpecular			= mInputs[Specular].Read<SR_ShaderVariableProperties>();
 
 	std::string code = SC_FormatStr(
-		"float3 baseColor = %s;\n"
-		"float3 normal = %s;\n"
-		"float roughness = %s;\n"
-		"float metallic = %s;\n"
-		"float ambientOcclusion = %s;\n"
-		"float specular = %s;\n",
+		"float3 baseColor = {};\n"
+		"float3 normal = {};\n"
+		"float roughness = {};\n"
+		"float metallic = {};\n"
+		"float ambientOcclusion = {};\n"
+		"float specular = {};\n",
 		inBaseColor->mName.c_str(),
 		inNormal->mName.c_str(),
 		inRoughness->mName.c_str(),

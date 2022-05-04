@@ -213,7 +213,7 @@ namespace SC_Atomic
 #if IS_DEBUG
 		//if (IsAligned(aDst, alignof(void*)) == false)
 		//{
-		//	printf("ExchangePtr requires aDst pointer to be aligned to %d bytes.\n", (int)alignof(void*));
+		//	printf("ExchangePtr requires aDst pointer to be aligned to {} bytes.\n", (int)alignof(void*));
 		//}
 #endif
 		return _InterlockedExchangePointer(aDst, aExchange);
@@ -224,7 +224,7 @@ namespace SC_Atomic
 #if IS_DEBUG
 		//if (IsAligned(aDst, alignof(void*)) == false)
 		//{
-		//	printf("ExchangePtr requires aDst pointer to be aligned to %d bytes.\n", (int)alignof(void*));
+		//	printf("ExchangePtr requires aDst pointer to be aligned to {} bytes.\n", (int)alignof(void*));
 		//}
 #endif
 		return _InterlockedCompareExchangePointer(aDst, aExchange, aComperand) == aComperand;

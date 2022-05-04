@@ -1,11 +1,11 @@
 #pragma once
 #include "Graphics/View/SGfx_Camera.h"
 
-class SED_ViewportPanel;
+class SED_ViewportWindow;
 class SED_Camera : public SGfx_Camera
 {
 public:
-	SED_Camera(SED_ViewportPanel* aParentViewport);
+	SED_Camera(SED_ViewportWindow* aParentViewport);
 
 	void Update();
 
@@ -34,7 +34,7 @@ private:
 	void UpdateFreeLook();
 
 	ControlType mActiveControlType;
-	SED_ViewportPanel* mParentViewport;
+	SED_ViewportWindow* mParentViewport;
 	SC_Vector2 mStoredMousePos;
 
 	float mMovementSpeed;

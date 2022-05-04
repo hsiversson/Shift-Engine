@@ -31,7 +31,7 @@ bool SGfx_MaterialCompiler::Compile(SR_ShaderGenerationProperties& aGenerationPr
 	aGenerationProperties.mMainCode += code;
 
 	aGenerationProperties.mMainCode += SC_FormatStr(
-		"output.%s = float4(CalculateLighting(materialData, aInput.mWorldPosition, viewDirection, aInput.mViewPosition.z), 1.0f);\n",
+		"output.{} = float4(CalculateLighting(materialData, aInput.mWorldPosition, viewDirection, aInput.mViewPosition.z), 1.0f);\n",
 		outputVariable.mName.c_str()
 	);
 

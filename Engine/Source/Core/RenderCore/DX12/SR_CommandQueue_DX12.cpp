@@ -44,7 +44,7 @@ bool SR_CommandQueue_DX12::Init(const SR_CommandListType& aType, const char* aDe
 	}
 
 	mFence = SC_MakeRef<SR_FenceResource_DX12>();
-	if (!mFence->Init(aType))
+	if (!mFence->Init())
 		return false;
 
 	if (aDebugName)
@@ -57,7 +57,7 @@ bool SR_CommandQueue_DX12::Init(const SR_CommandListType& aType, const char* aDe
 	return true;
 }
 
-SR_Fence SR_CommandQueue_DX12::SubmitCommandLists(SR_CommandList** aCommandLists, uint32 aNumCommandLists, const char* aEventName)
+void SR_CommandQueue_DX12::SubmitCommandLists(SR_CommandList** aCommandLists, uint32 aNumCommandLists, const char* aEventName)
 {
 	if (aEventName)
 		BeginEvent(aEventName);
@@ -75,46 +75,15 @@ SR_Fence SR_CommandQueue_DX12::SubmitCommandLists(SR_CommandList** aCommandLists
 	}
 
 	mD3D12CommandQueue->ExecuteCommandLists(d3d12CmdLists.Count(), d3d12CmdLists.GetBuffer());
-	SR_Fence fence = InsertFence();
 
 	if (aEventName)
 		EndEvent();
-
-	return fence;
 }
 
-SR_Fence SR_CommandQueue_DX12::InsertFence()
+void SR_CommandQueue_DX12::InsertFence(const SR_Fence& aFence)
 {
-	SR_Fence fence;
-	fence.mType = mType;
-	fence.mValue = SC_Atomic::Increment_GetNew(mFence->mFenceValue);
-	fence.mResource = mFence;
-	mD3D12CommandQueue->Signal(mFence->GetD3D12Fence(), fence.mValue);
-	return fence;
-}
-
-SR_Fence SR_CommandQueue_DX12::InsertFence(const SC_Ref<SR_FenceResource>& aFence)
-{
-	SC_Ref<SR_FenceResource_DX12> fenceResource;
-	if (!aFence)
-	{
-		fenceResource = SC_MakeRef<SR_FenceResource_DX12>();
-		if (!fenceResource->Init(mType))
-		{
-			assert(false);
-		}
-	}
-	else
-	{
-		assert(fenceResource->GetType() == mType);
-	}
-
-	SR_Fence fence;
-	fence.mType = mType;
-	fence.mValue = SC_Atomic::Increment_GetNew(fenceResource->mFenceValue);
-	fence.mResource = aFence;
-	mD3D12CommandQueue->Signal(fenceResource->GetD3D12Fence(), fence.mValue);
-	return fence;
+	SR_FenceResource_DX12* fenceResource = static_cast<SR_FenceResource_DX12*>(aFence.mResource);
+	mD3D12CommandQueue->Signal(fenceResource->GetD3D12Fence(), aFence.mValue);
 }
 
 void SR_CommandQueue_DX12::InsertWait(const SR_Fence& aFence)
@@ -123,15 +92,14 @@ void SR_CommandQueue_DX12::InsertWait(const SR_Fence& aFence)
 	if (mType == aFence.mType)
 		return;
 
-	SR_FenceResource_DX12* dx12Fence = static_cast<SR_FenceResource_DX12*>(aFence.mResource.get());
-	ID3D12Fence* aOtherFence = dx12Fence->GetD3D12Fence();
-	mD3D12CommandQueue->Wait(aOtherFence, aFence.mValue);
+	SR_FenceResource_DX12* dx12Fence = static_cast<SR_FenceResource_DX12*>(aFence.mResource);
+	mD3D12CommandQueue->Wait(dx12Fence->GetD3D12Fence(), aFence.mValue);
 }
 
 void SR_CommandQueue_DX12::BeginEvent(const char* aName)
 {
 #if ENABLE_PIX
-	PIXBeginEvent(mD3D12CommandQueue.Get(), 0, "%s", aName);
+	PIXBeginEvent(mD3D12CommandQueue.Get(), 0, "{}", aName);
 #else
 	(void)aName;
 #endif

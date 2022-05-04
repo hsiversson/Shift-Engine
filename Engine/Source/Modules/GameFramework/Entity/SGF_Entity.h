@@ -1,82 +1,93 @@
 #pragma once
-#include "GameFramework/Entity/Components/SGF_Component.h"
+#include "SGF_EntityCommon.h"
+#include "GameFramework/Entity/Components/SGF_ComponentCommon.h"
 
+class SGF_Component;
 class SGF_EntityGraph;
+class SGF_EntityManager;
+class SGF_ComponentManager;
 class SGF_World;
 
 class SGF_Entity
 {
-	friend class SED_WorldHierarchyPanel;
+	friend class SGF_EntityManager;
+	friend class SED_WorldHierarchyWindow;
 public:
 	SGF_Entity();
+	SGF_Entity(const SGF_Entity& aOther);
+	SGF_Entity(SGF_Entity&& aOther);
 	~SGF_Entity();
 
-	void Update();
+	operator bool() const;
+	SGF_Entity& operator=(const SGF_Entity& aOther);
+	SGF_Entity& operator=(SGF_Entity&& aOther);
+	bool operator==(const SGF_Entity& aOther) const;
+	bool operator!=(const SGF_Entity& aOther) const;
 
-	void SetWorld(SGF_World* aWorld);
+	bool HasComponent(const SGF_ComponentId& aId) const;
+	SGF_Component* GetComponent(const SGF_ComponentId& aId) const;
+	SGF_Component* AddComponent(const SGF_ComponentId& aId) const;
+	SGF_Component* AddComponent(const char* aComponentName) const;
+	void RemoveComponent(const SGF_ComponentId& aId) const;
+
+	template<class ComponentType>
+	bool HasComponent() const
+	{
+		return HasComponent(ComponentType::Id());
+	}
+
+	template<class ComponentType>
+	ComponentType* GetComponent() const
+	{
+		return static_cast<ComponentType*>(GetComponent(ComponentType::Id()));
+	}
+
+	template<class ComponentType>
+	ComponentType* AddComponent() const
+	{
+		return static_cast<ComponentType*>(AddComponent(ComponentType::Id()));
+	}
+
+	template<class ComponentType>
+	void RemoveComponent() const
+	{
+		RemoveComponent(ComponentType::Id());
+	}
+
+	const SGF_EntityHandle& GetHandle() const;
+	SGF_EntityManager* GetEntityManager() const;
+	SGF_ComponentManager* GetComponentManager() const;
 	SGF_World* GetWorld() const;
 
-	template<class ComponentType>
-	bool HasComponent() const;
-	bool HasComponent(const SGF_ComponentId& aComponentId) const;
-
-	template<class ComponentType>
-	ComponentType* GetComponent() const;
-	SGF_Component* GetComponent(const SGF_ComponentId& aComponentId) const;
-
-	template<class ComponentType>
-	ComponentType* AddComponent();
-	SGF_Component* AddComponent(const SGF_ComponentId& aComponentId);
-	SGF_Component* AddComponent(const char* aComponentName);
-
-	void RemoveComponent(const SGF_ComponentId& aComponentId);
-
-	const SC_Array<SC_Ref<SGF_Component>>& GetComponents() const;
-
-	bool Is(const SC_UUID& aId) const;
-
-	const SC_Array<SGF_Entity*>& GetChildren() const;
-	void SetParent(SGF_Entity* aParent);
-	SGF_Entity* GetParent() const;
-
-	void SetName(const std::string& aName);
-	const std::string& GetName() const;
-
-	void SetVisible(bool aValue);
-	bool IsVisible() const;
-
-	bool Save(SC_Json& aOutSaveData) const;
-	bool Load(const SC_Json& aSavedData);
-
 private:
-	void AddChild(SGF_Entity* aEntity);
-	void RemoveChild(SGF_Entity* aEntity);
+	SGF_Entity(const SGF_EntityHandle& aHandle, SGF_EntityManager* aEntityManager, SGF_ComponentManager* aComponentManager, SGF_World* aParentWorld);
 
-	SC_Array<SGF_Entity*> mChildren;
-	SGF_Entity* mParent;
-	SGF_World* mWorld;
-
-	SC_Array<SC_Ref<SGF_Component>> mComponents;
-	SC_UnorderedMap<SGF_ComponentId, uint32> mMappedComponents;
-
-	std::string mName;
-	bool mIsVisible;
+	SGF_EntityHandle mHandle;
+	SGF_EntityManager* mEntityManager;
+	SGF_ComponentManager* mComponentManager;
+	SGF_World* mParentWorld;
 };
 
-template<class ComponentType>
-inline bool SGF_Entity::HasComponent() const
+class SGF_EntityManager
 {
-	return HasComponent(ComponentType::Id());
-}
+public:
+	SGF_EntityManager(SGF_World* aWorld, SGF_ComponentManager* aComponentManager);
+	~SGF_EntityManager();
 
-template<class ComponentType>
-inline ComponentType* SGF_Entity::GetComponent() const
-{
-	return static_cast<ComponentType*>(GetComponent(ComponentType::Id()));
-}
+	bool Init();
 
-template<class ComponentType>
-inline ComponentType* SGF_Entity::AddComponent()
-{
-	return static_cast<ComponentType*>(AddComponent(ComponentType::Id()));
-}
+	SGF_Entity CreateEntity();
+	void DestroyEntity(const SGF_Entity& aEntity);
+
+private:
+	void GrowEntityAllocation();
+
+	SC_Array<SGF_EntityHandle> mAvailableEntityHandles;
+	SC_Array<SGF_EntityHandle> mAliveEntityHandles;
+
+	SC_Mutex mMutex;
+	uint32 mLatestAllocatedEntityHandle;
+
+	SGF_World* mWorld;
+	SGF_ComponentManager* mComponentManager;
+};

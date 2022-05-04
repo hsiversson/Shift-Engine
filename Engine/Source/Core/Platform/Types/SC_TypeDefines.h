@@ -41,3 +41,7 @@ static constexpr float SC_FLT_LOWEST = -SC_FLT_MAX;
 #define KB(Num) ((Num) * 1024)
 #define MB(Num) ((Num) * (1024 * 1024))
 #define GB(Num) ((Num) * (1024*1024*1024ull))
+
+#define BYTE_TO_KB(Num) ((Num) / KB(1))
+#define BYTE_TO_MB(Num) ((Num) / MB(1))
+#define BYTE_TO_GB(Num) ((Num) / GB(1))

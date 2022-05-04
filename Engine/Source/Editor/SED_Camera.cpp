@@ -1,7 +1,7 @@
 #include "SED_Camera.h"
 #include "InputOutput/KeyCodes/SC_KeyCodes.h"
 
-SED_Camera::SED_Camera(SED_ViewportPanel* aParentViewport)
+SED_Camera::SED_Camera(SED_ViewportWindow* aParentViewport)
 	: mActiveControlType(ControlType::None)
 	, mParentViewport(aParentViewport)
 	, mMovementSpeed(4.0f)

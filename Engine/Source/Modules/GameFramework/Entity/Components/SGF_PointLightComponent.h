@@ -20,5 +20,6 @@ public:
 	SGF_PROPERTY(float, mIntensity, "Intensity");
 	SGF_PROPERTY(float, mSourceRadius, "Source Radius");
 	SGF_PROPERTY(float, mSourceRadiusSoft, "Soft Source Radius");
+	SGF_PROPERTY(bool, mCastShadow, "Cast Shadow");
 };
 

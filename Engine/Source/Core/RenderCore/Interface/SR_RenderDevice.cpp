@@ -65,12 +65,12 @@ SR_RenderDevice::~SR_RenderDevice()
 
 void SR_RenderDevice::Present()
 {
+	mTempResourceHeap->EndFrame();
+
 	SR_SwapChain* sc = GetSwapChain();
 	WaitForFence(sc->GetLastFrameFence());
 
 	sc->Present();
-
-	mTempResourceHeap->EndFrame();
 }
 
 SC_Ref<SR_CommandList> SR_RenderDevice::CreateCommandList(const SR_CommandListType& /*aType*/)
@@ -140,6 +140,12 @@ SR_TempBuffer SR_RenderDevice::CreateTempBuffer(const SR_BufferResourcePropertie
 }
 
 SC_Ref<SR_Heap> SR_RenderDevice::CreateHeap(const SR_HeapProperties& /*aHeapProperties*/)
+{
+	assert(false && "Not implemented yet!");
+	return nullptr;
+}
+
+SC_Ref<SR_FenceResource> SR_RenderDevice::CreateFenceResource()
 {
 	assert(false && "Not implemented yet!");
 	return nullptr;
@@ -240,17 +246,17 @@ SR_InstanceBuffer* SR_RenderDevice::GetPersistentResourceInfo() const
 	return mPersistentResourceInfo.get();
 }
 
-SR_RenderTaskManager* SR_RenderDevice::GetRenderTaskManager() const
+SR_CommandQueueManager* SR_RenderDevice::GetCommandQueueManager() const
 {
-	return mRenderTaskManager.get();
+	return mCommandQueueManager.get();
 }
 
 SC_Ref<SR_CommandList> SR_RenderDevice::GetTaskCommandList()
 {
-	if (!mRenderTaskManager)
+	if (!mCommandQueueManager)
 		return nullptr;
 
-	return mRenderTaskManager->GetCommandList(mRenderTaskManager->gCurrentTaskType);
+	return mCommandQueueManager->GetCommandList(mCommandQueueManager->gCurrentTaskType);
 }
 
 const SR_RenderSupportCaps& SR_RenderDevice::GetSupportCaps() const
@@ -275,6 +281,17 @@ void SR_RenderDevice::EndRenderDocCapture()
 	}
 }
 #endif
+
+SC_SizeT SR_RenderDevice::GetAvailableVRAM() const
+{
+	assert(false && "Not implemented yet!");
+	return 0;
+}
+SC_SizeT SR_RenderDevice::GetUsedVRAM() const
+{
+	assert(false && "Not implemented yet!");
+	return 0;
+}
 
 const SR_API& SR_RenderDevice::GetAPI() const
 {
@@ -382,8 +399,8 @@ bool SR_RenderDevice::PostInit()
 		return false;
 	}
 
-	mRenderTaskManager = SC_MakeUnique<SR_RenderTaskManager>();
-	if (!mRenderTaskManager->Init())
+	mCommandQueueManager = SC_MakeUnique<SR_CommandQueueManager>();
+	if (!mCommandQueueManager->Init())
 		return false;
 
 	return true;

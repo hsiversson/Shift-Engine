@@ -1,4 +1,5 @@
 #pragma once
+#include "../Entity/SGF_EntityCommon.h"
 
 class SR_Texture;
 class SGfx_MeshInstance;
@@ -122,7 +123,7 @@ template<> inline SGF_PropertyHelperBase::Type SGF_PropertyHelperBase::GetTypeFr
 template<> inline SGF_PropertyHelperBase::Type SGF_PropertyHelperBase::GetTypeFromClassType<SC_Ref<SR_Texture>>() { return Type::Texture; }
 template<> inline SGF_PropertyHelperBase::Type SGF_PropertyHelperBase::GetTypeFromClassType<SC_Ref<SGfx_MeshInstance>>() { return Type::Mesh; }
 template<> inline SGF_PropertyHelperBase::Type SGF_PropertyHelperBase::GetTypeFromClassType<SC_Ref<SGfx_MaterialInstance>>() { return Type::Material; }
-template<> inline SGF_PropertyHelperBase::Type SGF_PropertyHelperBase::GetTypeFromClassType<SC_Ref<SGF_Entity>>() { return Type::EntityRef; }
+template<> inline SGF_PropertyHelperBase::Type SGF_PropertyHelperBase::GetTypeFromClassType<SGF_EntityHandle>() { return Type::EntityRef; }
 
 template<class T>
 class SGF_PropertyHelper : public SGF_PropertyHelperBase

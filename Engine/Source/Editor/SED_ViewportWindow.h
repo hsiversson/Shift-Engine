@@ -1,5 +1,5 @@
 #pragma once
-#include "SED_Panel.h"
+#include "SED_Window.h"
 #include "Common/MessageQueue/SC_MessageListener.h"
 #include "SED_Camera.h"
 
@@ -8,40 +8,44 @@ class SGfx_View;
 class SGfx_World;
 
 class SED_TransformationGizmo;
-class SED_ViewportPanel;
+class SED_ViewportWindow;
 class SED_ViewportToolbar
 {
 public:
-	SED_ViewportToolbar(SED_ViewportPanel& aViewportPanel, SED_TransformationGizmo* aGizmo);
+	SED_ViewportToolbar(SED_ViewportWindow& aViewportPanel, SED_TransformationGizmo* aGizmo);
 
-	void OnRender();
+	void OnDraw();
 	
 private:
 
 	void DrawGizmoOptions();
 
-	SED_ViewportPanel& mViewportParent;
+	SED_ViewportWindow& mViewportParent;
 	SED_TransformationGizmo* mGizmo;
 
 };
 
-class SED_ViewportPanel : public SED_Panel, SC_MessageListener
+class SED_ViewportWindow : public SED_Window, SC_MessageListener
 {
 	friend class SED_ViewportToolbar;
 public:
-	SED_ViewportPanel(SGfx_World* aGfxWorld, SED_TransformationGizmo* aGizmo, const char* aId = "Viewport");
-	~SED_ViewportPanel();
+	SED_ViewportWindow(SGfx_World* aGfxWorld, SED_TransformationGizmo* aGizmo, const char* aId = "Viewport");
+	~SED_ViewportWindow();
 
 	const SC_Vector4& GetViewportBounds() const;
 	const SC_Vector2& GetViewportSize() const;
 
 	const SGfx_Camera& GetCamera() const;
 
-	void Update() override;
-	void OnRender() override;
 
 	void SetCamera(SGfx_Camera* aCamera);
 	SGfx_Camera* GetEditorCamera();
+
+	const char* GetWindowName() const override;
+
+protected:
+	void OnUpdate() override;
+	void OnDraw() override;
 
 protected:
 	void RecieveMessage(const SC_Message& aMsg) override;

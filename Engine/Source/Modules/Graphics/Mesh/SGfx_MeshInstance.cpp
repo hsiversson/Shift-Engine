@@ -64,6 +64,30 @@ const SC_AABB& SGfx_MeshInstance::GetBoundingBox() const
 	return mBoundingBox;
 }
 
+void SGfx_MeshInstance::UpdateInstanceData() const
+{
+	struct InstanceData
+	{
+		SC_Matrix mTransform;
+		SC_Matrix mPrevTransform;
+		uint32 mVertexBufferDescriptorIndex;
+		uint32 mVertexStride;
+		uint32 mNumVertices;
+		uint32 mVertexNormalOffset;
+		uint32 mMaterialIndex;
+	};
+
+	InstanceData data;
+	data.mTransform = mTransform;
+	data.mPrevTransform = mPrevTransform;
+	data.mVertexBufferDescriptorIndex = mMeshTemplate->GetVertexBuffer()->GetDescriptorHeapIndex();
+	data.mVertexStride = mMeshTemplate->GetVertexBufferResource()->GetProperties().mElementSize;
+	data.mNumVertices = mMeshTemplate->GetVertexBufferResource()->GetProperties().mElementCount;
+	data.mVertexNormalOffset = mMeshTemplate->GetVertexLayout().GetAttributeByteOffset(SR_VertexAttribute::Normal);
+	data.mMaterialIndex = mMaterialInstance->GetMaterialIndex();
+
+}
+
 #if ENABLE_RAYTRACING
 bool SGfx_MeshInstance::IncludeInRaytracingScene() const
 {
@@ -112,5 +136,10 @@ void SGfx_MeshInstance::UpdateRaytracingData()
 	mRaytracingData.mHitGroup = 0;
 	mRaytracingData.mFaceCullingMode = SR_CullMode::Back;
 	mRaytracingData.mIsOpaque = true;
+
+
+
+	mMeshTemplate->GetVertexBuffer()->GetDescriptorHeapIndex();
+
 }
 #endif

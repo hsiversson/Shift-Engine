@@ -6,7 +6,8 @@
 * 
 */
 
-static constexpr uint32 gCurrentSRPVersion = 0x1;
+static constexpr uint32 SC_CurrentSRPVersion = 0x1;
+static constexpr const char* SC_SRPHeaderFileExtension = ".srph";
 
 enum class SC_SRPTypes
 {
@@ -17,7 +18,11 @@ enum class SC_SRPTypes
 
 struct SC_SRPHeader
 {
+	uint32 mFourCC;
 	uint32 mVersion;
+	uint32 mSize;
+	uint32 mCompressedSize;
+
 
 };
 

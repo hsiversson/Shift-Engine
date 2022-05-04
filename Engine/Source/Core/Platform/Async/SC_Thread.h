@@ -40,6 +40,8 @@ public:
 	static SC_ThreadId GetCurrentThreadId();
 	static SC_ThreadId GetMainThreadId();
 
+	static thread_local bool gIsTaskThread;
+
 protected:
 	virtual void ThreadMain();
 

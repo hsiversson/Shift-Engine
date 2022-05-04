@@ -2,6 +2,7 @@
 
 SGfx_Light::SGfx_Light(const SGfx_LightType& aType, const SGfx_LightUnit& aLightUnit)
 	: mIntensity(0.0f)
+	, mCastShadow(false)
 	, mLightUnit(aLightUnit)
 	, mType(aType)
 {
@@ -167,6 +168,7 @@ SGfx_PointLight::LocalLightShaderData SGfx_PointLight::GetShaderData() const
 	shaderData.mSourceRadius = GetSourceRadius();
 	shaderData.mSoftSourceRadius = GetSourceRadiusSoft();
 	shaderData.mSpotAngles = SC_Vector2(0);
+	shaderData.mCastShadow = mCastShadow;
 	shaderData.mType = static_cast<uint32>(SGfx_LightType::Point);
 
 	return shaderData;
@@ -308,6 +310,7 @@ SGfx_SpotLight::LocalLightShaderData SGfx_SpotLight::GetShaderData() const
 	shaderData.mSourceRadius = GetSourceRadius();
 	shaderData.mSoftSourceRadius = GetSourceRadiusSoft();
 	shaderData.mSpotAngles = GetSpotAngles();
+	shaderData.mCastShadow = mCastShadow;
 	shaderData.mType = static_cast<uint32>(SGfx_LightType::Spot);
 
 	return shaderData;
