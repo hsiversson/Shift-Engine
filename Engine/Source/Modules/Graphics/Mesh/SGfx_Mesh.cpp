@@ -78,7 +78,7 @@ bool SGfx_Mesh::Init(const SGfx_MeshCreateParams& aCreateParams)
 	{
 		SR_BufferProperties bufferProps;
 		bufferProps.mElementCount = mVertexBufferResource->GetProperties().mElementCount;
-		bufferProps.mType = SR_BufferType::Bytes;
+		bufferProps.mType = SR_BufferType::Structured;
 		mVertexBuffer = SR_RenderDevice::gInstance->CreateBuffer(bufferProps, mVertexBufferResource);
 
 #if ENABLE_MESH_SHADERS

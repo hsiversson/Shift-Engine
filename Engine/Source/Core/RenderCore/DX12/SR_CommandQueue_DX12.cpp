@@ -99,7 +99,7 @@ void SR_CommandQueue_DX12::InsertWait(const SR_Fence& aFence)
 void SR_CommandQueue_DX12::BeginEvent(const char* aName)
 {
 #if ENABLE_PIX
-	PIXBeginEvent(mD3D12CommandQueue.Get(), 0, "{}", aName);
+	PIXBeginEvent(mD3D12CommandQueue.Get(), 0, "%s", aName);
 #else
 	(void)aName;
 #endif

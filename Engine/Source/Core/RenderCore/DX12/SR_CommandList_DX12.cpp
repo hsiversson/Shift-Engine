@@ -80,7 +80,7 @@ void SR_CommandList_DX12::End()
 void SR_CommandList_DX12::BeginEvent(const char* aName)
 {
 #if ENABLE_PIX
-	PIXBeginEvent(mD3D12CommandList.Get(), 0, "{}", aName);
+	PIXBeginEvent(mD3D12CommandList.Get(), 0, "%s", aName);
 #else
 	(void)aName;
 #endif

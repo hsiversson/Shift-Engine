@@ -70,11 +70,19 @@ float3 CalculateIndirectLighting(in const MaterialData aMaterialData, in const f
     float3 indirectLighting = (float3)0;
 
 #if USE_RTGI
-    return TraceGI(aMaterialData, aWorldPosition, aViewDirection);
+    indirectLighting += TraceGI(aMaterialData, aWorldPosition, aViewDirection);
 #else
     // Environmental IBL
-    return CalculateEnvironmentalIBL(aMaterialData, aViewDirection);
+    indirectLighting += CalculateEnvironmentalIBL(aMaterialData, aViewDirection);
 #endif
+
+#if USE_RTREFLECTIONS
+    indirectLighting += TraceReflections(aMaterialData, aWorldPosition, aViewDirection);
+#else
+    indirectLighting += (float3)0;
+#endif
+
+    return indirectLighting;
 }
 
 #endif //INDIRECT_LIGHTING_HEADER

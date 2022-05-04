@@ -7,7 +7,7 @@
 #include "AtmosphereCommon.ssh"
 
 
-#define MAX_NUM_RAYS (4)
+#define MAX_NUM_RAYS (1)
 
 float3 TraceGI(in const MaterialData aMaterialData, in const float3 aWorldPosition, in const float3 aViewDirection)
 {
@@ -27,17 +27,12 @@ float3 TraceGI(in const MaterialData aMaterialData, in const float3 aWorldPositi
     uint numRays = lerp(1, MAX_NUM_RAYS, aMaterialData.mRoughness);
     float stepAccum = 1.0f / (float)numRays;
 
-	float a = aMaterialData.mRoughness * aMaterialData.mRoughness;
-	float a2 = a*a;
-    float3x3 tangentBasis = GetTangentBasis(aMaterialData.mWorldNormal);
-	float3 tangentV = mul(tangentBasis, aViewDirection);
-
     float3 outLight = 0.0f;
     for (uint i = 0; i < numRays; ++i)
     {
         float2 E = Hammersley16(i, numRays, random);
-	    float3 H = mul(ImportanceSampleVisibleGGX(UniformSampleDisk(E), a2, tangentV).xyz, tangentBasis);
-        ray.Direction = H;
+        float3 rayDirectionTangent = CosineSampleHemisphere(E).xyz;
+        ray.Direction = TangentToWorld(rayDirectionTangent, aMaterialData.mWorldNormal);
 
         rayQuery.TraceRayInline(raytracingScene, rayFlags, ~0, ray);
         rayQuery.Proceed();
@@ -58,7 +53,7 @@ float3 TraceGI(in const MaterialData aMaterialData, in const float3 aWorldPositi
             //SR_MaterialInfo materialInfo = SR_GetMaterialInfo(materialIndex);
 
             //bool isFrontFace = rayQuery.CommittedTriangleFrontFace();
-            outLight += color;
+            outLight += barycentric;
         }
         else
         {

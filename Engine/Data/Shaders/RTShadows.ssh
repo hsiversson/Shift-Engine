@@ -3,7 +3,7 @@
 
 #include "Raytracing.ssh"
 
-#define NUM_RAYS (4)
+#define NUM_RAYS (1)
 #define NUM_RAYS_RCP (1.0f / NUM_RAYS)
 
 float TraceShadow(in const MaterialData aMaterialData, float3 aWorldPosition, float3 aToLightDirection, float aMaxDistance, float aSourceRadius)
