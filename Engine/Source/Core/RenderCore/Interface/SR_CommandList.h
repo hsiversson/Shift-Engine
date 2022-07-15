@@ -47,7 +47,7 @@ public:
 	void DrawIndexed(uint32 aIndexCount, uint32 aStartIndex = 0, uint32 aStartVertex = 0);
 	virtual void DrawIndexedInstanced(uint32 aIndexCount, uint32 aInstanceCount, uint32 aStartIndex = 0, uint32 aStartVertex = 0, uint32 aStartInstance = 0);
 
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 	void DispatchMesh(const SC_IntVector3& aThreadGroups);
 	virtual void DispatchMesh(uint32 aGroupCountX, uint32 aGroupCountY = 1, uint32 aGroupCountZ = 1);
 #endif

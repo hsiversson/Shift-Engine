@@ -72,11 +72,11 @@ bool SAF_Framework_Win64::Init()
 
 	SR_API renderApi = SR_API::D3D12;
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 	if (SC_CommandLine::HasCommand("dx12"))
 		renderApi = SR_API::D3D12;
 #endif
-#if ENABLE_VULKAN
+#if SR_ENABLE_VULKAN
 	if (SC_CommandLine::HasCommand("vulkan"))
 		renderApi = SR_API::Vulkan;
 #endif

@@ -165,7 +165,7 @@ public:
 
 	const SR_RenderSupportCaps& GetSupportCaps() const;
 
-#if ENABLE_RENDERDOC_API
+#if SR_ENABLE_RENDERDOC_API
 	void StartRenderDocCapture();
 	void EndRenderDocCapture();
 #endif
@@ -201,7 +201,7 @@ protected:
 	bool mEnableDebugMode : 1;
 	bool mBreakOnError : 1;
 
-#if ENABLE_RENDERDOC_API
+#if SR_ENABLE_RENDERDOC_API
 	RENDERDOC_API_1_4_1* mRenderDocAPI;
 	bool mEnableRenderDocCaptures;
 #endif

@@ -1,7 +1,7 @@
 #pragma once
 #include "RenderCore/Interface/SR_Fence.h"
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 
 struct ID3D12Fence;
 class SR_FenceResource_DX12 : public SR_FenceResource

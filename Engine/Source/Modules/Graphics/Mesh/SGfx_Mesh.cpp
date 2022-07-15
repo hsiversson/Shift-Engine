@@ -112,7 +112,7 @@ bool SGfx_Mesh::Init(const SGfx_MeshCreateParams& aCreateParams)
 		bufferProps.mType = SR_BufferType::Bytes;
 		mVertexBuffer = SR_RenderDevice::gInstance->CreateBuffer(bufferProps, mVertexBufferResource);
 
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 		if (SR_RenderDevice::gInstance->GetSupportCaps().mEnableMeshShaders && aCreateParams.mIsMeshletData)
 		{
 			if (!InitForMeshShaders(aCreateParams))
@@ -132,7 +132,7 @@ bool SGfx_Mesh::Init(const SGfx_MeshCreateParams& aCreateParams)
 		}
 		mIsMeshletMesh = aCreateParams.mIsMeshletData;
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 		//if (aCreateParams.mIncludeInRaytracing)
 		{
 			if (!InitAccelerationStructure(aCreateParams))
@@ -203,7 +203,7 @@ SR_Buffer* SGfx_Mesh::GetIndexBuffer() const
 	return mIndexBuffer;
 }
 
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 const SGfx_MeshletBuffers& SGfx_Mesh::GetMeshletBuffers() const
 {
 	return mMeshletBuffers;
@@ -241,7 +241,7 @@ bool SGfx_Mesh::InitDefault(const SGfx_MeshCreateParams& aCreateParams)
 	return (mIndexBufferResource != nullptr);
 }
 
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 bool SGfx_Mesh::InitForMeshShaders(const SGfx_MeshCreateParams& aCreateParams)
 {
 	SR_BufferProperties bufferProps;
@@ -288,7 +288,7 @@ bool SGfx_Mesh::InitForMeshShaders(const SGfx_MeshCreateParams& aCreateParams)
 }
 #endif
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 bool SGfx_Mesh::InitAccelerationStructure(const SGfx_MeshCreateParams& aCreateParams)
 {
 	SC_Array<SR_RaytracingGeometryData> geometryData;
@@ -348,7 +348,7 @@ bool SGfx_Mesh::InitAccelerationStructure(const SGfx_MeshCreateParams& aCreatePa
 }
 #endif
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 SR_BufferResource* SGfx_Mesh::GetAccelerationStructure() const
 {
 	return mAccelerationStructure;

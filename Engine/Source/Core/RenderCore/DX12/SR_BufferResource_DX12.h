@@ -1,7 +1,7 @@
 #pragma once
 #include "RenderCore/Interface/SR_BufferResource.h"
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 
 struct ID3D12Resource;
 

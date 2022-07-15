@@ -1,7 +1,7 @@
 
 #include "SR_SwapChain_DX12.h"
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 
 #include "SR_RenderDevice_DX12.h"
 #include "SR_CommandQueue_DX12.h"

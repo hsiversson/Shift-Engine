@@ -2,7 +2,7 @@
 #include "RenderCore/Interface/SR_Heap.h"
 #include "RenderCore/Resources/SR_RingBuffer.h"
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 
 struct ID3D12Heap;
 
@@ -26,5 +26,5 @@ private:
 	volatile uint64 mHeapOffset;
 };
 
-#endif //ENABLE_DX12
+#endif //SR_ENABLE_DX12
 

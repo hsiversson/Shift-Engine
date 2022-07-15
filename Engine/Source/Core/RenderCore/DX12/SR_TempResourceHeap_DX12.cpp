@@ -1,6 +1,6 @@
 #include "SR_TempResourceHeap_DX12.h"
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 #include "SR_RenderDevice_DX12.h"
 #include "SR_Heap_DX12.h"
 #include "SR_TextureResource_DX12.h"
@@ -153,4 +153,4 @@ SR_TempBuffer SR_TempResourceHeap_DX12::GetBufferInternal(const SR_BufferResourc
 	return tempBuffer;
 }
 
-#endif //ENABLE_DX12
+#endif //SR_ENABLE_DX12

@@ -1,6 +1,6 @@
 #include "SR_Fence_DX12.h"
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 #include "SR_RenderDevice_DX12.h"
 
 SR_FenceResource_DX12::SR_FenceResource_DX12()
@@ -83,4 +83,4 @@ bool SR_FenceResource_DX12::Init()
 	return true;
 }
 
-#endif // ENABLE_DX12
+#endif // SR_ENABLE_DX12

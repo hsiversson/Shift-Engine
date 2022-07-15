@@ -1,6 +1,6 @@
 #pragma once
 
-#if ENABLE_DIRECTSTORAGE
+#if SR_ENABLE_DIRECTSTORAGE
 
 struct IDStorageFactory;
 struct IDStorageFile;

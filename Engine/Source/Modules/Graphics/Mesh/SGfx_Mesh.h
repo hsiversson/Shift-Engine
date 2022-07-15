@@ -58,7 +58,7 @@ public:
 	SR_BufferResource* GetIndexBufferResource() const;
 	SR_Buffer* GetIndexBuffer() const;
 
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 	const SGfx_MeshletBuffers& GetMeshletBuffers() const;
 	bool IsUsingMeshlets() const;
 #endif
@@ -71,7 +71,7 @@ public:
 
 private:
 	bool InitDefault(const SGfx_MeshCreateParams& aCreateParams);
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 	bool InitForMeshShaders(const SGfx_MeshCreateParams& aCreateParams);
 #endif
 
@@ -92,7 +92,7 @@ private:
 	SC_Ref<SR_Buffer> mVertexNormalBuffer;
 	SC_Ref<SR_BufferResource> mIndexBufferResource;
 	SC_Ref<SR_Buffer> mIndexBuffer;
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 	SGfx_MeshletBuffers mMeshletBuffers;
 #endif
 #if ENABLE_RAYTRACING

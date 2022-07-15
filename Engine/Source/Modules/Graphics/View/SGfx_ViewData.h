@@ -24,7 +24,7 @@ struct SGfx_RenderObject
 	SR_BufferResource* mVertexBufferResource;
 	SR_BufferResource* mIndexBufferResource;
 
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 	SR_Buffer* mVertexBuffer;
 	SR_Buffer* mMeshletBuffer;
 	SR_Buffer* mVertexIndexBuffer;

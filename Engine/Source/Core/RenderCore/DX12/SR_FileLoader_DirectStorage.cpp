@@ -1,6 +1,6 @@
 #include "SR_FileLoader_DirectStorage.h"
 
-#if ENABLE_DIRECTSTORAGE
+#if SR_ENABLE_DIRECTSTORAGE
 #include "SR_RenderDevice_DX12.h"
 
 #include "dstorage.h"

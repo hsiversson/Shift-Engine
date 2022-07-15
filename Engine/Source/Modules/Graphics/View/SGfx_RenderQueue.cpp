@@ -35,9 +35,9 @@ void SGfx_RenderQueue::Prepare(SGfx_ViewData& aPrepareData)
 		SR_BlendState* blendState = firstItem.mBlendState;
 
 		bool isItemValid = (firstItem.mVertexBuffer && firstItem.mIndexBuffer);
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 		isItemValid = (firstItem.mUsingMeshlets) ? firstItem.mMeshletData : isItemValid;
-#endif //ENABLE_MESH_SHADERS
+#endif //SR_ENABLE_MESH_SHADERS
 
 		if (isItemValid)
 		{
@@ -54,11 +54,11 @@ void SGfx_RenderQueue::Prepare(SGfx_ViewData& aPrepareData)
 					numInstances != SC_UINT16_MAX)
 					break;
 
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 				if (firstItem.mUsingMeshlets &&	(nextItem.mMeshletData != firstItem.mMeshletData))
 					break;
 				else
-#endif //ENABLE_MESH_SHADERS
+#endif //SR_ENABLE_MESH_SHADERS
 				{
 					if ((nextItem.mVertexBuffer != firstItem.mVertexBuffer) || (nextItem.mIndexBuffer != firstItem.mIndexBuffer))
 						break;
@@ -99,7 +99,7 @@ void SGfx_RenderQueue::Render(SR_CommandList* aCmdList) const
 		const SGfx_RenderQueueItem& item = *items;
 		uint32 numInstances = item.mNumInstances;
 
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 		if (item.mUsingMeshlets)
 		{
 			if (item.mMeshletData)
@@ -145,7 +145,7 @@ void SGfx_RenderQueue::Render(SR_CommandList* aCmdList) const
 			}
 		}
 		else
-#endif //ENABLE_MESH_SHADERS
+#endif //SR_ENABLE_MESH_SHADERS
 		{
 			SR_BufferResource* vertexBuffer = item.mVertexBuffer;
 			SR_BufferResource* indexBuffer = item.mIndexBuffer;

@@ -140,7 +140,7 @@ void SGfx_Renderer::RenderView(SGfx_View* aView)
 
 	mCurrentView = aView;
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	SubmitGraphicsTask(std::bind(&SGfx_Renderer::ComputeRaytracingScene, this), prepareData.mBuildRaytracingSceneEvent); // needs to be posted before PreRenderUpdates to make sure RaytracingScene descriptor is ready
 #endif
 
@@ -292,7 +292,7 @@ void SGfx_Renderer::SubmitCopyTask(SR_RenderTaskFunctionSignature aTask, const S
 void SGfx_Renderer::PreRenderUpdates()
 {
 	SGfx_ViewData& renderData = mCurrentView->GetMutableRenderData();
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	renderData.mBuildRaytracingSceneEvent->mCPUEvent.Wait();
 #endif
 
@@ -309,7 +309,7 @@ void SGfx_Renderer::PreRenderUpdates()
 
 }
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 
 void SGfx_Renderer::ComputeRaytracingScene()
 {
@@ -391,7 +391,7 @@ void SGfx_Renderer::ComputeAmbientOcclusion()
 	SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
 	const SGfx_ViewData& renderData = mCurrentView->GetRenderData();
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	if (renderData.mRaytracingInstances.IsEmpty())
 		return;
 #endif

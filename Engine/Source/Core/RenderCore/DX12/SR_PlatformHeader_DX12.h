@@ -7,7 +7,7 @@
 #pragma comment(lib,"dxgi.lib")
 #pragma comment(lib,"dxguid.lib")
 
-#if ENABLE_PIX
+#if SR_ENABLE_PIX
 	#define USE_PIX (1)
 
 	#if !IS_RETAIL_BUILD

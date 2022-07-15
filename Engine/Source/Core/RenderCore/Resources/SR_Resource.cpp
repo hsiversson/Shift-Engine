@@ -3,7 +3,7 @@
 
 SR_Resource::SR_Resource()
 	: mLatestResourceState(0)
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 	, mTrackedD3D12Resource(nullptr)
 #endif
 {

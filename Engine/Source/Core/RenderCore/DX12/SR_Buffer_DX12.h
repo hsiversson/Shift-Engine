@@ -1,7 +1,7 @@
 
 #pragma once
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 
 class SR_BufferResource_DX12;
 class SR_Buffer_DX12 : public SR_Buffer

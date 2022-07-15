@@ -104,7 +104,7 @@ static std::wstring GetTargetProfile(const SR_ShaderType& aShaderType)
 	case SR_ShaderType::Vertex:
 		shaderTarget = L"vs_";
 		break;
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 	case SR_ShaderType::Amplification:
 		shaderTarget = L"as_";
 		break;
@@ -388,7 +388,7 @@ bool SR_DirectXShaderCompiler::CompileFromString(const std::string& aShadercode,
 				reflectionBuffer.Size = reflectionData->GetBufferSize();
 				reflectionBuffer.Encoding = 0;
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 				SR_ComPtr<ID3D12ShaderReflection> reflection;
 				dxcUtils->CreateReflection(&reflectionBuffer, IID_PPV_ARGS(&reflection));
 				if (reflection)

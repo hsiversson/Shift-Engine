@@ -2,7 +2,7 @@
 #include "RenderCore/Interface/SR_TextureResource.h"
 #include "RenderCore/Interface/SR_BufferResource.h"
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 
 SR_Format SR_D3D12ConvertFormat(DXGI_FORMAT aFormat)
 {

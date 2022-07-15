@@ -1,7 +1,7 @@
 
 #include "SR_DescriptorHeap_DX12.h"
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 #include "SR_RenderDevice_DX12.h"
 
 SR_DescriptorHeap_DX12::SR_DescriptorHeap_DX12(uint32 aNumDescriptors, const SR_DescriptorHeapType& aType, bool aShaderVisible, const char* aDebugName)

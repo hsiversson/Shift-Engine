@@ -185,7 +185,7 @@ void SGfx_SceneGraph::CullMeshes(SGfx_View* aView)
 			// Add to render queues because this mesh is visible inside our current view
 			SGfx_RenderQueueItem renderQueueItem;
 
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 			if (SR_RenderDevice::gInstance->GetSupportCaps().mEnableMeshShaders && meshTemplate->IsUsingMeshlets())
 			{
 				const SGfx_MeshletBuffers& meshletBuffers = meshTemplate->GetMeshletBuffers();

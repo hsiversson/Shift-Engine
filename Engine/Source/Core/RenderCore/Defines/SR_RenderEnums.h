@@ -4,10 +4,10 @@
 enum class SR_API
 {
 	Unknown,
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 	D3D12,
 #endif
-#if ENABLE_VULKAN
+#if SR_ENABLE_VULKAN
 	Vulkan,
 #endif
 };
@@ -29,7 +29,7 @@ enum class SR_ShaderModel
 enum class SR_ShaderType
 {
 	Vertex,
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 	Mesh,
 	Amplification,
 #endif

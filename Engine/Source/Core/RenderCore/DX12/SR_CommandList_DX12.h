@@ -1,7 +1,7 @@
 #pragma once
 #include "RenderCore/Interface/SR_CommandList.h"
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 
 struct ID3D12CommandAllocator;
 struct ID3D12GraphicsCommandList;
@@ -30,7 +30,7 @@ public:
 	void DrawInstanced(uint32 aVertexCount, uint32 aInstanceCount, uint32 aStartVertex = 0, uint32 aStartInstance = 0) override;
 	void DrawIndexedInstanced(uint32 aIndexCount, uint32 aInstanceCount, uint32 aStartIndex = 0, uint32 aStartVertex = 0, uint32 aStartInstance = 0) override;
 
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 	void DispatchMesh(uint32 aGroupCountX, uint32 aGroupCountY = 1, uint32 aGroupCountZ = 1) override;
 #endif
 
@@ -118,6 +118,10 @@ private:
 	SR_ComPtr<ID3D12GraphicsCommandList6> mD3D12CommandList6;
 
 	SC_Ref<SR_BufferResource> mAccelerationStructureScratchBuffer;
+
+#if SR_ENABLE_NVIDIA_AFTERMATH
+	void* mNvAftermathContextHandle;
+#endif
 };
 
 #endif

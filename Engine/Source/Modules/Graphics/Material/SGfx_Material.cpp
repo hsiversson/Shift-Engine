@@ -275,7 +275,7 @@ SR_ShaderState* SGfx_Material::GetShaderState(const SR_VertexLayout& aVertexLayo
 
 			std::string shaderCodeBuffer;
 
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
             if (SR_RenderDevice::gInstance->GetSupportCaps().mEnableMeshShaders)
 			{
 				std::ifstream t((SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/DefaultMeshShader.ssf").GetAbsolutePath());

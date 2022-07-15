@@ -1,7 +1,7 @@
 #pragma once
 #include "RenderCore/Interface/SR_RootSignature.h"
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 
 class SR_RootSignature_DX12 : public SR_RootSignature
 {

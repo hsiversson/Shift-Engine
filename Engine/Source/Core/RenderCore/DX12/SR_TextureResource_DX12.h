@@ -1,6 +1,6 @@
 #pragma once
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 #include "RenderCore/Interface/SR_TextureResource.h"
 
 struct ID3D12Resource;

@@ -2,11 +2,11 @@
 
 #include "RenderCore/RenderTasks/SR_RenderThread.h"
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 #include "RenderCore/DX12/SR_RenderDevice_DX12.h"
 #endif
 
-#if ENABLE_RENDERDOC_API
+#if SR_ENABLE_RENDERDOC_API
 #include "renderdoc_app.h"
 #endif
 
@@ -269,7 +269,7 @@ const SR_RenderSupportCaps& SR_RenderDevice::GetSupportCaps() const
 	return mSupportCaps;
 }
 
-#if ENABLE_RENDERDOC_API
+#if SR_ENABLE_RENDERDOC_API
 void SR_RenderDevice::StartRenderDocCapture()
 {
 	if (mRenderDocAPI)
@@ -313,12 +313,12 @@ bool SR_RenderDevice::Create(const SR_API& aAPIType)
 
 	switch (aAPIType)
 	{
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 	case SR_API::D3D12:
 		gInstance = new SR_RenderDevice_DX12();
 		break;
 #endif
-#if ENABLE_VULKAN
+#if SR_ENABLE_VULKAN
 	case SR_API::Vulkan:
 		gInstance = new SR_RenderDevice_Vk();
 		break;
@@ -352,7 +352,7 @@ SR_RenderDevice::SR_RenderDevice(const SR_API& aAPI)
 	, mDefaultSwapChain(nullptr)
 	, mEnableDebugMode(false)
 	, mBreakOnError(false)
-#if ENABLE_RENDERDOC_API
+#if SR_ENABLE_RENDERDOC_API
 	, mEnableRenderDocCaptures(false)
 #endif
 	, mRenderAPIType(aAPI)
@@ -370,7 +370,7 @@ SR_RenderDevice::SR_RenderDevice(const SR_API& aAPI)
 		mBreakOnError = true;
 	}
 
-#if ENABLE_RENDERDOC_API
+#if SR_ENABLE_RENDERDOC_API
 	if (mEnableRenderDocCaptures)
 	{
 		if (HMODULE renderDocModule = GetModuleHandleA("renderdoc.dll"))

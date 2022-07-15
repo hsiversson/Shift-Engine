@@ -1,7 +1,7 @@
 #pragma once
 #include "RenderCore/Interface/SR_RenderStates.h"
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 
 struct alignas(void*) SR_PipelineStreamRasterizerDesc
 {
@@ -155,7 +155,7 @@ public:
 	D3D12_SHADER_BYTECODE mByteCode;
 };
 
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 struct alignas(void*) SR_PipelineStreamAmplificationShader
 {
 private:
@@ -203,7 +203,7 @@ struct SR_DefaultShaderPipelineStreamDesc
 	SR_PipelineStreamPixelShader mPS;
 };
 
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 struct SR_MeshShaderPipelineStreamDesc
 {
 	SR_PipelineStreamRasterizerDesc mRasterizerState;

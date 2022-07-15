@@ -1,6 +1,6 @@
 #pragma once
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 #include "RenderCore/Interface/SR_CommandQueue.h"
 #include "SR_CommandList_DX12.h"
 

@@ -80,7 +80,7 @@ void SR_CommandList::DrawIndexedInstanced(uint32 /*aIndexCount*/, uint32 /*aInst
 {
 }
 
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 
 void SR_CommandList::DispatchMesh(const SC_IntVector3& aThreadGroups)
 {

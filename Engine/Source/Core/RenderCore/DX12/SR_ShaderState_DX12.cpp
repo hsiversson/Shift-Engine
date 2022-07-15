@@ -1,7 +1,7 @@
 
 #include "SR_ShaderState_DX12.h"
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 #include "SR_PipelineStreamStructs_DX12.h"
 #include "SR_RenderDevice_DX12.h"
 #include "SR_BufferResource_DX12.h"
@@ -30,7 +30,7 @@ bool SR_ShaderState_DX12::Init(const SR_ShaderStateProperties& aProperties)
 #endif
 	if (aProperties.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Compute)].mSize)
 		return InitAsComputeShader(aProperties);
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 	else if (SR_RenderDevice::gInstance->GetSupportCaps().mEnableMeshShaders && aProperties.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Mesh)].mSize)
 		return InitAsMeshShader(aProperties);
 #endif
@@ -139,7 +139,7 @@ bool SR_ShaderState_DX12::InitDefault(const SR_ShaderStateProperties& aPropertie
 	return VerifyHRESULT(result);
 }
 
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 bool SR_ShaderState_DX12::InitAsMeshShader(const SR_ShaderStateProperties& aProperties)
 {
 	uint32 asIndex = static_cast<uint32>(SR_ShaderType::Amplification);
@@ -197,7 +197,7 @@ bool SR_ShaderState_DX12::InitAsMeshShader(const SR_ShaderStateProperties& aProp
 	mIsMeshShader = true;
 	return VerifyHRESULT(result);
 }
-#endif //ENABLE_MESH_SHADERS
+#endif //SR_ENABLE_MESH_SHADERS
 
 bool SR_ShaderState_DX12::InitAsComputeShader(const SR_ShaderStateProperties& aProperties)
 {
@@ -351,4 +351,4 @@ void SR_ShaderState_DX12::CreateRaytracingShaderTable(const SR_ShaderStateProper
 	mDispatchRaysDesc.HitGroupTable.StrideInBytes = numHitGroups > 1 ? recordSize : 0; // 0 stride when possible as a hint to the driver, recommended by Intel
 }
 #endif //ENABLE_RAYTRACING
-#endif //ENABLE_DX12
+#endif //SR_ENABLE_DX12

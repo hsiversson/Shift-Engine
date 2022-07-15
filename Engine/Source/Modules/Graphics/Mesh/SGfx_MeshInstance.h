@@ -27,7 +27,7 @@ public:
 
 	void UpdateInstanceData(SGfx_InstanceData* aInstanceData);
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	bool IncludeInRaytracingScene() const;
 	const SR_RaytracingInstanceData& GetRaytracingData();
 #endif
@@ -37,7 +37,7 @@ public:
 private:
 	void CalculateBoundingBox();
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	void UpdateRaytracingData();
 #endif
 
@@ -49,7 +49,7 @@ private:
 	SC_Ref<SGfx_Mesh> mMeshTemplate;
 	SC_Ref<SGfx_MaterialInstance> mMaterialInstance;
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	SR_RaytracingInstanceData mRaytracingData;
 #endif
 

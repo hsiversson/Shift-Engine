@@ -1,6 +1,6 @@
 #pragma once
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 #include "RenderCore/Interface/SR_ShaderState.h"
 
 struct ID3D12PipelineState;
@@ -22,7 +22,7 @@ public:
 private:
 
 	bool InitDefault(const SR_ShaderStateProperties& aProperties);
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 	bool InitAsMeshShader(const SR_ShaderStateProperties& aProperties);
 #endif
 	bool InitAsComputeShader(const SR_ShaderStateProperties& aProperties);

@@ -1,6 +1,6 @@
 #include "SR_Heap_DX12.h"
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 #include "SR_RenderDevice_DX12.h"
 
 SR_Heap_DX12::SR_Heap_DX12(const SR_HeapProperties& aProperties)
@@ -105,4 +105,4 @@ uint64 SR_Heap_DX12::GetHeapOffset() const
 	return mHeapOffset;
 }
 
-#endif //ENABLE_DX12
+#endif //SR_ENABLE_DX12

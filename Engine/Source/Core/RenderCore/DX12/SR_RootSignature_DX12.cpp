@@ -1,6 +1,6 @@
 #include "SR_RootSignature_DX12.h"
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 #include "SR_RenderDevice_DX12.h"
 
 static D3D12_ROOT_SIGNATURE_FLAGS GetRootSignatureFlags(uint32 aFlags)

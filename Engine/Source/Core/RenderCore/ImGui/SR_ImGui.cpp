@@ -519,7 +519,7 @@ bool SR_ImGui::CreateShaderState()
 
 	rootSignatureProperties.mFlags = SR_RootSignatureFlag_DefaultSetup | SR_RootSignatureFlag_DescriptorHeapDirectAccess;
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 	SC_Ref<SR_RootSignature_DX12> rootSigDX12 = SC_MakeRef<SR_RootSignature_DX12>(rootSignatureProperties);
 	if (!rootSigDX12->Init())
 		return false;

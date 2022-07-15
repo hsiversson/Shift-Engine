@@ -1,7 +1,7 @@
 
 #include "SR_RenderDevice_DX12.h"
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 
 // D3D12 Agility SDK
 extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 700; }
@@ -38,14 +38,14 @@ extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = "./"; }
 		#include "amd_ags.h"
 	#endif
 
-	#if ENABLE_NVIDIA_AFTERMATH
+	#if SR_ENABLE_NVIDIA_AFTERMATH
 		#include "GFSDK_Aftermath.h"
 		#include "GFSDK_Aftermath_GpuCrashDump.h"
 		#include "GFSDK_Aftermath_GpuCrashDumpDecoding.h"
 	#endif
 #endif
 
-#if ENABLE_DIRECTSTORAGE
+#if SR_ENABLE_DIRECTSTORAGE
 	#include "dstorage.h"
 #endif
 
@@ -55,7 +55,7 @@ bool SR_RenderDevice_DX12::gUsingAGS = false;
 
 SR_RenderDevice_DX12::SR_RenderDevice_DX12()
 	: SR_RenderDevice(SR_API::D3D12)
-#if ENABLE_DRED
+#if SR_ENABLE_DRED
 	, mEnableDRED(false)
 #endif
 {
@@ -64,7 +64,7 @@ SR_RenderDevice_DX12::SR_RenderDevice_DX12()
 	else
 		gInstance = this;
 
-#if ENABLE_DRED
+#if SR_ENABLE_DRED
 	if (SC_CommandLine::HasCommand("dred"))
 		mEnableDRED = true;
 #endif
@@ -259,7 +259,7 @@ ID3D12Device6* SR_RenderDevice_DX12::GetD3D12Device6() const
 	return mD3D12Device6.Get();
 }
 
-#if ENABLE_DRED
+#if SR_ENABLE_DRED
 const char* DREDGetBreadcrumbOp(const D3D12_AUTO_BREADCRUMB_OP& aOP)
 {
 	switch (aOP)
@@ -419,7 +419,7 @@ void SR_RenderDevice_DX12::OutputDredDebugData()
 	SC_ERROR("<----- BREADCRUMBS END ----->");
 	SC_ERROR("<----- DRED DEBUG OUTPUT END ----->\n");
 }
-#endif //ENABLE_DRED
+#endif //SR_ENABLE_DRED
 
 SC_SizeT SR_RenderDevice_DX12::GetAvailableVRAM() const
 {
@@ -487,7 +487,7 @@ bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 		debugger->EnableDebugLayer();
 	}
 
-#if ENABLE_DRED
+#if SR_ENABLE_DRED
 	if (mEnableDRED)
 	{
 		SC_LOG("D3D12 DRED: Enabled");
@@ -505,13 +505,13 @@ bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 
 
 #if IS_PC_PLATFORM
-#if ENABLE_NVIDIA_AFTERMATH
+#if SR_ENABLE_NVIDIA_AFTERMATH
 	if (SC_CommandLine::HasCommand("enableaftermath"))
 	{
 		const uint32 aftermathFlags =
 			GFSDK_Aftermath_FeatureFlags_EnableMarkers |           // Enable event marker tracking.
-			GFSDK_Aftermath_FeatureFlags_EnableResourceTracking |  // Enable tracking of resources.
-			GFSDK_Aftermath_FeatureFlags_CallStackCapturing;// |      // Capture call stacks for all draw calls, compute dispatches, and resource copies.
+			GFSDK_Aftermath_FeatureFlags_EnableResourceTracking;// |  // Enable tracking of resources.
+			//GFSDK_Aftermath_FeatureFlags_CallStackCapturing;// |      // Capture call stacks for all draw calls, compute dispatches, and resource copies.
 			//GFSDK_Aftermath_FeatureFlags_GenerateShaderDebugInfo;  // Generate debug information for shaders.
 
 		GFSDK_Aftermath_DX12_Initialize(GFSDK_Aftermath_Version_API, aftermathFlags, mD3D12Device.Get());
@@ -528,7 +528,7 @@ bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 			return false;
 	}
 
-#endif //ENABLE_NVIDIA_AFTERMATH
+#endif //SR_ENABLE_NVIDIA_AFTERMATH
 #endif
 
 
@@ -590,7 +590,7 @@ bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 	if (!mTempResourceHeap->Init())
 		return false;
 
-#if ENABLE_DIRECTSTORAGE
+#if SR_ENABLE_DIRECTSTORAGE
 	SR_ComPtr<IDStorageFactory> storageFactory;
 	DStorageGetFactory(IID_PPV_ARGS(&storageFactory));
 
@@ -972,7 +972,7 @@ void SR_RenderDevice_DX12::GatherSupportCaps()
 	SC_LOG("Sampler Feedback: {}", mSupportCaps.mEnableSamplerFeedback ? "true" : "false");
 }
 
-#if ENABLE_NVIDIA_AFTERMATH
+#if SR_ENABLE_NVIDIA_AFTERMATH
 void SR_RenderDevice_DX12::GpuCrashDumpCallback(const void* aGpuCrashDump, const uint32 aGpuCrashDumpSize, void* aUserData)
 {
 	SR_RenderDevice_DX12* renderDevice = reinterpret_cast<SR_RenderDevice_DX12*>(aUserData);

@@ -1,6 +1,6 @@
 #pragma once
 
-#if ENABLE_GPU_PROFILER
+#if SR_ENABLE_GPU_PROFILER
 class SR_CommandList;
 
 class SR_GPUProfiler
@@ -43,9 +43,9 @@ private:
 #define SR_PROFILE_SCOPED(aCommandList, aTag)		SR_GPUProfilerEventScope __profilerScope_##aTag(aCommandList, aTag)
 #define SR_PROFILE_FUNCTION(aCommandList)			SR_PROFILE_SCOPED(aCommandList, __FUNCTION__)
 
-#else //ENABLE_GPU_PROFILER
+#else //SR_ENABLE_GPU_PROFILER
 
 #define SR_PROFILE_SCOPED(aCommandList, aTag)
 #define SR_PROFILE_FUNCTION(aCommandList)
 
-#endif //ENABLE_GPU_PROFILER
+#endif //SR_ENABLE_GPU_PROFILER

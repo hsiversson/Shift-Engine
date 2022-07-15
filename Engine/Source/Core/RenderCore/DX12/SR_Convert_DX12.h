@@ -5,7 +5,7 @@
 struct SR_TextureResourceProperties;
 struct SR_BufferResourceProperties;
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 
 SR_Format					SR_D3D12ConvertFormat(DXGI_FORMAT aFormat);
 D3D12_RESOURCE_STATES		SR_D3D12ConvertResourceState(uint32 aState);

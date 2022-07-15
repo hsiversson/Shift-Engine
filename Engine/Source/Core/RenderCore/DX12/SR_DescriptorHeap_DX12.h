@@ -1,5 +1,5 @@
 #pragma once
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 #include "Platform/Async/SC_Mutex.h"
 #include "RenderCore/Interface/SR_DescriptorHeap.h"
 

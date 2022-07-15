@@ -1,6 +1,6 @@
 #include "SR_CommandList_DX12.h"
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 #include "SR_RenderDevice_DX12.h"
 #include "SR_RenderTarget_DX12.h"
 #include "SR_DepthStencil_DX12.h"
@@ -12,15 +12,25 @@
 #include "SR_TextureResource_DX12.h"
 #include "RenderCore/Interface/SR_RaytracingStructs.h"
 
+#if SR_ENABLE_NVIDIA_AFTERMATH
+#include "GFSDK_Aftermath.h"
+#endif
+
 SR_CommandList_DX12::SR_CommandList_DX12(const SR_CommandListType& aType)
 	: SR_CommandList(aType)
+#if SR_ENABLE_NVIDIA_AFTERMATH
+	, mNvAftermathContextHandle(nullptr)
+#endif
 {
 
 }
 
 SR_CommandList_DX12::~SR_CommandList_DX12()
 {
-
+#if SR_ENABLE_NVIDIA_AFTERMATH
+	if (mNvAftermathContextHandle)
+		GFSDK_Aftermath_ReleaseContextHandle(GFSDK_Aftermath_ContextHandle(mNvAftermathContextHandle));
+#endif
 }
 
 bool SR_CommandList_DX12::Init(const char* aDebugName)
@@ -70,6 +80,15 @@ void SR_CommandList_DX12::Begin()
 	mStateCache.Clear();
 
 	SR_CommandList::Begin();
+
+#if SR_ENABLE_NVIDIA_AFTERMATH
+	if (mNvAftermathContextHandle && mD3D12CommandList)
+	{
+		GFSDK_Aftermath_ContextHandle handle = nullptr;
+		GFSDK_Aftermath_DX12_CreateContextHandle(mD3D12CommandList.Get(), &handle);
+		mNvAftermathContextHandle = handle;
+	}
+#endif
 }
 
 void SR_CommandList_DX12::End()
@@ -79,7 +98,14 @@ void SR_CommandList_DX12::End()
 
 void SR_CommandList_DX12::BeginEvent(const char* aName)
 {
-#if ENABLE_PIX
+#if SR_ENABLE_NVIDIA_AFTERMATH
+	if (mNvAftermathContextHandle)
+	{
+		GFSDK_Aftermath_SetEventMarker(GFSDK_Aftermath_ContextHandle(mNvAftermathContextHandle), aName, uint32(strlen(aName) * sizeof(char)));
+	}
+#endif
+
+#if SR_ENABLE_PIX
 	PIXBeginEvent(mD3D12CommandList.Get(), 0, "%s", aName);
 #else
 	(void)aName;
@@ -88,7 +114,7 @@ void SR_CommandList_DX12::BeginEvent(const char* aName)
 
 void SR_CommandList_DX12::EndEvent()
 {
-#if ENABLE_PIX
+#if SR_ENABLE_PIX
 	PIXEndEvent(mD3D12CommandList.Get());
 #endif
 }
@@ -111,7 +137,7 @@ void SR_CommandList_DX12::DrawIndexedInstanced(uint32 aIndexCount, uint32 aInsta
 	mD3D12CommandList->DrawIndexedInstanced(aIndexCount, aInstanceCount, aStartIndex, aStartVertex, aStartInstance);
 }
 
-#if ENABLE_MESH_SHADERS
+#if SR_ENABLE_MESH_SHADERS
 void SR_CommandList_DX12::DispatchMesh(uint32 aGroupCountX, uint32 aGroupCountY /*= 1*/, uint32 aGroupCountZ /*= 1*/)
 {
 	if (mD3D12CommandList6)

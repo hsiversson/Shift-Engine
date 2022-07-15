@@ -1,7 +1,7 @@
 #pragma once
 #include "RenderCore/Interface/SR_TempResourceHeap.h"
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 
 class SR_Heap_DX12;
 class SR_TempResourceHeap_DX12 : public SR_TempResourceHeap
@@ -24,5 +24,5 @@ private:
 	SC_UniquePtr<SR_Heap_DX12> mResourceHeap_GenericBuffers;
 };
 
-#endif //ENABLE_DX12
+#endif //SR_ENABLE_DX12
 

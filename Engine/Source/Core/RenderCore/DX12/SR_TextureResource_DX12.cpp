@@ -1,7 +1,7 @@
 
 #include "SR_TextureResource_DX12.h"
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 #include "SR_RenderDevice_DX12.h"
 #include "SR_Heap_DX12.h"
 
@@ -136,4 +136,4 @@ uint32 SR_GetD3D12SubresourceIndex(const SR_TextureResourceProperties& aProperti
 	return aLevel.mMipLevel + arraySlice * mipLevels;
 }
 
-#endif //ENABLE_DX12
+#endif //SR_ENABLE_DX12

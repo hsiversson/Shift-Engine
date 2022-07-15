@@ -1,11 +1,8 @@
 #pragma once
 #include "RenderCore/Interface/SR_RenderDevice.h"
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 #include "SR_CommandQueue_DX12.h"
-
-#define ENABLE_NVIDIA_AFTERMATH (0)
-#define ENABLE_DRED				(1)
 
 struct ID3D12Device;
 struct ID3D12Device5;
@@ -63,7 +60,7 @@ public:
 	ID3D12Device5* GetD3D12Device5() const;
 	ID3D12Device6* GetD3D12Device6() const;
 
-#if ENABLE_DRED
+#if SR_ENABLE_DRED
 	void OutputDredDebugData();
 #endif
 
@@ -79,7 +76,7 @@ private:
 
 	void GatherSupportCaps();
 
-#if ENABLE_NVIDIA_AFTERMATH
+#if SR_ENABLE_NVIDIA_AFTERMATH
 	static void GpuCrashDumpCallback(const void* aGpuCrashDump, const uint32 aGpuCrashDumpSize, void* aUserData);
 	void OnGpuCrashDump(const void* aGpuCrashDump, const uint32 aGpuCrashDumpSize);
 #endif
@@ -107,7 +104,7 @@ private:
 
 	SC_UniquePtr<SR_DirectXShaderCompiler> mDxcCompiler;
 
-#if ENABLE_DRED
+#if SR_ENABLE_DRED
 	SC_Mutex mDREDMutex;
 	bool mEnableDRED : 1;
 #endif
@@ -165,7 +162,7 @@ inline bool VerifyHRESULT(HRESULT aValue)
 
 	if (outputDebugData)
 	{
-#if ENABLE_DRED
+#if SR_ENABLE_DRED
 		SR_RenderDevice_DX12::gInstance->OutputDredDebugData();
 #endif
 	}

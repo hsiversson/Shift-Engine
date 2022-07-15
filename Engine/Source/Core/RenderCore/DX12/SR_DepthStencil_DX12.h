@@ -1,6 +1,6 @@
 #pragma once
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 #include "RenderCore/Interface/SR_DepthStencil.h"
 
 class SR_TextureResource_DX12;

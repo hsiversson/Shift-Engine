@@ -1,6 +1,6 @@
 #include "SR_CommandQueue_DX12.h"
 
-#if ENABLE_DX12
+#if SR_ENABLE_DX12
 #include "SR_RenderDevice_DX12.h"
 #include "SR_Fence_DX12.h"
 
@@ -98,7 +98,7 @@ void SR_CommandQueue_DX12::InsertWait(const SR_Fence& aFence)
 
 void SR_CommandQueue_DX12::BeginEvent(const char* aName)
 {
-#if ENABLE_PIX
+#if SR_ENABLE_PIX
 	PIXBeginEvent(mD3D12CommandQueue.Get(), 0, "%s", aName);
 #else
 	(void)aName;
@@ -107,7 +107,7 @@ void SR_CommandQueue_DX12::BeginEvent(const char* aName)
 
 void SR_CommandQueue_DX12::EndEvent()
 {
-#if ENABLE_PIX
+#if SR_ENABLE_PIX
 	PIXEndEvent(mD3D12CommandQueue.Get());
 #endif
 }
