@@ -1,6 +1,4 @@
-#ifndef MATERIAL_TEMPLATE_HEADER
-#define MATERIAL_TEMPLATE_HEADER
-
+#pragma once
 #include "MaterialData.ssh"
 
 float GetMaterialBaseColor()
@@ -42,5 +40,3 @@ uint GetMaterialShadingModel()
 {
     return 1;
 }
-
-#endif //MATERIAL_TEMPLATE_HEADER

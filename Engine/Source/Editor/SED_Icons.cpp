@@ -34,6 +34,6 @@ SED_Icons::~SED_Icons()
 
 SR_Texture* SED_Icons::GetIconByType(const IconType& aType) const
 {
-	return mIconsByType[static_cast<uint32>(aType)].get();
+	return mIconsByType[static_cast<uint32>(aType)];
 }
 

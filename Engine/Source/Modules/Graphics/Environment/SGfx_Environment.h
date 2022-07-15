@@ -10,11 +10,12 @@ class SGfx_Camera;
 
 struct alignas(16) SGfx_EnvironmentConstants
 {
+	SGfx_EnvironmentConstants() : mSunLightIntensity(1.0f) {}
+
 	SC_Vector mSunLightDirection;
 	float mSunLightIntensity;
 
-	SC_Vector mSunLightColor;
-	uint32 _pad;
+	SC_LinearColor mSunLightColor;
 
 	SGfx_SkyAtmosphereConstants mSkyAtmosphereConstants;
 	SGfx_SkyIrradianceConstants mySkyIrradianceConstants;
@@ -37,8 +38,8 @@ public:
 
 	SC_Vector& GetSunDirection();
 	const SC_Vector& GetSunDirection() const;
-	SC_Vector& GetSunColor();
-	const SC_Vector& GetSunColor() const;
+	SC_LinearColor& GetSunColor();
+	const SC_LinearColor& GetSunColor() const;
 	float& GetSunIntensity();
 	const float& GetSunIntensity() const;
 

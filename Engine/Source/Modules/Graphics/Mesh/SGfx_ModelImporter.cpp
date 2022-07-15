@@ -46,7 +46,7 @@ bool SGfx_ModelImporterScene::Import(SC_Array<SGfx_MeshCreateParams>& aOutCreate
 		vertexLayout.SetAttribute(SR_VertexAttribute::Position, SR_Format::RGB32_FLOAT);
 		if (!vertexLayout.HasAttribute(SR_VertexAttribute::Position))
 		{
-			assert(false && "Mesh is missing positions, cannot continue processing.");
+			SC_ASSERT(false && "Mesh is missing positions, cannot continue processing.");
 			continue;
 		}
 
@@ -60,14 +60,14 @@ bool SGfx_ModelImporterScene::Import(SC_Array<SGfx_MeshCreateParams>& aOutCreate
 		}
 
 		if (mesh->HasTextureCoords(0))
-			vertexLayout.SetAttribute(SR_VertexAttribute::UV0, SR_Format::RG32_FLOAT);
+			vertexLayout.SetAttribute(SR_VertexAttribute::UV, SR_Format::RG32_FLOAT);
 		if (mesh->HasTextureCoords(1))
-			vertexLayout.SetAttribute(SR_VertexAttribute::UV1, SR_Format::RG32_FLOAT);
+			vertexLayout.SetAttribute(SR_VertexAttribute::UV, SR_Format::RG32_FLOAT, 1);
 
 		if (mesh->HasVertexColors(0))
-			vertexLayout.SetAttribute(SR_VertexAttribute::Color0, SR_Format::RGBA32_FLOAT);
+			vertexLayout.SetAttribute(SR_VertexAttribute::Color, SR_Format::RGBA32_FLOAT);
 		if (mesh->HasVertexColors(1))
-			vertexLayout.SetAttribute(SR_VertexAttribute::Color1, SR_Format::RGBA32_FLOAT);
+			vertexLayout.SetAttribute(SR_VertexAttribute::Color, SR_Format::RGBA32_FLOAT, 1);
 
 		SGfx_MeshCreateParams& params = aOutCreateParams.Add();
 		params.mVertexLayout = vertexLayout;
@@ -120,28 +120,28 @@ void SGfx_ModelImporterScene::ExtractVertices(const aiMesh* aMesh, SGfx_MeshCrea
 			currentDataArrayPos += (sizeof(SC_Vector) * 2);
 		}
 
-		if (vertexLayout.HasAttribute(SR_VertexAttribute::UV0))
+		if (vertexLayout.HasAttribute(SR_VertexAttribute::UV))
 		{
 			SC_Vector2 vUV = SC_Vector2(aMesh->mTextureCoords[0][i].x, aMesh->mTextureCoords[0][i].y);
 			SC_Memcpy(&aOutCreateParams.mVertexData[currentDataArrayPos], &vUV, sizeof(SC_Vector2));
 			currentDataArrayPos += sizeof(SC_Vector2);
 		}
 
-		if (vertexLayout.HasAttribute(SR_VertexAttribute::UV1))
+		if (vertexLayout.HasAttribute(SR_VertexAttribute::UV, 1))
 		{
 			SC_Vector2 vUV = SC_Vector2(aMesh->mTextureCoords[1][i].x, aMesh->mTextureCoords[1][i].y);
 			SC_Memcpy(&aOutCreateParams.mVertexData[currentDataArrayPos], &vUV, sizeof(SC_Vector2));
 			currentDataArrayPos += sizeof(SC_Vector2);
 		}
 
-		if (vertexLayout.HasAttribute(SR_VertexAttribute::Color0))
+		if (vertexLayout.HasAttribute(SR_VertexAttribute::Color))
 		{
 			SC_Vector4 vColor = SC_Vector4(aMesh->mColors[0][i].r, aMesh->mColors[0][i].g, aMesh->mColors[0][i].b, aMesh->mColors[0][i].a);
 			SC_Memcpy(&aOutCreateParams.mVertexData[currentDataArrayPos], &vColor, sizeof(SC_Vector4));
 			currentDataArrayPos += sizeof(SC_Vector4);
 		}
 
-		if (vertexLayout.HasAttribute(SR_VertexAttribute::Color1))
+		if (vertexLayout.HasAttribute(SR_VertexAttribute::Color, 1))
 		{
 			SC_Vector4 vColor = SC_Vector4(aMesh->mColors[1][i].r, aMesh->mColors[1][i].g, aMesh->mColors[1][i].b, aMesh->mColors[1][i].a);
 			SC_Memcpy(&aOutCreateParams.mVertexData[currentDataArrayPos], &vColor, sizeof(SC_Vector4));
@@ -168,7 +168,7 @@ void SGfx_ModelImporterScene::ExtractIndices(const aiMesh* aMesh, SGfx_MeshCreat
 	for (uint32 faceIdx = 0; faceIdx < aMesh->mNumFaces; ++faceIdx)
 	{
 		const aiFace& face = aMesh->mFaces[faceIdx];
-		assert(face.mNumIndices == 3 && "Mesh isn't triangulated.");
+		SC_ASSERT(face.mNumIndices == 3 && "Mesh isn't triangulated.");
 
 		
 		for (uint32 i = 0; i < 3; ++i)

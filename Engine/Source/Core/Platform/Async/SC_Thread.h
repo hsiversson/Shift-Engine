@@ -41,6 +41,7 @@ public:
 	static SC_ThreadId GetMainThreadId();
 
 	static thread_local bool gIsTaskThread;
+	static thread_local bool gIsRenderThread;
 
 protected:
 	virtual void ThreadMain();

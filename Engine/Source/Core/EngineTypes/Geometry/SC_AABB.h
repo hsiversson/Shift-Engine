@@ -11,7 +11,7 @@ public:
 
 	void FromPoints(const SC_Vector* aPoints, uint32 aCount)
 	{
-		assert(aCount > 0);
+		SC_ASSERT(aCount > 0);
 		mMin = aPoints[0];
 		mMax = aPoints[0];
 		for (uint32 i = 1; i < aCount; ++i)

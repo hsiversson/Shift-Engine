@@ -86,6 +86,10 @@ set(DXC_LIB "${DXC_LIB_PATH}/dxcompiler.lib")
 set(IMGUI_SDK_PATH "${ENGINE_EXTERNAL_DIRECTORY}/ImGui")
 set(IMGUI_INCLUDE_PATH "${IMGUI_SDK_PATH}")
 
+## Nlohmann JSON
+set(NLOHMANN_JSON_SDK_PATH "${ENGINE_EXTERNAL_DIRECTORY}/NlohmannJson")
+set(NLOHMANN_JSON_INCLUDE_PATH "${NLOHMANN_JSON_SDK_PATH}")
+
 ## Nvidia NvApi
 set(NVAPI_SDK_PATH "${ENGINE_EXTERNAL_DIRECTORY}/Nvidia/nvapi")
 set(NVAPI_LIB_PATH "${NVAPI_SDK_PATH}/amd64")
@@ -107,6 +111,10 @@ set(WINPIXEVENTRUNTIME_LIB "${WINPIXEVENTRUNTIME_BIN_PATH}/WinPixEventRuntime.li
 
 ## Gather all SDKs into one variable
 set(VENDOR_SDK_LIBS ${AGS_LIB} ${ASSIMP_LIB} ${DIRECTSTORAGE_LIB} ${DXC_LIB} ${NVAPI_LIB} ${AFTERMATH_LIB} ${WINPIXEVENTRUNTIME_LIB})
+
+##################################
+# Global Include Directories
+include_directories(${NLOHMANN_JSON_INCLUDE_PATH})
 
 ##################################
 # Utility functions

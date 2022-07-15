@@ -32,5 +32,5 @@ const SR_BufferProperties& SR_Buffer::GetProperties() const
 
 SR_BufferResource* SR_Buffer::GetResource() const
 {
-	return mResource.get();
+	return mResource;
 }

@@ -17,15 +17,6 @@ struct SR_Fence;
 struct SR_TaskEvent;
 struct SR_PixelData;
 
-enum class SR_CommandListType
-{
-	Graphics,
-	Compute,
-	Copy,
-	COUNT = 3,
-	Unknown = COUNT,
-};
-
 enum class SR_DepthClearFlags
 {
 	Depth,
@@ -121,6 +112,7 @@ public:
 	void WaitFor(const SC_UniquePtr<SR_TaskEvent>& aEvent);
 	const SC_Array<SR_Fence>& GetFenceWaits() const;
 
+	const SR_CommandListType& GetType() const;
 protected:
 	struct ResourceBindings
 	{

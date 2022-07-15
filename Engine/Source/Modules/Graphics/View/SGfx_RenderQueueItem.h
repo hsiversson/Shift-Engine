@@ -8,6 +8,11 @@ struct SR_BlendState;
 
 struct SGfx_RenderQueueItemMeshletData
 {
+	operator bool() const
+	{
+		return (mVertexBuffer && mMeshletBuffer && mVertexIndexBuffer && mPrimitiveIndexBuffer);
+	}
+
 	SR_Buffer* mVertexBuffer;
 	SR_Buffer* mMeshletBuffer;
 	SR_Buffer* mVertexIndexBuffer;
@@ -31,13 +36,19 @@ struct SGfx_RenderQueueItem
 		SGfx_RenderQueueItemMeshletData mMeshletData;
 	};
 
+	SC_Matrix mTransform;
+	SC_Matrix mPrevTransform;
+
+	uint32 mMaterialIndex;
+
 	SR_RasterizerState* mRasterizerState;
 	SR_BlendState* mBlendState;
 
 	SR_ShaderState* mShader;
 
 	float mSortDistance;
-	uint16 mBatchedSize;
+	uint32 mBaseInstanceDataOffset;
+	uint16 mNumInstances;
 
 	bool mUsingMeshlets;
 };

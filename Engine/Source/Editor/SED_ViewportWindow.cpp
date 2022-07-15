@@ -4,7 +4,9 @@
 #include "Graphics/Renderer/SGfx_Renderer.h"
 #include "SED_TransformationGizmo.h"
 
-SED_ViewportToolbar::SED_ViewportToolbar(SED_ViewportWindow& aViewportPanel, SED_TransformationGizmo* aGizmo)
+#include "ImGuizmo/ImGuizmo.h"
+
+SED_ViewportToolbar::SED_ViewportToolbar(SED_ViewportWindow& aViewportPanel, SED_TransformationGizmo& aGizmo)
 	: mViewportParent(aViewportPanel)
 	, mGizmo(aGizmo)
 {
@@ -18,10 +20,7 @@ void SED_ViewportToolbar::OnDraw()
 
 void SED_ViewportToolbar::DrawGizmoOptions()
 {
-	if (!mGizmo)
-		return;
-
-	float fontHeight = ImGui::GetFontSize();
+	float fontHeight = SED_GetCurrentFontSize();
 	ImVec2 buttonTextSize = ImGui::CalcTextSize("World", nullptr, true);
 	ImVec2 buttonSize = { buttonTextSize.x + 10.f,  fontHeight + 10.f };
 
@@ -29,7 +28,7 @@ void SED_ViewportToolbar::DrawGizmoOptions()
 	const ImVec4 selectedButtonColor = ImVec4(32 / 255.f, 128 / 255.f, 32 / 255.f, 0.75f);
 	const ImVec4 defaultButtonColor = ImVec4(51 / 255.f, 51 / 255.f, 55 / 255.f, 0.75f);
 
-	bool isLocal = mGizmo->GetManipulationSpace() == SED_GizmoSpace::Local;
+	bool isLocal = mGizmo.GetManipulationSpace() == SED_GizmoSpace::Local;
 
 	const SC_Vector4& viewportBounds = mViewportParent.GetViewportBounds();
 	ImVec2 gizmoSpaceButtonPos = { viewportBounds.z - buttonSize.x - 200.f, viewportBounds.y + 10.f };
@@ -39,52 +38,52 @@ void SED_ViewportToolbar::DrawGizmoOptions()
 	if (!isLocal)
 		ImGui::PushStyleColor(ImGuiCol_Button, selectedButtonColor);
 
-	if (ImGui::Button("World", spaceButtonSize))
-		mGizmo->SetManipulationSpace(SED_GizmoSpace::World);
+	if (SED_Button("World", spaceButtonSize))
+		mGizmo.SetManipulationSpace(SED_GizmoSpace::World);
 
 	if (!isLocal)
 		ImGui::PopStyleColor();
 
-	ImGui::SameLine(0.0f, 2.0f);
+	SED_SameLine(0.0f, 2.0f);
 
 	if (isLocal)
 		ImGui::PushStyleColor(ImGuiCol_Button, selectedButtonColor);
 
-	if (ImGui::Button("Local", spaceButtonSize))
-		mGizmo->SetManipulationSpace(SED_GizmoSpace::Local);
+	if (SED_Button("Local", spaceButtonSize))
+		mGizmo.SetManipulationSpace(SED_GizmoSpace::Local);
 
 	if (isLocal)
 		ImGui::PopStyleColor();
 
-	ImGui::SameLine(0.0f, 4.0f);
+	SED_SameLine(0.0f, 4.0f);
 
-	if (ImGui::BeginCombo("Camera", "Camera"))
+	if (SED_BeginComboBox("Camera", "Camera"))
 	{
 		float speed = mViewportParent.mEditorCamera.GetMovementSpeed();
-		if (ImGui::DragFloat("Speed", &speed, 1.0f, 1.0f, 128.0f))
+		if (SED_FloatField("Speed", speed, 1.0f, 1.0f, 128.0f))
 			mViewportParent.mEditorCamera.SetMovementSpeed(speed);
 
 		float boost = mViewportParent.mEditorCamera.GetBoostMultiplier();
-		if (ImGui::DragFloat("Boost", &boost, 1.0f, 1.0f, 1024.0f))
+		if (SED_FloatField("Boost", boost, 1.0f, 1.0f, 1024.0f))
 			mViewportParent.mEditorCamera.SetBoostMultiplier(boost);
 
-		ImGui::EndCombo();
+		SED_EndComboBox();
 	}
 
-	ImGui::SameLine(0.0f, 4.0f);
+	SED_SameLine(0.0f, 4.0f);
 
-	if (ImGui::BeginCombo("Mode", "Translate"))
+	if (SED_BeginComboBox("Mode", "Translate"))
 	{
-		ImGui::Selectable("Translate");
-		ImGui::Selectable("Rotate");
-		ImGui::Selectable("Scale");
+		SED_Selectable("Translate");
+		SED_Selectable("Rotate");
+		SED_Selectable("Scale");
 
-		ImGui::EndCombo();
+		SED_EndComboBox();
 	}
 }
 
-SED_ViewportWindow::SED_ViewportWindow(SGfx_World* aGfxWorld, SED_TransformationGizmo* aGizmo, const char* aId)
-	: mToolbar(*this, aGizmo)
+SED_ViewportWindow::SED_ViewportWindow(SGfx_World* aGfxWorld, const char* aId)
+	: mToolbar(*this, mGizmo)
 	, mEditorCamera(this)
 	, mGfxWorld(aGfxWorld)
 	, mId(aId)
@@ -130,6 +129,11 @@ SGfx_Camera* SED_ViewportWindow::GetEditorCamera()
 	return &mEditorCamera;
 }
 
+void SED_ViewportWindow::SetSelectedEntity(const SGF_Entity& aEntity)
+{
+	mGizmo.SetSelectedEntity(aEntity);
+}
+
 const char* SED_ViewportWindow::GetWindowName() const
 {
 	return mId;
@@ -153,29 +157,36 @@ void SED_ViewportWindow::OnUpdate()
 
 		mView->SetCamera(*mActiveCamera);
 	}
-	mGfxWorld->PrepareView(mView.get());
-	mGfxWorld->RenderView(mView.get());
+	mGfxWorld->PrepareView(mView);
+	mGfxWorld->RenderView(mView);
 }
 
 void SED_ViewportWindow::OnDraw()
 {
-	ImVec2 viewportMinRegion = ImGui::GetWindowContentRegionMin();
-	ImVec2 viewportMaxRegion = ImGui::GetWindowContentRegionMax();
-	ImVec2 viewportOffset = ImGui::GetWindowPos();
+	SC_Vector2 viewportMinRegion = GetContentRegionMin();
+	SC_Vector2 viewportMaxRegion = GetContentRegionMax();
+	SC_Vector2 viewportOffset = GetPosition();
 	mViewportBounds.x = viewportMinRegion.x + viewportOffset.x;
 	mViewportBounds.y = viewportMinRegion.y + viewportOffset.y;
 	mViewportBounds.z = viewportMaxRegion.x + viewportOffset.x;
 	mViewportBounds.w = viewportMaxRegion.y + viewportOffset.y;
 
-	ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
+	SC_Vector2 viewportPanelSize = GetAvailableContentRegion();
 	mViewportSize = { viewportPanelSize.x, viewportPanelSize.y };
 
 	const SC_IntVector& textureSize = mGfxWorld->GetRenderer()->GetScreenColor()->GetResource()->GetProperties().mSize;
 
-	ImGui::Image(mGfxWorld->GetRenderer()->GetScreenColor().get(), viewportPanelSize, ImVec2(0, 0), ImVec2(viewportPanelSize.x / (float)textureSize.x, viewportPanelSize.y / (float)textureSize.y));
+	SED_Image(mGfxWorld->GetRenderer()->GetScreenColor(), viewportPanelSize, ImVec2(0, 0), ImVec2(viewportPanelSize.x / (float)textureSize.x, viewportPanelSize.y / (float)textureSize.y));
 
 	mToolbar.OnDraw();
-	mIsFocused = ImGui::IsWindowFocused();
+	mIsFocused = IsFocused();
+
+	const SGfx_ViewConstants constants = GetCamera().GetViewConstants();
+	const SC_Vector4 viewportBounds = GetViewportBounds();
+	mGizmo.SetViewportPositionAndSize(SC_Vector4(viewportBounds.x, viewportBounds.y, viewportBounds.z - viewportBounds.x, viewportBounds.w - viewportBounds.y));
+	mGizmo.SetViewAndProjection(constants.mWorldToCamera, constants.mCameraToClip);
+
+	mGizmo.Manipulate();
 }
 
 void SED_ViewportWindow::RecieveMessage(const SC_Message& aMsg)

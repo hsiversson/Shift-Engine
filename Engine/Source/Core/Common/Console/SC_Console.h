@@ -136,8 +136,8 @@ private:
 
 #if ENABLE_CONSOLE
 #define SC_CVAR(aType, aVariableName, aCommandName, aDefaultVal) static SC_TypedCVar<aType> aVariableName("" aCommandName, aDefaultVal)
-#define SC_CONSOLE_FUNC()
+#define SC_CFUNC()
 #else
 #define SC_CVAR(aType, aVariableName, aCommandName, aDefaultVal) static aType aVariableName = aDefaultVal
-#define SC_CONSOLE_FUNC()
+#define SC_CFUNC()
 #endif

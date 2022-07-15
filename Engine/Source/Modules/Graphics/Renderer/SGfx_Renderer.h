@@ -1,7 +1,9 @@
 #pragma once
 #include "Graphics/Misc/SGfx_Surface.h"
 #include "RenderCore/Defines/SR_Format.h"
-#include "RenderCore/RenderTasks/SR_CommandQueueManager.h"
+#include "RenderCore/RenderTasks/SR_QueueManager.h"
+
+#include "InputOutput/File/SC_FileWatcher.h"
 
 class SR_CommandList;
 class SR_ShaderState;
@@ -26,7 +28,7 @@ class SGfx_Environment;
  *		Renders views with a tiled forward path.
  * 
  */
-class SGfx_Renderer
+class SGfx_Renderer : public SC_FileWatcherListener
 {
 public:
 	struct Settings
@@ -47,6 +49,7 @@ public:
 	bool Init(SGfx_Environment* aEnvironment);
 
 	// Called from MainThread to kick off render tasks
+	// This function returns after scheduling all render tasks.
 	void RenderView(SGfx_View* aView);
 
 	SC_Vector2 GetJitter(const SC_IntVector2& aTargetResolution) const;
@@ -61,8 +64,10 @@ public:
 	Settings& GetSettings();
 	const Settings& GetSettings() const;
 
-private:
+protected:
+	void OnChanged(const SC_FilePath& aPath, const ChangeReason& aReason) override;
 
+private:
 	void SubmitGraphicsTask(SR_RenderTaskFunctionSignature aTask, SR_TaskEvent* aEvent);
 	void SubmitGraphicsTask(SR_RenderTaskFunctionSignature aTask, const SC_UniquePtr<SR_TaskEvent>& aEvent);
 	void SubmitComputeTask(SR_RenderTaskFunctionSignature aTask, SR_TaskEvent* aEvent);

@@ -12,7 +12,7 @@
 
 SR_SwapChain_DX12::SR_SwapChain_DX12(SR_RenderDevice_DX12* aDevice)
 	: mRenderDevice(aDevice)
-#if IS_DESKTOP_PLATFORM
+#if IS_PC_PLATFORM
 	, myFrameLatencyWaitableObject(nullptr)
 #endif
 	, mWindowHandle(nullptr)
@@ -82,10 +82,13 @@ void SR_SwapChain_DX12::Present()
 		flags |= DXGI_PRESENT_ALLOW_TEARING;
 
 	hr = mDXGISwapChain->Present(0, flags);
-	mFrameFence[mCurrentIndex] = SR_RenderDevice::gInstance->GetCommandQueueManager()->InsertFence(SR_CommandListType::Graphics);
+	mFrameFence[mCurrentIndex] = SR_RenderDevice::gInstance->GetQueueManager()->InsertFence(SR_CommandListType::Graphics);
 
 	mCurrentIndex = (uint8)mDXGISwapChain4->GetCurrentBackBufferIndex();
 	mCurrentResource = &mBackbufferResources[mCurrentIndex];
+
+	// Before starting next frame, make sure that we don't have to throttle because of the swapchain buffering.
+	mFrameFence[mCurrentIndex].Wait(true);
 }
 
 bool SR_SwapChain_DX12::CreateSwapChain()
@@ -136,7 +139,7 @@ bool SR_SwapChain_DX12::CreateSwapChain()
 		return false;
 
 
-#if IS_DESKTOP_PLATFORM
+#if IS_PC_PLATFORM
 	return InitFrameLatencyWaitable();
 #else
 	return true;
@@ -158,7 +161,7 @@ bool SR_SwapChain_DX12::CreateResources()
 			HRESULT hr = mDXGISwapChain->GetBuffer(i, IID_PPV_ARGS(&res));
 			if (!VerifyHRESULT(hr))
 			{
-				assert(false);
+				SC_ASSERT(false);
 				return false;
 			}
 
@@ -179,10 +182,10 @@ bool SR_SwapChain_DX12::CreateResources()
 			mBackbufferResources[i].mResource->mLatestResourceState = SR_ResourceState_Present;
 
 			SR_RenderTargetProperties renderTargetProperties(framebufferProperties.mFormat);
-			mBackbufferResources[i].mRenderTarget = SR_RenderDevice_DX12::gD3D12Instance->CreateRenderTarget(renderTargetProperties, mBackbufferResources[i].mResource);
+			mBackbufferResources[i].mRenderTarget = SR_RenderDevice_DX12::gInstance->CreateRenderTarget(renderTargetProperties, mBackbufferResources[i].mResource);
 
 			SR_TextureProperties texProperties(framebufferProperties.mFormat);
-			mBackbufferResources[i].mTexture = SR_RenderDevice_DX12::gD3D12Instance->CreateTexture(texProperties, mBackbufferResources[i].mResource);
+			mBackbufferResources[i].mTexture = SR_RenderDevice_DX12::gInstance->CreateTexture(texProperties, mBackbufferResources[i].mResource);
 		}
 
 		mCurrentResource = &mBackbufferResources[0];
@@ -193,12 +196,12 @@ bool SR_SwapChain_DX12::CreateResources()
 
 void SR_SwapChain_DX12::DestroyResources()
 {
-	if (!SR_RenderDevice_DX12::gD3D12Instance)
+	if (!SR_RenderDevice_DX12::gInstance)
 		return;
 
 	for (uint32 i = 0; i < 3; ++i)
 	{
-		SR_RenderDevice_DX12::gD3D12Instance->WaitForFence(mFrameFence[i]);
+		SR_RenderDevice_DX12::gInstance->WaitForFence(mFrameFence[i]);
 		mBackbufferResources[i].mRenderTarget = nullptr;
 		mBackbufferResources[i].mTexture = nullptr;
 		mBackbufferResources[i].mResource = nullptr;
@@ -222,10 +225,25 @@ void SR_SwapChain_DX12::UpdateInternal()
 		}
 	}
 
+	UpdateHDRMetaData();
+
 	CreateResources();
 }
 
-#if IS_DESKTOP_PLATFORM
+void SR_SwapChain_DX12::UpdateHDRMetaData()
+{
+#if IS_PC_PLATFORM
+
+	MONITORINFOEX monitorInfo = {};
+	monitorInfo.cbSize = sizeof monitorInfo;
+
+	HMONITOR monitor = ::MonitorFromWindow((HWND)mWindowHandle, MONITOR_DEFAULTTONEAREST);
+	::GetMonitorInfo(monitor, &monitorInfo);
+
+#endif
+}
+
+#if IS_PC_PLATFORM
 bool SR_SwapChain_DX12::InitFrameLatencyWaitable()
 {
 	myFrameLatencyWaitableObject = nullptr;

@@ -4,7 +4,7 @@
 #include <initializer_list>
 #include <functional>
 
-#define SC_ARRAY_BOUNDS_CHECK(aIdx) assert(aIdx < mCurrentItemCount && "Index out of bounds!")
+#define SC_ARRAY_BOUNDS_CHECK(aIdx, aSize) SC_ASSERT(aIdx < aSize, "Out of bounds! (anIndex: {0} Size: {1})", aIdx, aSize);
 
 template<class T>
 class SC_Array
@@ -45,7 +45,7 @@ public:
 	const T* end() const;
 
 	void ForEach(std::function<void(T&)> aLambda);
-	int32 Find(const T& aItem, uint32 aSearchStartIndex = 0);
+	int32 Find(const T& aItem, uint32 aSearchStartIndex = 0) const;
 
 	void Swap(SC_Array<T>& aOther);
 
@@ -252,28 +252,28 @@ inline void SC_Array<T>::AllocateAdditional(uint32 aNumToAlloc)
 template <class T>
 inline T& SC_Array<T>::First()
 {
-	SC_ARRAY_BOUNDS_CHECK(0);
+	SC_ARRAY_BOUNDS_CHECK(0, mCurrentItemCount);
 	return mInternalItemBuffer[0];
 }
 
 template <class T>
 inline const T& SC_Array<T>::First() const
 {
-	SC_ARRAY_BOUNDS_CHECK(0);
+	SC_ARRAY_BOUNDS_CHECK(0, mCurrentItemCount);
 	return mInternalItemBuffer[0];
 }
 
 template <class T>
 inline const T& SC_Array<T>::Last() const
 {
-	SC_ARRAY_BOUNDS_CHECK(mCurrentItemCount - 1u);
+	SC_ARRAY_BOUNDS_CHECK(mCurrentItemCount - 1u, mCurrentItemCount);
 	return mInternalItemBuffer[mCurrentItemCount - 1];
 }
 
 template <class T>
 inline T& SC_Array<T>::Last()
 {
-	SC_ARRAY_BOUNDS_CHECK(mCurrentItemCount - 1u);
+	SC_ARRAY_BOUNDS_CHECK(mCurrentItemCount - 1u, mCurrentItemCount);
 	return mInternalItemBuffer[mCurrentItemCount - 1];
 }
 
@@ -292,26 +292,26 @@ inline const T* SC_Array<T>::begin() const
 template <class T>
 inline T* SC_Array<T>::end()
 {
-	return (mInternalItemBuffer) ? &mInternalItemBuffer[mCurrentItemCount] : nullptr;
+	return mInternalItemBuffer + mCurrentItemCount;
 }
 
 template <class T>
 inline const T* SC_Array<T>::end() const
 {
-	return (mInternalItemBuffer) ? &mInternalItemBuffer[mCurrentItemCount] : nullptr;
+	return mInternalItemBuffer + mCurrentItemCount;
 }
 
 template<class T>
 inline void SC_Array<T>::ForEach(std::function<void(T&)> aLambda)
 {
-	for (T& item : *this)
+	for (uint32 i = 0; i < mCurrentItemCount; ++i)
 	{
-		aLambda(item);
+		aLambda(mInternalItemBuffer[i]);
 	}
 }
 
 template<class T>
-inline int32 SC_Array<T>::Find(const T& aItem, uint32 aSearchStartIndex)
+inline int32 SC_Array<T>::Find(const T& aItem, uint32 aSearchStartIndex) const
 {
 	if (aSearchStartIndex >= mCurrentItemCount)
 		return gFindResultNone;
@@ -337,7 +337,7 @@ template<class T>
 inline void SC_Array<T>::Swap(SC_Array<T>& aOther)
 {
 	const size_t sizeofThis = sizeof(*this);
-	char tmp[sizeofThis];
+	char tmp[sizeofThis] = {};
 	SC_Memcpy(tmp, &aOther, sizeofThis);
 	SC_Memcpy(&aOther, this, sizeofThis);
 	SC_Memcpy(this, tmp, sizeofThis);
@@ -420,7 +420,7 @@ inline void SC_Array<T>::Add(const T* aItemBuffer, uint32 aNumItemsToAdd)
 template<class T>
 inline T& SC_Array<T>::AddAt(uint32 aIndex, const T& aItem)
 {
-	SC_ARRAY_BOUNDS_CHECK(aIndex);
+	SC_ARRAY_BOUNDS_CHECK(aIndex, mCurrentItemCount);
 	mInternalItemBuffer[aIndex] = aItem;
 	return mInternalItemBuffer[aIndex];
 }
@@ -448,7 +448,7 @@ inline void SC_Array<T>::RemoveCyclic(const T& aItem)
 template <class T>
 inline void SC_Array<T>::RemoveAt(uint32 aIndex)
 {
-	SC_ARRAY_BOUNDS_CHECK(aIndex);
+	SC_ARRAY_BOUNDS_CHECK(aIndex, mCurrentItemCount);
 
 	Destruct((mInternalItemBuffer + aIndex), 1);
 	SC_RelocateN((mInternalItemBuffer + aIndex), (mInternalItemBuffer + aIndex + 1), (mCurrentItemCount - aIndex - 1));
@@ -465,7 +465,7 @@ inline void SC_Array<T>::RemoveLast()
 template<class T>
 inline void SC_Array<T>::RemoveCyclicAt(uint32 aIndex)
 {
-	SC_ARRAY_BOUNDS_CHECK(aIndex);
+	SC_ARRAY_BOUNDS_CHECK(aIndex, mCurrentItemCount);
 
 	Destruct((mInternalItemBuffer + aIndex), 1);
 	SC_Relocate((mInternalItemBuffer + aIndex), (mInternalItemBuffer + this->mCurrentItemCount - 1));
@@ -555,14 +555,14 @@ inline void SC_Array<T>::operator=(SC_Array<T>&& aRhs) noexcept
 template <class T>
 inline T& SC_Array<T>::operator[](uint32 aIndex)
 {
-	SC_ARRAY_BOUNDS_CHECK(aIndex);
+	SC_ARRAY_BOUNDS_CHECK(aIndex, mCurrentItemCount);
 	return mInternalItemBuffer[aIndex];
 }
 
 template <class T>
 inline const T& SC_Array<T>::operator[](uint32 aIndex) const
 {
-	SC_ARRAY_BOUNDS_CHECK(aIndex);
+	SC_ARRAY_BOUNDS_CHECK(aIndex, mCurrentItemCount);
 	return mInternalItemBuffer[aIndex];
 }
 
@@ -602,14 +602,14 @@ const T* SC_Array<T>::operator*() const
 //template<class T>
 //inline uint32 SC_Array<T>::GetHybridBufferSize()
 //{
-//	assert(mIsHybrid && "This is not a HybridArray");
+//	SC_ASSERT(mIsHybrid && "This is not a HybridArray");
 //	return 0;
 //}
 //
 //template<class T>
 //inline T* SC_Array<T>::GetHybridBuffer()
 //{
-//	assert(mIsHybrid && "This is not a HybridArray");
+//	SC_ASSERT(mIsHybrid && "This is not a HybridArray");
 //	return nullptr;
 //}
 

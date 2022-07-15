@@ -64,11 +64,12 @@ bool SR_BufferResource_DX12::Init(const void* aInitialData)
 	HRESULT hr = S_OK;
 	if (mProperties.mHeap)
 	{
-		const D3D12_RESOURCE_ALLOCATION_INFO allocInfo = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->GetResourceAllocationInfo(0, 1, &resourceDesc);
+		static constexpr uint32 alignment = 65536;
+		const D3D12_RESOURCE_ALLOCATION_INFO allocInfo = SR_RenderDevice_DX12::gInstance->GetD3D12Device()->GetResourceAllocationInfo(0, 1, &resourceDesc);
 
 		SR_Heap_DX12* heap = static_cast<SR_Heap_DX12*>(mProperties.mHeap);
 
-		hr = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreatePlacedResource(
+		hr = SR_RenderDevice_DX12::gInstance->GetD3D12Device()->CreatePlacedResource(
 			heap->GetD3D12Heap(),
 			heap->GetOffset(allocInfo.SizeInBytes, allocInfo.Alignment),
 			&resourceDesc,
@@ -78,12 +79,11 @@ bool SR_BufferResource_DX12::Init(const void* aInitialData)
 		);
 	}
 	else
-	{
-		hr = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, initialState, nullptr, IID_PPV_ARGS(&mD3D12Resource));
-	}
+		hr = SR_RenderDevice_DX12::gInstance->GetD3D12Device()->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, initialState, nullptr, IID_PPV_ARGS(&mD3D12Resource));
+
 	if (!VerifyHRESULT(hr))
 	{
-		//LOG_ERROR("Could not create buffer with id: %ls \n", aDebugName);
+		SC_ERROR("Could not create buffer with id: {} \n", mProperties.mDebugName);
 		return false;
 	}
 	mTrackedD3D12Resource = mD3D12Resource;
@@ -93,8 +93,8 @@ bool SR_BufferResource_DX12::Init(const void* aInitialData)
 		D3D12_RANGE readRange{ 0, 0 };
 		void* dataPtr = nullptr;
 		hr = mD3D12Resource->Map(0, &readRange, &dataPtr);
-		if (FAILED(hr))
-			assert(false && "Could not map resource.");
+		if (!VerifyHRESULT(hr))
+			SC_ASSERT(false, "Could not map resource.");
 
 		mDataPtr = (uint8*)dataPtr;
 	}
@@ -103,11 +103,12 @@ bool SR_BufferResource_DX12::Init(const void* aInitialData)
 	{
 		SR_BufferResourceProperties uploadProps(mProperties);
 		uploadProps.mIsUploadBuffer = true;
+		uploadProps.mHeap = nullptr;
 
 		SR_BufferResource_DX12* uploadBuffer = new SR_BufferResource_DX12(uploadProps);
 		if (!uploadBuffer->Init(nullptr))
 		{
-			assert(false && "Could not init upload buffer.");
+			SC_ASSERT(false, "Could not init upload buffer.");
 		}
 
 		uploadBuffer->UpdateData(0, aInitialData, resourceDesc.Width);
@@ -119,7 +120,7 @@ bool SR_BufferResource_DX12::Init(const void* aInitialData)
 		};
 
 		SC_Ref<SR_TaskEvent> taskEvent = SC_MakeRef<SR_TaskEvent>();
-		SR_RenderDevice::gInstance->GetCommandQueueManager()->SubmitTask(UploadData, SR_CommandListType::Copy, taskEvent.get());
+		SR_RenderDevice::gInstance->GetQueueManager()->SubmitTask(UploadData, SR_CommandListType::Copy, taskEvent);
 
 		taskEvent->mCPUEvent.Wait();
 		taskEvent->mFence.Wait();

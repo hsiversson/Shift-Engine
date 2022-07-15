@@ -1,6 +1,4 @@
-#ifndef IMPORTANCE_SAMPLING_HEADER
-#define IMPORTANCE_SAMPLING_HEADER
-
+#pragma once 
 #include "Common.ssh"
 
 // [ Duff et al. 2017, "Building an Orthonormal Basis, Revisited" ]
@@ -166,5 +164,3 @@ float4 ImportanceSampleVisibleGGX(float2 aDiskE, float a2, float3 V)
 
 	return float4(H, VisiblePDFGGX(V, H, a2));
 }
-
-#endif //IMPORTANCE_SAMPLING_HEADER

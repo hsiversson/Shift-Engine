@@ -19,6 +19,7 @@ static void SetThreadName(SC_ThreadHandle aThreadHandle, const wchar_t* aName)
 
 
 thread_local bool SC_Thread::gIsTaskThread = false;
+thread_local bool SC_Thread::gIsRenderThread = false;
 thread_local SC_Thread* SC_Thread::gCurrentThread = nullptr;
 
 SC_Thread::SC_Thread()

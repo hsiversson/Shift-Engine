@@ -6,6 +6,7 @@
 SR_FenceResource_DX12::SR_FenceResource_DX12()
 	: mFenceValue(0)
 	, mLastKnownCompletedValue(0)
+	, mCommandQueue(nullptr)
 {
 
 }
@@ -22,7 +23,7 @@ bool SR_FenceResource_DX12::IsPending(uint64 aValue)
 	{
 		if (completedValue == UINT64_MAX) // Device Was Removed
 		{
-			assert(false);
+			SC_ASSERT(false);
 			return true;
 		}
 
@@ -42,7 +43,7 @@ bool SR_FenceResource_DX12::Wait(uint64 aValue, bool aBlock)
 		HANDLE eventHandle = CreateEvent(nullptr, false, false, nullptr);
 		if (!eventHandle)
 		{
-			assert(false && "Could not create event");
+			SC_ASSERT(false, "Could not create event");
 			return false;
 		}
 
@@ -72,7 +73,7 @@ ID3D12Fence* SR_FenceResource_DX12::GetD3D12Fence() const
 
 bool SR_FenceResource_DX12::Init()
 {
-	HRESULT hr = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&mD3D12Fence));
+	HRESULT hr = SR_RenderDevice_DX12::gInstance->GetD3D12Device()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&mD3D12Fence));
 	if (!VerifyHRESULT(hr))
 	{
 		SC_ASSERT(false, "Could not create fence.");

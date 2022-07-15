@@ -21,7 +21,9 @@
 
 #include "Platform/Time/SC_Time.h"
 #include "RenderCore/Interface/SR_RenderDevice.h"
+#include "RenderCore/RenderTasks/SR_RenderThread.h"
 #include "SED_MetricsWindow.h"
+#include "SED_Widgets.h"
 
 SED_Editor::SED_Editor()
 	: mIsDemoWindowOpen(false)
@@ -47,7 +49,7 @@ bool SED_Editor::Init()
 
 	mWorldHierarchy = SC_MakeRef<SED_WorldHierarchyWindow>(mActiveWorld);
 	mPropertiesPanel = SC_MakeRef<SED_PropertiesWindow>(mActiveWorld);
-	mViewport = SC_MakeRef<SED_ViewportWindow>(mActiveWorld->GetGraphicsWorld(), &mGizmo);
+	mViewport = SC_MakeRef<SED_ViewportWindow>(mActiveWorld->GetGraphicsWorld());
 
 	mWindows.Add(mWorldHierarchy);
 	mWindows.Add(mPropertiesPanel);
@@ -55,14 +57,13 @@ bool SED_Editor::Init()
 	mWindows.Add(SC_MakeRef<SED_ContentBrowserWindow>());
 
 	mMetricsWindow = SC_MakeRef<SED_MetricsWindow>();
-	mMetricsWindow->Close();
 	mWindows.Add(mMetricsWindow);
 
-	mActiveWorld->LoadLevel("");
 	//auto WorldLoadingTask = [&]()
 	//{
-	//};
-	//SC_ThreadPool::Get().SubmitTask(WorldLoadingTask);
+		mActiveWorld->LoadLevel("");
+		//};
+		//SC_ThreadPool::Get().SubmitTask(WorldLoadingTask);
 
 	//mMaterialEditor = SC_MakeUnique<SED_MaterialEditor>();
 	//if (!mMaterialEditor->Init())
@@ -75,20 +76,28 @@ bool SED_Editor::Update()
 {
 	mActiveWorld->Update();
 
+	//SC_Array<SC_Future<bool>> taskEvents;
+
 	for (auto& panel : mWindows)
+	{
 		panel->Update();
+		//taskEvents.Add(SC_ThreadPool::Get().SubmitTask([panel]() { panel->Update(); }));
+	}
+
+	//for (SC_Future<bool>& taskEvent : taskEvents)
+	//	taskEvent.Wait();
 
 	//mMaterialEditor->OnUpdate();
 
 	mSelectedEntity = mWorldHierarchy->GetSelected();
 	mPropertiesPanel->SetSelectedEntity(mSelectedEntity);
+	mViewport->SetSelectedEntity(mSelectedEntity);
 	return true;
 }
 
 bool SED_Editor::Render()
 {
 	mImGui.BeginFrame();
-	mGizmo.BeginFrame(mViewport->GetViewportBounds());
 
 	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
 
@@ -99,7 +108,7 @@ bool SED_Editor::Render()
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
 	windowFlags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-	windowFlags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+	windowFlags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_MenuBar;
 
 	bool dockspaceOpen = true;
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
@@ -110,7 +119,10 @@ bool SED_Editor::Render()
 	ImGuiID dockspaceId = ImGui::GetID("MainDockSpace");
 	ImGui::DockSpace(dockspaceId, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
 
-	if (ImGui::BeginMainMenuBar())
+	if (mIsDemoWindowOpen)
+		ImGui::ShowDemoWindow(&mIsDemoWindowOpen);
+
+	if (ImGui::BeginMenuBar())
 	{
 		//if (ImGui::BeginMenu("File"))
 		//{
@@ -131,12 +143,12 @@ bool SED_Editor::Render()
 		{
 			SGfx_Renderer* renderer = mActiveWorld->GetGraphicsWorld()->GetRenderer();
 			SGfx_Renderer::Settings& rendererSettings = renderer->GetSettings();
-			ImGui::Checkbox("Enable TAA", &rendererSettings.mEnableTemporalAA);
-			ImGui::Checkbox("Draw Grid", &rendererSettings.mDrawGridHelper);
+			SED_Checkbox("Enable TAA", rendererSettings.mEnableTemporalAA);
+			SED_Checkbox("Draw Grid", rendererSettings.mDrawGridHelper);
 
-			ImGui::DragFloat3("Sun Direction", &mActiveWorld->GetGraphicsWorld()->GetEnvironment()->GetSunDirection().x, 0.1f); // temp
-			ImGui::ColorPicker3("Sun Color", &mActiveWorld->GetGraphicsWorld()->GetEnvironment()->GetSunColor().x);
-			ImGui::DragFloat("Sun Intensity", &mActiveWorld->GetGraphicsWorld()->GetEnvironment()->GetSunIntensity());
+			SED_FloatField("Sun Direction", mActiveWorld->GetGraphicsWorld()->GetEnvironment()->GetSunDirection(), 0.1f, 1.0f, 0.01f); // temp
+			SED_ColorPickerRGB("Sun Color", mActiveWorld->GetGraphicsWorld()->GetEnvironment()->GetSunColor());
+			SED_FloatField("Sun Intensity", mActiveWorld->GetGraphicsWorld()->GetEnvironment()->GetSunIntensity());
 
 			if (ImGui::BeginMenu("Ambient Occlusion"))
 			{
@@ -161,105 +173,34 @@ bool SED_Editor::Render()
 
 				if (aoSettings.mAOType == SGfx_AmbientOcclusion::Type::RTAO)
 				{
-					ImGui::SliderInt("Num Rays", &aoSettings.mNumRaysPerPixel, 0, 8);
-					ImGui::SliderFloat("Radius", &aoSettings.mRadius, 0.1f, 25.0f);
-					ImGui::Checkbox("Denoise", &aoSettings.mUseDenoiser);
+					SED_IntSlider("Num Rays", aoSettings.mNumRaysPerPixel, 0, 8);
+					SED_FloatSlider("Radius", aoSettings.mRadius, 0.1f, 25.0f);
+					SED_Checkbox("Denoise", aoSettings.mUseDenoiser);
 				}
-				ImGui::EndMenu();
-			}
-			if (ImGui::BeginMenu("Shadows"))
-			{
-				SGfx_CascadedShadowMap::Settings& csmSettings = renderer->GetShadowMapSystem()->GetCSM()->GetSettings();
-				const char* resolutions[] = { "512", "1024", "2048", "4096" };
-
-				uint32 resolutionIndex = 0;
-				switch (csmSettings.mResolution)
-				{
-				case 512:
-					resolutionIndex = 0;
-					break;
-				case 1024:
-					resolutionIndex = 1;
-					break;
-				case 2048:
-					resolutionIndex = 2;
-					break;
-				case 4096:
-					resolutionIndex = 3;
-					break;
-				}
-
-				if (ImGui::BeginCombo("CSM Resolution", resolutions[static_cast<uint32>(resolutionIndex)]))
-				{
-					for (uint32 i = 0; i < 4; ++i)
-					{
-						bool isSelected = resolutionIndex == i;
-						if (ImGui::Selectable(resolutions[i], &isSelected))
-						{
-							switch (i)
-							{
-							case 0:
-								csmSettings.mResolution = 512;
-								break;
-							case 1:
-								csmSettings.mResolution = 1024;
-								break;
-							case 2:
-								csmSettings.mResolution = 2048;
-								break;
-							case 3:
-								csmSettings.mResolution = 4096;
-								break;
-							}
-						}
-					}
-					ImGui::EndCombo();
-				}
-
-
-				ImGui::SliderFloat("CSM Max Distance", &csmSettings.mMaxDistance, 1.0f, 1000.0f, "%.0f");
-				ImGui::SliderFloat("CSM Split Factor", &csmSettings.mSplitFactor, 0.7f, 1.0f, "%.2f");
-#if IS_DEBUG_BUILD
-				ImGui::Checkbox("CSM Debug Frustums", &csmSettings.mDebugDrawFrustums);
-				ImGui::Checkbox("CSM Lock Shadow View", &csmSettings.mLockShadowView);
-#endif
-
 				ImGui::EndMenu();
 			}
 
 			ImGui::EndMenu();
 		}
 
-		ImGui::EndMainMenuBar();
+		ImGui::EndMenuBar();
 	}
-
-	if (mIsDemoWindowOpen)
-		ImGui::ShowDemoWindow(&mIsDemoWindowOpen);
 
 	for (auto& panel : mWindows)
 		panel->Draw();
 
 	//mMaterialEditor->OnRender();
-
-	if (mSelectedEntity)
-	{
-		SGF_TransformComponent* transformComp = mSelectedEntity.GetComponent<SGF_TransformComponent>();
-		if (transformComp)
-		{
-			const SGfx_ViewConstants constants = mViewport->GetCamera().GetViewConstants();
-			const SC_Vector4 viewportBounds = mViewport->GetViewportBounds();
-
-			mGizmo.SetViewportPositionAndSize(SC_Vector4(viewportBounds.x, viewportBounds.y, viewportBounds.z - viewportBounds.x, viewportBounds.w - viewportBounds.y));
-			mGizmo.SetViewAndProjection(constants.mWorldToCamera, constants.mCameraToClip);
-
-			SC_Matrix transform = transformComp->GetTransform();
-			mGizmo.Manipulate(transform);
-		}
-	}
-
 	ImGui::End();
 
-	mImGui.Render(SR_RenderDevice::gInstance->GetSwapChain()->GetRenderTarget());
+	SC_Event taskEvent;
+	auto renderTask = [&]() 
+	{
+		mImGui.Render(SR_RenderDevice::gInstance->GetSwapChain()->GetRenderTarget());
+		taskEvent.Signal();
+	};
+	SR_RenderThread::Get()->PostTask(renderTask);
+	taskEvent.Wait();
+
 	return true;
 }
 

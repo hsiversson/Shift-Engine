@@ -2,6 +2,7 @@
 #include "Platform/Time/SC_Time.h"
 #include "RenderCore/Interface/SR_RenderDevice.h"
 #include "RenderCore/Interface/SR_SwapChain.h"
+#include "RenderCore/RenderTasks/SR_RenderThread.h"
 
 #if IS_WINDOWS_PLATFORM
 #include "Application/Win64/SAF_Framework_Win64.h"
@@ -117,8 +118,8 @@ bool SAF_Framework::Update()
 		// Render Modules
 
 		SR_RenderDevice::gInstance->Present();
-		SR_RenderDevice::gInstance->mLatestFinishedFrame = SC_Time::gFrameCounter;
 	}
+
 
 	// EndFrame ThreadPool
 	// EndFrame Input

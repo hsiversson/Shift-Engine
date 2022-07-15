@@ -89,7 +89,7 @@ inline void SC_RingArray<T>::Reserve(uint32 aCount)
 	{
 		uint32 endCount = mItemCapacity - read;
 		count = endCount + write;
-		assert(count == mCurrentItemCount);
+		SC_ASSERT(count == mCurrentItemCount);
 		SC_RelocateN(newData, mInternalItemBuffer + read, endCount);
 		SC_RelocateN(newData + endCount, mInternalItemBuffer, write);
 	}
@@ -183,7 +183,7 @@ inline T& SC_RingArray<T>::Add(const T& aItem)
 template<class T>
 inline T& SC_RingArray<T>::Peek() const
 {
-	assert(mBeginIndex != mEndIndex); 
+	SC_ASSERT(mBeginIndex != mEndIndex); 
 	return mInternalItemBuffer[mBeginIndex];
 }
 
@@ -202,7 +202,7 @@ inline const T& SC_RingArray<T>::operator[](uint32 aIndex) const
 template<class T>
 inline void SC_RingArray<T>::Remove()
 {
-	assert(mBeginIndex != mEndIndex);
+	SC_ASSERT(mBeginIndex != mEndIndex);
 
 	(mInternalItemBuffer + mBeginIndex)->~T();
 

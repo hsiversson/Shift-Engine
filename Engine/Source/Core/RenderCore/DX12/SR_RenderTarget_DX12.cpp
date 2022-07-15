@@ -59,8 +59,8 @@ bool SR_RenderTarget_DX12::Init()
 	}
 
 	
-	mDescriptor = SR_RenderDevice_DX12::gD3D12Instance->GetRTVDescriptorHeap()->Alloc();
-	SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateRenderTargetView(resource->GetD3D12Resource(), &desc, D3D12_CPU_DESCRIPTOR_HANDLE{ mDescriptor.mDescriptorHandleCPU });
+	mDescriptor = SR_RenderDevice_DX12::gInstance->GetRTVDescriptorHeap()->Alloc();
+	SR_RenderDevice_DX12::gInstance->GetD3D12Device()->CreateRenderTargetView(resource->GetD3D12Resource(), &desc, D3D12_CPU_DESCRIPTOR_HANDLE{ mDescriptor.mDescriptorHandleCPU });
 
 	return true;
 }

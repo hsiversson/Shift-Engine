@@ -1,5 +1,7 @@
 #include "SED_TransformationGizmo.h"
 
+#include "GameFramework/Entity/Components/SGF_TransformComponent.h"
+
 #include "ImGuizmo/ImGuizmo.h"
 
 static const ImU32 gDirectionColors[3] = { IM_COL32(170, 0, 0, 255), IM_COL32(0, 170, 0, 255), IM_COL32(0, 0, 170, 255) };
@@ -76,18 +78,29 @@ void SED_TransformationGizmo::SetViewAndProjection(const SC_Matrix& aView, const
 	mCameraForward.Normalize();
 }
 
-void SED_TransformationGizmo::SetViewportPositionAndSize(const SC_Vector4& /*aPositionAndSize*/)
+void SED_TransformationGizmo::SetViewportPositionAndSize(const SC_Vector4& aPositionAndSize)
 {
-	//mViewportPosAndSize = aPositionAndSize;
+	mViewportPosAndSize = aPositionAndSize;
 	//mAspectRatio = mViewportPosAndSize.z / mViewportPosAndSize.w;
 }
 
-bool SED_TransformationGizmo::Manipulate(SC_Matrix& aTransform, bool /*aShouldSnap*/ /*= false*/, float /*aSnapValue*/ /*= 0.0f*/)
+bool SED_TransformationGizmo::Manipulate(bool /*aShouldSnap*/ /*= false*/, float /*aSnapValue*/ /*= 0.0f*/)
 {
-	ImGuizmo::SetOrthographic(false);
-	//ImGuizmo::SetDrawlist();
-	ImGuizmo::SetRect(mRect.x, mRect.y, mRect.z, mRect.w);
-	return ImGuizmo::Manipulate(mWorldToCamera.m, mCameraToClip.m, ImGuizmo::OPERATION::TRANSLATE, ImGuizmo::MODE::WORLD, aTransform.m);
+	if (mSelectedEntity.GetHandle() != SGF_InvalidEntityHandle)
+	{
+		SGF_TransformComponent* transformComponent = mSelectedEntity.GetComponent<SGF_TransformComponent>();
+		SC_Matrix transform = transformComponent->GetTransform();
+
+		ImGuizmo::SetDrawlist();
+		ImGuizmo::SetRect(mViewportPosAndSize.x, mViewportPosAndSize.y, mViewportPosAndSize.z, mViewportPosAndSize.w);
+		bool result = ImGuizmo::Manipulate(mWorldToCamera.m, mCameraToClip.m, ImGuizmo::OPERATION::TRANSLATE, ImGuizmo::MODE::WORLD, transform.m);
+
+		transformComponent->SetTransform(transform);
+
+		return result;
+	}
+	else
+		return false;
 
 	//mModel = aTransform;
 	//mModelInv = mModel.Inverse();
@@ -115,6 +128,11 @@ bool SED_TransformationGizmo::Manipulate(SC_Matrix& aTransform, bool /*aShouldSn
 	//}
 
 	//return didManipulate;
+}
+
+void SED_TransformationGizmo::SetSelectedEntity(const SGF_Entity& aEntity)
+{
+	mSelectedEntity = aEntity;
 }
 
 void SED_TransformationGizmo::ComputeTripodAxisAndVisibility(const uint32 /*aAxisIndex*/, SC_Vector& /*aDirAxis*/, SC_Vector& /*aDirPlaneX*/, SC_Vector& /*aDirPlaneY*/, bool& /*aUnderAxisLimit*/, bool& /*aUnderPlaneLimit*/, const bool /*aLocalCoordinates*/)

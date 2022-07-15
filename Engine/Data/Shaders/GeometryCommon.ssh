@@ -1,6 +1,4 @@
-#ifndef GEOMETRY_COMMON_HEADER
-#define GEOMETRY_COMMON_HEADER
-
+#pragma once 
 ////////////////////////////////////////
 // Sphere
 struct SR_Sphere
@@ -77,4 +75,11 @@ void TransformAABB(inout SR_AABB aAABB, float4x4 aMatrix)
 	ConstructAABBFromMinMax(aAABB, _min, _max);
 }
 
-#endif //GEOMETRY_COMMON_HEADER
+////////////////////////////////////////
+// Surfel
+struct SR_Surfel
+{
+	float3 mPosition;
+	float3 mNormal;
+	float mRadius;
+};

@@ -9,7 +9,7 @@ SC_Logger* SC_Logger::gInstance = nullptr;
 
 void SC_Logger::Create()
 {
-	assert(gInstance == nullptr);
+	SC_ASSERT(gInstance == nullptr);
 	gInstance = new SC_Logger;
 }
 
@@ -87,7 +87,7 @@ void SC_Logger::SC_LoggerThread::ThreadMain()
 
 			struct tm buf;
 			localtime_s(&buf, &msg.mTime);
-			timeStr << std::put_time(&buf, "%Y-%m-{} %X");
+			timeStr << std::put_time(&buf, "%Y-%m-%d %X");
 			std::wstringstream sstr;
 			sstr << L"[" << SC_UTF8ToUTF16(timeStr.str()) << L"] - " << SC_UTF8ToUTF16(msg.mMessage.c_str()) << std::endl;
 

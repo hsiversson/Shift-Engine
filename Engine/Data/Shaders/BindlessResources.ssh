@@ -1,6 +1,4 @@
-#ifndef BINDLESS_RESOURCES_HEADER
-#define BINDLESS_RESOURCES_HEADER
-
+#pragma once 
 #if IS_DXIL
 
 template<typename T>
@@ -52,8 +50,16 @@ RWBuffer<T> GetRWBuffer(uint aResourceIndex)
     return ResourceDescriptorHeap[NonUniformResourceIndex(aResourceIndex)];
 }
 
+ByteAddressBuffer GetByteBuffer(uint aResourceIndex)
+{
+    return ResourceDescriptorHeap[NonUniformResourceIndex(aResourceIndex)];
+}
+RWByteAddressBuffer GetRWByteBuffer(uint aResourceIndex)
+{
+    return ResourceDescriptorHeap[NonUniformResourceIndex(aResourceIndex)];
+}
+
+
 #elif IS_SPIRV
 
 #endif
-
-#endif //BINDLESS_RESOURCES_HEADER

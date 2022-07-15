@@ -1,6 +1,7 @@
 ##################################
 # Engine External sub-directories
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/External/ImGui)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/External/NlohmannJson)
 
 ##################################
 # Engine Core sub-directories

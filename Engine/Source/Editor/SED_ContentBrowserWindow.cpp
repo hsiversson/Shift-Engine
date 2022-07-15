@@ -14,13 +14,6 @@ SED_ContentBrowserWindow::~SED_ContentBrowserWindow()
 
 void SED_ContentBrowserWindow::OnDraw()
 {
-	if (ImGui::BeginPopupContextWindow())
-	{
-		ImGui::Selectable("Right Click Menu");
-
-		ImGui::EndPopup();
-	}
-
 	static float padding = 16.0f;
 	static float thumbnailSize = 192.0f;
 	float cellSize = thumbnailSize + padding;
@@ -37,7 +30,7 @@ void SED_ContentBrowserWindow::OnDraw()
 		ImGui::NextColumn();
 	}
 
-	SR_Texture* thumbnailTexture = mThumbnailGenerator.GetDefaultThumbnail(SED_AssetType::Texture).get();
+	SR_Texture* thumbnailTexture = mThumbnailGenerator.GetDefaultThumbnail(SED_AssetType::Texture);
 	DrawAssetEntry("TestTexture0", SED_AssetType::Texture, &thumbnailTexture, sizeof(thumbnailTexture));
 	ImGui::NextColumn();
 	DrawAssetEntry("TestMaterial0", SED_AssetType::Material);
@@ -57,14 +50,14 @@ void SED_ContentBrowserWindow::DrawFolderEntry(const char* aFolderName)
 	ImRect buttonRect = ImRect(currentPos.x, currentPos.y, currentPos.x + itemSize.x, currentPos.y + itemSize.y);
 	ImRect labelRect = ImRect(buttonRect.Min.x, buttonRect.Max.y - labelHeight - style.FramePadding.y, buttonRect.Max.x, buttonRect.Max.y);
 
-	ImGui::PushID(aFolderName);
+	SED_PushId(aFolderName);
 
 	// Thumbnail
 	{
-		ImGui::ImageButton(mThumbnailGenerator.GetFolderThumbnail().get(), itemSize); 
+		SED_ImageButton(mThumbnailGenerator.GetFolderThumbnail(), itemSize); 
 		if (ImGui::BeginPopupContextItem())
 		{
-			ImGui::Selectable("Right Click Folder");
+			SED_Selectable("Right Click Folder");
 
 			ImGui::EndPopup();
 		}
@@ -74,7 +67,7 @@ void SED_ContentBrowserWindow::DrawFolderEntry(const char* aFolderName)
 		ImGui::TextWrapped(aFolderName);
 	}
 
-	ImGui::PopID();
+	SED_PopId();
 }
 
 void SED_ContentBrowserWindow::DrawAssetEntry(const char* aAssetName, const SED_AssetType& aType, void* aAssetPtr, SC_SizeT aAssetDataSize)
@@ -89,21 +82,21 @@ void SED_ContentBrowserWindow::DrawAssetEntry(const char* aAssetName, const SED_
 	ImRect buttonRect = ImRect(currentPos.x, currentPos.y, currentPos.x + itemSize.x, currentPos.y + itemSize.y);
 	ImRect labelRect = ImRect(buttonRect.Min.x, buttonRect.Max.y - labelHeight - style.FramePadding.y, buttonRect.Max.x, buttonRect.Max.y);
 
-	ImGui::PushID(aAssetName);
+	SED_PushId(aAssetName);
 
 	// Thumbnail
 	{
-		SR_Texture* thumbnailTexture = mThumbnailGenerator.GetDefaultThumbnail(aType).get();
+		SR_Texture* thumbnailTexture = mThumbnailGenerator.GetDefaultThumbnail(aType);
 		ImGui::ImageButton(thumbnailTexture, itemSize);
 
 		if (ImGui::BeginPopupContextItem())
 		{
-			ImGui::Selectable("Right Click Item");
+			SED_Selectable("Right Click Item");
 
 			ImGui::EndPopup();
 		}
 
-		if (ImGui::BeginDragDropSource())
+		if (SED_BeginDragDropSource())
 		{
 			const char* dataTag = nullptr;
 			switch (aType)
@@ -139,10 +132,10 @@ void SED_ContentBrowserWindow::DrawAssetEntry(const char* aAssetName, const SED_
 
 			if (dataTag)
 			{
-				ImGui::SetDragDropPayload(dataTag, aAssetPtr, aAssetDataSize);
-				ImGui::Image(thumbnailTexture, { 64.f, 64.f });
+				SED_PushDragDropPayload(dataTag, aAssetPtr, aAssetDataSize);
+				SED_Image(thumbnailTexture, { 64.f, 64.f });
 			}
-			ImGui::EndDragDropSource();
+			SED_EndDragDropSource();
 		}
 	}
 	// Label
@@ -150,5 +143,5 @@ void SED_ContentBrowserWindow::DrawAssetEntry(const char* aAssetName, const SED_
 		ImGui::TextWrapped(aAssetName);
 	}
 
-	ImGui::PopID();
+	SED_PopId();
 }

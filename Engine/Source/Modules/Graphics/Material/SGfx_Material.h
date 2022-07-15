@@ -35,6 +35,7 @@ enum class SGfx_MaterialAttributes
 	AmbientOcclusion,
 	Specular,
 	Opacity,
+	Emissive,
 	ShadingModel,
 
 	COUNT
@@ -154,6 +155,36 @@ private:
 	bool mEnableTangentSpaceNormals;
 };
 
+
+class SGfx_Material2
+{
+public:
+	SGfx_Material2();
+	~SGfx_Material2();
+
+private:
+
+	// INPUTS 
+	SGfx_MaterialInput mBaseColor;
+	SGfx_MaterialInput mNormal;
+	SGfx_MaterialInput mRoughness;
+	SGfx_MaterialInput mMetallic;
+	SGfx_MaterialInput mAmbientOcclusion;
+	SGfx_MaterialInput mSpecular;
+	SGfx_MaterialInput mOpacity;
+	SGfx_MaterialInput mAlphaMask;
+	SGfx_MaterialInput mEmissive;
+
+	// PROPERTIES
+	SGfx_MaterialType mMaterialType;
+	SGfx_MaterialShadingModel mShadingModel;
+	SGfx_MaterialBlendMode mMaterialBlendMode;
+
+	bool mUseGeometricSpecularAA;
+	bool mUseResponsiveAA;
+	bool mUseTangentSpaceNormals;
+	bool mIsTwoSided;
+};
 
 /*
 	MATERIAL JSON TEMPLATE

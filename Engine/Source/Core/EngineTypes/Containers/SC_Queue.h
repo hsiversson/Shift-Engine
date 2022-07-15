@@ -8,9 +8,9 @@ template<class T>
 using SC_Deque = std::deque<T>;
 
 template<class T>
-class SC_LocklessQueue
+class SC_AtomicQueue
 {
 public:
-	SC_LocklessQueue() {}
-	~SC_LocklessQueue() {}
+	SC_AtomicQueue() {}
+	~SC_AtomicQueue() {}
 };

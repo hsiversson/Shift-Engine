@@ -1,6 +1,4 @@
-#ifndef GAMMA_COMMON_HEADER
-#define GAMMA_COMMON_HEADER
-
+#pragma once 
 float3 LinearTosRGB(in float3 color)
 {
     float3 x = color * 12.92f;
@@ -26,5 +24,3 @@ float3 SRGBToLinear(in float3 color)
 
     return clr;
 }
-
-#endif //GAMMA_COMMON_HEADER

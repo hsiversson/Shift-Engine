@@ -97,10 +97,10 @@ void SGfx_Sky::ComputeSkyAtmosphereLUTs(SR_CommandList* aCmdList)
 
 		mTransmittanceLUTConstantBuffer->UpdateData(0, &constants, sizeof(constants));
 
-		aCmdList->SetRootConstantBuffer(mTransmittanceLUTConstantBuffer.get(), 0);
-		aCmdList->TransitionBarrier(SR_ResourceState_UnorderedAccess, mTransmittanceLUT.mResource.get());
-		aCmdList->Dispatch(mComputeTransmittanceLUTShader.get(), targetSize.x, targetSize.y);
-		aCmdList->TransitionBarrier(SR_ResourceState_Read, mTransmittanceLUT.mResource.get());
+		aCmdList->SetRootConstantBuffer(mTransmittanceLUTConstantBuffer, 0);
+		aCmdList->TransitionBarrier(SR_ResourceState_UnorderedAccess, mTransmittanceLUT.mResource);
+		aCmdList->Dispatch(mComputeTransmittanceLUTShader, targetSize.x, targetSize.y);
+		aCmdList->TransitionBarrier(SR_ResourceState_Read, mTransmittanceLUT.mResource);
 
 		aCmdList->EndEvent();
 	}
@@ -127,10 +127,10 @@ void SGfx_Sky::ComputeSkyAtmosphereLUTs(SR_CommandList* aCmdList)
 
 		mSkyViewLUTConstantBuffer->UpdateData(0, &constants, sizeof(constants));
 
-		aCmdList->SetRootConstantBuffer(mSkyViewLUTConstantBuffer.get(), 0);
-		aCmdList->TransitionBarrier(SR_ResourceState_UnorderedAccess, mSkyViewLUT.mResource.get());
-		aCmdList->Dispatch(mComputeSkyViewLUTShader.get(), targetSize.x, targetSize.y);
-		aCmdList->TransitionBarrier(SR_ResourceState_Read, mSkyViewLUT.mResource.get());
+		aCmdList->SetRootConstantBuffer(mSkyViewLUTConstantBuffer, 0);
+		aCmdList->TransitionBarrier(SR_ResourceState_UnorderedAccess, mSkyViewLUT.mResource);
+		aCmdList->Dispatch(mComputeSkyViewLUTShader, targetSize.x, targetSize.y);
+		aCmdList->TransitionBarrier(SR_ResourceState_Read, mSkyViewLUT.mResource);
 
 		aCmdList->EndEvent();
 	}
@@ -248,9 +248,9 @@ bool SGfx_Sky::InitSkyIrradianceMaps()
 
 void SGfx_Sky::Render(SR_CommandList* aCmdList)
 {
-	aCmdList->SetVertexBuffer(mSphereVertexBuffer.get());
-	aCmdList->SetIndexBuffer(mSphereIndexBuffer.get());
-	aCmdList->SetShaderState(mSphereShader.get());
+	aCmdList->SetVertexBuffer(mSphereVertexBuffer);
+	aCmdList->SetIndexBuffer(mSphereIndexBuffer);
+	aCmdList->SetShaderState(mSphereShader);
 	aCmdList->SetPrimitiveTopology(SR_PrimitiveTopology::TriangleList);
 	aCmdList->DrawIndexed(mSphereIndexBuffer->GetProperties().mElementCount);
 }

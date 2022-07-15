@@ -16,8 +16,8 @@ void SED_MetricsWindow::OnUpdate()
 	mFPS = SC_Time::gFramerate;
 	mDeltaTimeCPU = SC_Time::gDeltaTime * 1000.f;
 
-	mUsedSystemMemoryMB = BYTE_TO_MB(SC_System::GetPhysicalMemoryUsed());
-	mAvailableSystemMemoryMB = BYTE_TO_MB(SC_System::GetPhysicalMemoryAvailable());
+	mUsedSystemMemoryMB = BYTE_TO_MB(SC_Platform::GetPhysicalMemoryUsed());
+	mAvailableSystemMemoryMB = BYTE_TO_MB(SC_Platform::GetPhysicalMemoryAvailable());
 
 	mUsedVideoMemoryMB = BYTE_TO_MB(SR_RenderDevice::gInstance->GetUsedVRAM());
 	mAvailableVideoMemoryMB = BYTE_TO_MB(SR_RenderDevice::gInstance->GetAvailableVRAM());
@@ -25,7 +25,7 @@ void SED_MetricsWindow::OnUpdate()
 
 void SED_MetricsWindow::OnDraw()
 {
-	ImGui::Text("Application: %.3f ms/frame (%i FPS)", mDeltaTimeCPU, mFPS);
-	ImGui::Text("Memory: %i MB (%i MB Total)", mUsedSystemMemoryMB, mAvailableSystemMemoryMB);
-	ImGui::Text("VRAM: %i MB (%i MB Total)", mUsedVideoMemoryMB, mAvailableVideoMemoryMB);
+	SED_Text("Application: %.3f ms/frame (%i FPS)", mDeltaTimeCPU, mFPS);
+	SED_Text("Memory: %i MB (%i MB Total)", mUsedSystemMemoryMB, mAvailableSystemMemoryMB);
+	SED_Text("VRAM: %i MB (%i MB Total)", mUsedVideoMemoryMB, mAvailableVideoMemoryMB);
 }

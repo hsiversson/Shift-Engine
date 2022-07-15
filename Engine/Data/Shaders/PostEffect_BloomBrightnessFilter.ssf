@@ -1,7 +1,3 @@
-/*
-    Gathers brightest parts of input using a smooth threshold.
-*/
-
 #include "Common.ssh"
 
 struct FilterConstants
@@ -14,6 +10,9 @@ struct FilterConstants
 };
 ConstantBuffer<FilterConstants> Constants : register(b0);
 
+/*
+    Gathers brightest parts of input using a smooth threshold.
+*/
 float3 BrightnessFilter(in float3 aColor)
 {
     float brightness = RelativeLuminance(aColor);

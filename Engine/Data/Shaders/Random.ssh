@@ -1,5 +1,4 @@
-#ifndef RANDOM_HEADER
-#define RANDOM_HEADER
+#pragma once 
 
 // [Jimenez 2014, "Next Generation Post Processing In Call Of Duty: Advanced Warfare"]
 // http://advances.realtimerendering.com/s2014/index.html
@@ -10,6 +9,3 @@ float InterleavedGradientNoise(float2 aUV, uint aFrameIndex)
 	const float3 magic = float3(0.06711056f, 0.00583715f, 52.9829189f);
 	return frac(magic.z * frac(dot(aUV, magic.xy)));
 }
-
-
-#endif //RANDOM_HEADER

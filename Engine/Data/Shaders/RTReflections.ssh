@@ -1,6 +1,4 @@
-#ifndef RTREFLECTIONS_HEADER
-#define RTREFLECTIONS_HEADER
-
+#pragma once 
 #include "SceneConstants.ssh"
 #include "Raytracing.ssh"
 
@@ -54,5 +52,3 @@ float3 TraceReflections(float3 aWorldPosition, float3 aViewDirection, float3 aSu
 
     return accumulatedReflection / NUM_RAYS_PER_PIXEL;
 }
-
-#endif //RTREFLECTIONS_HEADER

@@ -20,6 +20,7 @@ public:
 public:
 	SC_FilePath();
 	SC_FilePath(const char* aPath);
+	SC_FilePath(const std::string& aPath);
 	~SC_FilePath();
 
 	std::string GetFileName() const;
@@ -29,6 +30,8 @@ public:
 	SC_FilePath GetParentDirectory() const;
 	bool IsRelativePath() const;
 	bool IsAbsolutePath() const;
+
+	void MakeAbsolute();
 
 	const char* GetStr() const;
 	bool IsEmpty() const;

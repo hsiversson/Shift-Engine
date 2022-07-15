@@ -9,7 +9,7 @@ public:
 	~SED_ContentBrowserWindow();
 
 	const char* GetWindowName() const override { return "Content Browser"; }
-
+	bool HasRightClickMenu() const override { return true; }
 protected:
 	void OnDraw() override;
 

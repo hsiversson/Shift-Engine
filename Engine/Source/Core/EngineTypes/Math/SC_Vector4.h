@@ -254,14 +254,14 @@ bool SC_TVector4<T>::operator==(const SC_TVector4<T>& aVector) const
 template<class T>
 T& SC_TVector4<T>::operator[](const uint32 aIndex)
 {
-	assert(aIndex < 4);
+	SC_ASSERT(aIndex < 4);
 	return (aIndex == 0) ? x : ((aIndex == 1) ? y : ((aIndex == 2) ? z : w));
 }
 
 template<class T>
 const T& SC_TVector4<T>::operator[](const uint32 aIndex) const
 {
-	assert(aIndex < 4);
+	SC_ASSERT(aIndex < 4);
 	return (aIndex == 0) ? x : ((aIndex == 1) ? y : ((aIndex == 2) ? z : w));
 }
 
@@ -274,3 +274,4 @@ bool SC_TVector4<T>::operator!=(const SC_TVector4<T>& aVector) const
 using SC_Vector4 = SC_TVector4<float>;
 using SC_Vector4f = SC_TVector4<float>;
 using SC_IntVector4 = SC_TVector4<int>;
+using SC_Vector4u = SC_TVector4<unsigned int>;

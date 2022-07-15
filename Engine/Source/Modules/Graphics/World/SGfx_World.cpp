@@ -5,6 +5,7 @@
 #include "Graphics/Material/SGfx_MaterialCache.h"
 #include "Graphics/Renderer/SGfx_Renderer.h"
 #include "Graphics/Lighting/Shadows/SGfx_ShadowSystem.h"
+#include "RenderCore/RenderTasks/SR_RenderThread.h"
 
 SGfx_World::SGfx_World()
 {
@@ -14,7 +15,7 @@ SGfx_World::SGfx_World()
 	mRenderer = SC_MakeUnique<SGfx_Renderer>();
 	if (!mRenderer->Init(mEnvironment.get()))
 	{
-		assert(false);
+		SC_ASSERT(false);
 		return;
 	}
 
@@ -43,6 +44,8 @@ void SGfx_World::DestroyView(const SC_Ref<SGfx_View>& aView)
 
 void SGfx_World::PrepareView(SGfx_View* aView)
 {
+	aView->StartPrepare();
+
 	SGfx_MaterialGPUDataBuffer& materialGpuBuffer = SGfx_MaterialGPUDataBuffer::Get();
 	materialGpuBuffer.UpdateBuffer();
 
@@ -90,9 +93,14 @@ void SGfx_World::PrepareView(SGfx_View* aView)
 
 void SGfx_World::RenderView(SGfx_View* aView)
 {
+	aView->StartRender();
 	// Choose renderer?
-	mRenderer->RenderView(aView);
-
+	auto renderTask = [&, aView]()
+	{
+		mRenderer->RenderView(aView);
+	};
+	SR_RenderThread::Get()->PostTask(renderTask);
+	aView->EndRender();
 }
 
 void SGfx_World::AddModel(SC_Ref<SGfx_Model> aModel)

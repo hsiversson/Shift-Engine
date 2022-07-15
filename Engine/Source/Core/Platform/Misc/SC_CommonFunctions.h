@@ -89,7 +89,9 @@ inline T&& SC_Forward(typename SC_RemoveReference<T>::Type&& aValue)
 //	Power of Two
 
 static inline bool SC_IsPow2(const uint32 aValue) { return (aValue && !(aValue & (aValue - 1))); }
+static inline bool SC_IsPow2(const uint64 aValue) { return (aValue && !(aValue & (aValue - 1))); }
 static inline bool SC_IsPow2(const float aValue) { return SC_IsPow2(uint32(aValue)); }
+static inline bool SC_IsPow2(const double aValue) { return SC_IsPow2(uint64(aValue)); }
 
 static inline uint32 SC_GetNextPow2(uint32 aValue)
 {

@@ -53,7 +53,7 @@ static D3D12_SHADER_VISIBILITY GetShaderVisibility(const SR_RootParamVisibility&
 		return D3D12_SHADER_VISIBILITY_MESH;
 	}
 
-	assert(false && "Incorrect visibility.");
+	SC_ASSERT(false, "Incorrect visibility.");
 	return D3D12_SHADER_VISIBILITY_ALL;
 }
 
@@ -164,7 +164,7 @@ bool SR_RootSignature_DX12::Init()
 		else if (sampler.mBorderColor == opaqueWhite)
 			staticSampler.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE;
 		else
-			assert(!"Unsupported Border Color");
+			SC_ASSERT(false, "Unsupported Border Color");
 	}
 
 	D3D12_ROOT_SIGNATURE_DESC1 rootSigDesc = {};
@@ -190,7 +190,7 @@ bool SR_RootSignature_DX12::Init()
 		return false;
 	}
 
-	hr = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&mD3D12RootSignature));
+	hr = SR_RenderDevice_DX12::gInstance->GetD3D12Device()->CreateRootSignature(0, signatureBlob->GetBufferPointer(), signatureBlob->GetBufferSize(), IID_PPV_ARGS(&mD3D12RootSignature));
 	if (!VerifyHRESULT(hr))
 		return false;
 

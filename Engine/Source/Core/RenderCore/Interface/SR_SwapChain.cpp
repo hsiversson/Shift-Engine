@@ -33,10 +33,10 @@ SR_Fence& SR_SwapChain::GetLastFrameFence()
 
 SR_RenderTarget* SR_SwapChain::GetRenderTarget() const
 {
-	return mCurrentResource->mRenderTarget.get();
+	return mCurrentResource->mRenderTarget;
 }
 
 SR_Texture* SR_SwapChain::GetTexture() const
 {
-	return mCurrentResource->mTexture.get();
+	return mCurrentResource->mTexture;
 }

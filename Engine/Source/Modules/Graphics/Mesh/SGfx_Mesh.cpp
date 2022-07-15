@@ -70,15 +70,46 @@ bool SGfx_Mesh::Init(const SGfx_MeshCreateParams& aCreateParams)
 {
 	SR_BufferResourceProperties resourceProps;
 	resourceProps.mBindFlags = SR_BufferBindFlag_VertexBuffer | SR_BufferBindFlag_Buffer;
-	resourceProps.mElementSize = aCreateParams.mVertexLayout.GetVertexStrideSize();
+	resourceProps.mElementSize = SC_Max(aCreateParams.mVertexLayout.GetVertexStrideSize(), 1);
 	resourceProps.mElementCount = aCreateParams.mVertexData.Count() / resourceProps.mElementSize;
 	resourceProps.mWritable = false;
+
+	if (aCreateParams.mVertexLayout.HasAttribute(SR_VertexAttribute::Normal))
+	{
+		SR_BufferResourceProperties props;
+		props.mBindFlags = SR_BufferBindFlag_Buffer;
+		props.mElementSize = sizeof(SC_Vector);
+		props.mElementCount = resourceProps.mElementCount;
+		props.mWritable = false;
+
+		SC_Array<SC_Vector> normals;
+		normals.Reserve(props.mElementCount);
+
+		uint32 step = resourceProps.mElementSize;
+		uint32 normalOffset = aCreateParams.mVertexLayout.GetAttributeByteOffset(SR_VertexAttribute::Normal);
+		uint32 currentOffset = 0;
+		for (uint32 i = 0; i < props.mElementCount; ++i)
+		{
+			const uint8* data = &aCreateParams.mVertexData[currentOffset + normalOffset];
+			const SC_Vector* normalData = reinterpret_cast<const SC_Vector*>(data);
+			normals.Add(*normalData);
+			currentOffset += step;
+		}
+
+		SC_Ref<SR_BufferResource> buf = SR_RenderDevice::gInstance->CreateBufferResource(props, normals.GetBuffer());
+
+		SR_BufferProperties bufferProps;
+		bufferProps.mElementCount = props.mElementCount;
+		bufferProps.mFormat = aCreateParams.mVertexLayout.GetAttributeFormat(SR_VertexAttribute::Normal);
+		bufferProps.mType = SR_BufferType::Default;
+		mVertexNormalBuffer = SR_RenderDevice::gInstance->CreateBuffer(bufferProps, buf);
+	}
 
 	if (mVertexBufferResource = SR_RenderDevice::gInstance->CreateBufferResource(resourceProps, aCreateParams.mVertexData.GetBuffer()))
 	{
 		SR_BufferProperties bufferProps;
-		bufferProps.mElementCount = mVertexBufferResource->GetProperties().mElementCount;
-		bufferProps.mType = SR_BufferType::Structured;
+		bufferProps.mElementCount = mVertexBufferResource->GetProperties().mElementCount * mVertexBufferResource->GetProperties().mElementSize;
+		bufferProps.mType = SR_BufferType::Bytes;
 		mVertexBuffer = SR_RenderDevice::gInstance->CreateBuffer(bufferProps, mVertexBufferResource);
 
 #if ENABLE_MESH_SHADERS
@@ -112,6 +143,12 @@ bool SGfx_Mesh::Init(const SGfx_MeshCreateParams& aCreateParams)
 		}
 #endif
 
+		SR_BufferProperties idxbufferProps;
+		idxbufferProps.mElementCount = mIndexBufferResource->GetProperties().mElementCount;
+		idxbufferProps.mType = SR_BufferType::Default;
+		idxbufferProps.mFormat = (mIndexBufferResource->GetProperties().mElementSize == sizeof(uint16)) ? SR_Format::R16_UINT : SR_Format::R32_UINT;
+		mIndexBuffer = SR_RenderDevice::gInstance->CreateBuffer(idxbufferProps, mIndexBufferResource);
+
 		mVertexLayout = aCreateParams.mVertexLayout;
 		mBoundingBox.mMin = aCreateParams.mAABBMin;
 		mBoundingBox.mMax = aCreateParams.mAABBMax;
@@ -143,17 +180,27 @@ const SR_VertexLayout& SGfx_Mesh::GetVertexLayout() const
 
 SR_BufferResource* SGfx_Mesh::GetVertexBufferResource() const
 {
-	return mVertexBufferResource.get();
+	return mVertexBufferResource;
 }
 
 SR_Buffer* SGfx_Mesh::GetVertexBuffer() const
 {
-	return mVertexBuffer.get();
+	return mVertexBuffer;
+}
+
+SR_Buffer* SGfx_Mesh::GetNormalBuffer() const
+{
+	return mVertexNormalBuffer;
 }
 
 SR_BufferResource* SGfx_Mesh::GetIndexBufferResource() const
 {
-	return mIndexBufferResource.get();
+	return mIndexBufferResource;
+}
+
+SR_Buffer* SGfx_Mesh::GetIndexBuffer() const
+{
+	return mIndexBuffer;
 }
 
 #if ENABLE_MESH_SHADERS
@@ -173,25 +220,23 @@ bool SGfx_Mesh::InitDefault(const SGfx_MeshCreateParams& aCreateParams)
 	resourceProps.mBindFlags = SR_BufferBindFlag_IndexBuffer | SR_BufferBindFlag_Buffer;
 	resourceProps.mWritable = false;
 
-	const uint8* indexData = nullptr;
 	if (aCreateParams.mIsMeshletData)
 	{
 		SC_Array<uint8> indices;
 		uint32 indexStride;
 		SGfx_FlattenMeshletPrimitivesToIndexBuffer(aCreateParams.mMeshlets, aCreateParams.mPrimitiveIndices, aCreateParams.mVertexIndices, aCreateParams.mVertexIndicesStride, indices, indexStride);
 
-		resourceProps.mElementCount = indices.Count() * indexStride;
+		resourceProps.mElementCount = indices.Count() / indexStride;
 		resourceProps.mElementSize = indexStride;
-		indexData = indices.GetBuffer();
+		mIndexBufferResource = SR_RenderDevice::gInstance->CreateBufferResource(resourceProps, indices.GetBuffer());
 	}
 	else
 	{
-		resourceProps.mElementCount = aCreateParams.mIndexData.Count() * aCreateParams.mIndexStride;
+		resourceProps.mElementCount = aCreateParams.mIndexData.Count() / aCreateParams.mIndexStride;
 		resourceProps.mElementSize = aCreateParams.mIndexStride;
-		indexData = aCreateParams.mIndexData.GetBuffer();
+		mIndexBufferResource = SR_RenderDevice::gInstance->CreateBufferResource(resourceProps, aCreateParams.mIndexData.GetBuffer());
 	}
 
-	mIndexBufferResource = SR_RenderDevice::gInstance->CreateBufferResource(resourceProps, indexData);
 
 	return (mIndexBufferResource != nullptr);
 }
@@ -250,7 +295,7 @@ bool SGfx_Mesh::InitAccelerationStructure(const SGfx_MeshCreateParams& aCreatePa
 	SR_RaytracingGeometryData& geometry = geometryData.Add();
 
 	geometry.mVertexFormat = SR_Format::RGB32_FLOAT;
-	geometry.mVertexBuffer = mVertexBufferResource.get();
+	geometry.mVertexBuffer = mVertexBufferResource;
 
 	SC_Ref<SR_BufferResource> indexBuffer;
 	if (mIsMeshletMesh)
@@ -266,10 +311,11 @@ bool SGfx_Mesh::InitAccelerationStructure(const SGfx_MeshCreateParams& aCreatePa
 
 		// re-generate index buffer from meshlets if needed
 		indexBuffer = SR_RenderDevice::gInstance->CreateBufferResource(indexBufferProps, indices.GetBuffer());
-		geometry.mIndexBuffer = indexBuffer.get();
+		geometry.mIndexBuffer = indexBuffer;
+		mIndexBufferResource = indexBuffer;
 	}
 	else
-		geometry.mIndexBuffer = mIndexBufferResource.get();
+		geometry.mIndexBuffer = mIndexBufferResource;
 
 	SR_AccelerationStructureInputs inputs;
 	inputs.mIsTopLevel = false;
@@ -293,7 +339,7 @@ bool SGfx_Mesh::InitAccelerationStructure(const SGfx_MeshCreateParams& aCreatePa
 	};
 
 	SC_Ref<SR_TaskEvent> taskEvent = SC_MakeRef<SR_TaskEvent>();
-	SR_RenderDevice::gInstance->GetCommandQueueManager()->SubmitTask(UploadData, SR_CommandListType::Graphics, taskEvent.get());
+	SR_RenderDevice::gInstance->GetQueueManager()->SubmitTask(UploadData, SR_CommandListType::Graphics, taskEvent);
 
 	taskEvent->mCPUEvent.Wait();
 	taskEvent->mFence.Wait();
@@ -305,7 +351,7 @@ bool SGfx_Mesh::InitAccelerationStructure(const SGfx_MeshCreateParams& aCreatePa
 #if ENABLE_RAYTRACING
 SR_BufferResource* SGfx_Mesh::GetAccelerationStructure() const
 {
-	return mAccelerationStructure.get();
+	return mAccelerationStructure;
 }
 #endif
 

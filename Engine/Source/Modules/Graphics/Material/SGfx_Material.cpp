@@ -189,9 +189,52 @@ static const char* GetTypeFromFormat(const SR_Format& aFormat)
 		return "float2";
 	case SR_Format::R32_FLOAT:
 		return "float";
+	case SR_Format::RGBA32_UINT:
+		return "uint4";
+	case SR_Format::RGB32_UINT:
+		return "uint3";
+	case SR_Format::RG32_UINT:
+		return "uint2";
+	case SR_Format::R32_UINT:
+		return "uint";
     }
 
     return "";
+}
+
+static const char* locGetVertexAttributeSemantic(const SR_VertexAttribute& aAttributeId)
+{
+	switch (aAttributeId)
+	{
+	case SR_VertexAttribute::Position: return "POSITION";
+	case SR_VertexAttribute::Normal: return "NORMAL";
+	case SR_VertexAttribute::Tangent: return "TANGENT";
+	case SR_VertexAttribute::Bitangent: return "BITANGENT";
+	case SR_VertexAttribute::UV: return "UV";
+	case SR_VertexAttribute::Color: return "COLOR";
+	case SR_VertexAttribute::BoneId: return "BONEID";
+	case SR_VertexAttribute::BoneWeight: return "BONEWEIGHT";
+	}
+
+	SC_ASSERT(false, "Unknown attribute");
+	return "<unknown>";
+}
+static const char* locGetVertexAttributeVariableName(const SR_VertexAttribute& aAttributeId)
+{
+	switch (aAttributeId)
+	{
+	case SR_VertexAttribute::Position: return "mPosition";
+	case SR_VertexAttribute::Normal: return "mNormal";
+	case SR_VertexAttribute::Tangent: return "mTangent";
+	case SR_VertexAttribute::Bitangent: return "mBitangent";
+	case SR_VertexAttribute::UV: return "mUV";
+	case SR_VertexAttribute::Color: return "mColor";
+	case SR_VertexAttribute::BoneId: return "mBoneId";
+	case SR_VertexAttribute::BoneWeight: return "mBoneWeight";
+	}
+
+	SC_ASSERT(false, "Unknown attribute");
+	return "<unknown>";
 }
 
 SR_ShaderState* SGfx_Material::GetShaderState(const SR_VertexLayout& aVertexLayout, SGfx_MaterialShaderType aType)
@@ -199,7 +242,7 @@ SR_ShaderState* SGfx_Material::GetShaderState(const SR_VertexLayout& aVertexLayo
     auto& shaderStates = mShaderStates[static_cast<uint32>(aType)];
 
     if (shaderStates.count(aVertexLayout) > 0)
-        return shaderStates[aVertexLayout].get();
+        return shaderStates[aVertexLayout];
     else
     {
         // Create shader version for this vertex layout
@@ -216,30 +259,28 @@ SR_ShaderState* SGfx_Material::GetShaderState(const SR_VertexLayout& aVertexLayo
 
 			// Generate mesh code
 			vertexLayoutCode << "struct SR_VertexLayout\n{\n";
-			if (aVertexLayout.HasAttribute(SR_VertexAttribute::Position))
-				vertexLayoutCode << " " << GetTypeFromFormat(aVertexLayout.GetAttributeFormat(SR_VertexAttribute::Position)) << " mPosition : POSITION;\n";
-			if (aVertexLayout.HasAttribute(SR_VertexAttribute::Normal))
-				vertexLayoutCode << " " << GetTypeFromFormat(aVertexLayout.GetAttributeFormat(SR_VertexAttribute::Normal)) << " mNormal : NORMAL;\n";
-			if (aVertexLayout.HasAttribute(SR_VertexAttribute::Tangent))
-				vertexLayoutCode << " " << GetTypeFromFormat(aVertexLayout.GetAttributeFormat(SR_VertexAttribute::Tangent)) << " mTangent : TANGENT;\n";
-			if (aVertexLayout.HasAttribute(SR_VertexAttribute::Bitangent))
-				vertexLayoutCode << " " << GetTypeFromFormat(aVertexLayout.GetAttributeFormat(SR_VertexAttribute::Bitangent)) << " mBitangent : BITANGENT;\n";
-			if (aVertexLayout.HasAttribute(SR_VertexAttribute::UV0))
-				vertexLayoutCode << " " << GetTypeFromFormat(aVertexLayout.GetAttributeFormat(SR_VertexAttribute::UV0)) << " mUV0 : UV0;\n";
-			if (aVertexLayout.HasAttribute(SR_VertexAttribute::UV1))
-				vertexLayoutCode << " " << GetTypeFromFormat(aVertexLayout.GetAttributeFormat(SR_VertexAttribute::UV1)) << " mUV1 : UV1;\n";
-			if (aVertexLayout.HasAttribute(SR_VertexAttribute::Color0))
-				vertexLayoutCode << " " << GetTypeFromFormat(aVertexLayout.GetAttributeFormat(SR_VertexAttribute::Color0)) << " mColor0 : COLOR0;\n";
-			if (aVertexLayout.HasAttribute(SR_VertexAttribute::Color1))
-				vertexLayoutCode << " " << GetTypeFromFormat(aVertexLayout.GetAttributeFormat(SR_VertexAttribute::Color1)) << " mColor1 : COLOR1;\n";
+
+			for (const SR_VertexAttributeData& vertexAttribute : aVertexLayout.mAttributes)
+			{
+				vertexLayoutCode << SC_FormatStr("{} {}{} : {}{};\n", 
+					GetTypeFromFormat(vertexAttribute.mFormat),
+					locGetVertexAttributeVariableName(vertexAttribute.mAttributeId),
+					(vertexAttribute.mAttributeIndex) > 0 ? std::to_string(vertexAttribute.mAttributeIndex) : "",
+					locGetVertexAttributeSemantic(vertexAttribute.mAttributeId),
+					vertexAttribute.mAttributeIndex
+				);
+
+			}
 			vertexLayoutCode << "};\n\n";
 
-			std::ifstream t((SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/DefaultMeshShader.ssf").GetAbsolutePath());
-			std::string shaderCodeBuffer((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
+			std::string shaderCodeBuffer;
 
 #if ENABLE_MESH_SHADERS
             if (SR_RenderDevice::gInstance->GetSupportCaps().mEnableMeshShaders)
 			{
+				std::ifstream t((SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/DefaultMeshShader.ssf").GetAbsolutePath());
+				shaderCodeBuffer = std::string((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
+
 				SR_ShaderCompileArgs meshShaderCompileArgs;
                 meshShaderCompileArgs.mDefines.Add(SC_Pair<std::string, std::string>("MESH_SHADER", "1"));
                 meshShaderCompileArgs.mEntryPoint = "MainMS";
@@ -251,8 +292,11 @@ SR_ShaderState* SGfx_Material::GetShaderState(const SR_VertexLayout& aVertexLayo
             else
 #endif
 			{
+				std::ifstream t((SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/DefaultVertexShader.ssf").GetAbsolutePath());
+				shaderCodeBuffer = std::string((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
+
 				SR_ShaderCompileArgs vertexShaderCompileArgs;
-                vertexShaderCompileArgs.mEntryPoint = "MainVS";
+                vertexShaderCompileArgs.mEntryPoint = "Main";
                 vertexShaderCompileArgs.mType = SR_ShaderType::Vertex;
 
 				std::string vertexShaderCode(vertexLayoutCode.str() + shaderCodeBuffer);
@@ -263,7 +307,7 @@ SR_ShaderState* SGfx_Material::GetShaderState(const SR_VertexLayout& aVertexLayo
         };
         SGfx_MaterialCompilerThread::Get().Queue(CompileMaterial);
 
-        return shaderStates[aVertexLayout].get();
+        return shaderStates[aVertexLayout];
     }
 }
 
@@ -349,7 +393,7 @@ const SGfx_MaterialBlendMode& SGfx_Material::GetBlendMode() const
 
 void SGfx_Material::AddTexture(SC_Ref<SR_Texture> aTexture)
 {
-	assert(mTextures.Count() < SGfx_MaxMaterialTextureCount);
+	SC_ASSERT(mTextures.Count() < SGfx_MaxMaterialTextureCount);
 	mTextures.Add(aTexture);
 }
 

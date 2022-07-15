@@ -8,71 +8,85 @@ enum class SR_VertexAttribute
 	Normal,
 	Tangent,
 	Bitangent,
-	UV0,
-	UV1,
-	Color0,
-	Color1,
+	UV,
+	Color,
+	BoneId,
+	BoneWeight,
 	COUNT
 };
 
-//static const char* SR_GetTypeFromVertexFormat(const SR_Format& aFormat)
-//{
-//	switch (aFormat)
-//	{
-//	case SR_Format::RGBA32_FLOAT:
-//		return "float4";
-//	case SR_Format::RGB32_FLOAT:
-//		return "float3";
-//	case SR_Format::RG32_FLOAT:
-//		return "float2";
-//	case SR_Format::R32_FLOAT:
-//		return "float";
-//	}
-//
-//	return "";
-//}
+struct SR_VertexAttributeData
+{
+	SR_VertexAttributeData() : mAttributeId(SR_VertexAttribute::COUNT), mFormat(SR_Format::UNKNOWN), mAttributeIndex(0) {}
+	SR_VertexAttributeData(const SR_VertexAttribute& aAttribute, const SR_Format& aFormat, uint32 aAttributeIndex = 0) : mAttributeId(aAttribute), mFormat(aFormat), mAttributeIndex(aAttributeIndex) {}
+
+	SR_VertexAttribute mAttributeId;
+	SR_Format mFormat;
+	uint32 mAttributeIndex;
+};
 
 struct SR_VertexLayout
 {
-	SR_VertexLayout()
-	{
-		SC_Fill(mAttributeFormats, static_cast<uint32>(SR_VertexAttribute::COUNT), SR_Format::UNKNOWN);
-	}
+	SR_VertexLayout() {}
 
 	uint32 GetVertexStrideSize() const
 	{
 		uint32 stride = 0;
 
-		for (const SR_Format& format : mAttributeFormats)
+		for (const SR_VertexAttributeData& attribute : mAttributes)
 		{
-			uint32 bytesPerAttribute = SR_GetFormatBitsPerPixel(format) / 8;
+			uint32 bytesPerAttribute = SR_GetFormatBitsPerPixel(attribute.mFormat) / 8;
 			stride += bytesPerAttribute;
 		}
 
 		return stride;
 	}
 
-	void SetAttribute(const SR_VertexAttribute& aAttribute, const SR_Format aFormat = SR_Format::UNKNOWN)
+	void SetAttribute(const SR_VertexAttribute& aAttribute, const SR_Format aFormat = SR_Format::UNKNOWN, uint32 aIndex = 0)
 	{
-		mAttributeFormats[static_cast<uint32>(aAttribute)] = aFormat;
+		for (SR_VertexAttributeData& attrib : mAttributes)
+		{
+			if (attrib.mAttributeId == aAttribute && attrib.mAttributeIndex == aIndex)
+			{
+				attrib.mFormat = aFormat;
+				return;
+			}
+		}
+
+		mAttributes.Add(SR_VertexAttributeData(aAttribute, aFormat, aIndex));
 	}
 
-	bool HasAttribute(const SR_VertexAttribute& aAttribute) const
+	bool HasAttribute(const SR_VertexAttribute& aAttribute, uint32 aIndex = 0) const
 	{
-		return GetAttributeFormat(aAttribute) != SR_Format::UNKNOWN;
+		for (const SR_VertexAttributeData& attrib : mAttributes)
+		{
+			if (attrib.mAttributeId == aAttribute && attrib.mAttributeIndex == aIndex)
+				return true;
+		}
+
+		return false;
 	}
 
-	const SR_Format& GetAttributeFormat(const SR_VertexAttribute& aAttribute) const
+	SR_Format GetAttributeFormat(const SR_VertexAttribute& aAttribute, uint32 aIndex = 0) const
 	{
-		return mAttributeFormats[static_cast<uint32>(aAttribute)];
+		for (const SR_VertexAttributeData& attrib : mAttributes)
+		{
+			if (attrib.mAttributeId == aAttribute && attrib.mAttributeIndex == aIndex)
+				return attrib.mFormat;
+		}
+
+		return SR_Format::UNKNOWN;
 	}
 
-	uint32 GetAttributeByteOffset(const SR_VertexAttribute& aAttribute) const
+	uint32 GetAttributeByteOffset(const SR_VertexAttribute& aAttribute, uint32 aIndex = 0) const
 	{
 		uint32 offset = 0;
-		for (uint32 i = 0; i < static_cast<uint32>(aAttribute); ++i)
+		for (const SR_VertexAttributeData& attrib : mAttributes)
 		{
-			uint32 attributeBytes = SR_GetFormatBitsPerPixel(mAttributeFormats[i]) / 8;
+			if (attrib.mAttributeId == aAttribute && attrib.mAttributeIndex == aIndex)
+				break;
+
+			uint32 attributeBytes = SR_GetFormatBitsPerPixel(attrib.mFormat) / 8;
 			offset += attributeBytes;
 		}
 		return offset;
@@ -80,16 +94,22 @@ struct SR_VertexLayout
 
 	bool operator==(const SR_VertexLayout& aOther) const 
 	{
-		for (uint32 i = 0; i < static_cast<uint32>(SR_VertexAttribute::COUNT); ++i)
+		if (mAttributes.Count() != aOther.mAttributes.Count())
+			return false;
+
+		for (uint32 i = 0; i < mAttributes.Count(); ++i)
 		{
-			if (mAttributeFormats[i] != aOther.mAttributeFormats[i])
+			if (mAttributes[i].mAttributeId != aOther.mAttributes[i].mAttributeId)
+				return false;
+
+			if (mAttributes[i].mAttributeIndex != aOther.mAttributes[i].mAttributeIndex)
 				return false;
 		}
 
 		return true;
 	}
 
-	SR_Format mAttributeFormats[static_cast<uint32>(SR_VertexAttribute::COUNT)];
+	SC_Array<SR_VertexAttributeData> mAttributes;
 };
 
 namespace std
@@ -100,9 +120,11 @@ namespace std
 		size_t operator()(const SR_VertexLayout& aOther) const
 		{
 			size_t res = 17;
-			for (uint32 i = 0; i < static_cast<uint32>(SR_VertexAttribute::COUNT); ++i)
+			for (uint32 i = 0; i < aOther.mAttributes.Count(); ++i)
 			{
-				res = res * 31 + hash<uint32>()(static_cast<uint32>(aOther.mAttributeFormats[i]));
+				res = res * 31 + hash<uint32>()(static_cast<uint32>(aOther.mAttributes[i].mAttributeId));
+				res += 9 * hash<uint32>()(static_cast<uint32>(aOther.mAttributes[i].mFormat));
+				res += 24 * hash<uint32>()(static_cast<uint32>(aOther.mAttributes[i].mAttributeIndex));
 			}
 			return res;
 		}

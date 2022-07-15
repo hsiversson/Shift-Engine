@@ -1,7 +1,4 @@
-#ifndef SHADING_MODELS_HEADER
-#define SHADING_MODELS_HEADER
-//#pragma once
-
+#pragma once 
 #include "BRDF.ssh"
 #include "MaterialData.ssh"
 #include "LightsCommon.ssh"
@@ -77,4 +74,3 @@ float3 CalculateShading(in MaterialData aMaterialData, in SR_AreaLight aAreaLigh
     return (diffuseBRDF + specularBRDF);
 }
 #endif
-#endif //SHADING_MODELS_HEADER

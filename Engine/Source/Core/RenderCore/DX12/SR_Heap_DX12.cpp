@@ -5,9 +5,9 @@
 
 SR_Heap_DX12::SR_Heap_DX12(const SR_HeapProperties& aProperties)
 	: SR_Heap(aProperties)
+	, mRingBuffer(mProperties.mByteSize, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT)
 	, mHeapOffset(0)
 {
-
 }
 
 SR_Heap_DX12::~SR_Heap_DX12()
@@ -56,7 +56,7 @@ bool SR_Heap_DX12::Init()
 	if (mProperties.mCreateResourcesUninitialized)
 		heapDesc.Flags |= D3D12_HEAP_FLAG_CREATE_NOT_ZEROED;
 
-	HRESULT hr = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateHeap(&heapDesc, IID_PPV_ARGS(&mD3D12Heap));
+	HRESULT hr = SR_RenderDevice_DX12::gInstance->GetD3D12Device()->CreateHeap(&heapDesc, IID_PPV_ARGS(&mD3D12Heap));
 	if (!VerifyHRESULT(hr))
 	{
 		SC_ASSERT(false, "Could not create heap.");
@@ -69,21 +69,29 @@ bool SR_Heap_DX12::Init()
 	return true;
 }
 
-void SR_Heap_DX12::ResetOffset()
+void SR_Heap_DX12::EndFrame()
 {
-	while (true)
-	{
-		uint64 currentOffset = mHeapOffset;
-		if (SC_Atomic::CompareExchange(mHeapOffset, 0, currentOffset))
-			break;
-	}
+	//SR_Fence fence = SR_RenderDevice::gInstance->GetCommandQueueManager()->InsertFence(SR_CommandListType::Graphics);
+	//mRingBuffer.UpdateFrame(false, fence);
 }
 
 const uint64 SR_Heap_DX12::GetOffset(uint64 aSize, uint64 aAlignment)
 {
-	uint64 aligned = SC_Align(aSize, aAlignment);
-	uint64 offset = mHeapOffset;
-	SC_Atomic::Add(mHeapOffset, aligned);
+	SC_ASSERT(aSize > 0);
+
+	SR_Fence fence = SR_RenderDevice::gInstance->GetQueueManager()->InsertFence(SR_CommandListType::Graphics);
+
+	uint64 offset = 0;
+	if (!mRingBuffer.GetOffset(offset, aSize, aAlignment, fence))
+	{
+		SC_ASSERT(false);
+		return SC_UINT32_MAX;
+	}
+
+	if (mProperties.mDebugPrint)
+	{
+		SC_LOG("[SR_Heap_DX12::GetOffset]: [offset: {:#x}, size: {}] from heap: {}", offset, aSize, (mProperties.mDebugName) ? mProperties.mDebugName : "<unnamed heap>");
+	}
 	return offset;
 }
 

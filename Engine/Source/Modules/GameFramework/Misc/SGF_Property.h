@@ -23,6 +23,7 @@ protected:
 	SC_Array<SGF_PropertyHelperBase*> mProperties;
 #endif
 };
+SC_ALLOW_MEMCPY_RELOCATE(SGF_PropertyContainer);
 
 #if IS_EDITOR_BUILD
 class SGF_PropertyHelperBase

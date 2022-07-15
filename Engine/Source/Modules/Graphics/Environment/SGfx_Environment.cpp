@@ -9,7 +9,7 @@ SGfx_Environment::SGfx_Environment()
 	mConstants.mSunLightDirection = SC_Vector(0.45f, 0.80f, 0.05f);
 	mConstants.mSunLightIntensity = 30.0f;
 
-	mConstants.mSunLightColor = SC_Vector(0.99f, 0.84f, 0.55f);
+	mConstants.mSunLightColor = SC_LinearColor(0.99f, 0.84f, 0.55f, 1.0f);
 
 	mSky = SC_MakeUnique<SGfx_Sky>();
 	if (!mSky->Init())
@@ -36,12 +36,12 @@ const SC_Vector& SGfx_Environment::GetSunDirection() const
 	return mConstants.mSunLightDirection;
 }
 
-SC_Vector& SGfx_Environment::GetSunColor()
+SC_LinearColor& SGfx_Environment::GetSunColor()
 {
 	return mConstants.mSunLightColor;
 }
 
-const SC_Vector& SGfx_Environment::GetSunColor() const
+const SC_LinearColor& SGfx_Environment::GetSunColor() const
 {
 	return mConstants.mSunLightColor;
 }

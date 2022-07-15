@@ -1,0 +1,50 @@
+#include "SceneConstants.ssh"
+#include "InstanceData.ssh"
+
+struct PixelShaderInput
+{
+    float4 mClipPosition : SV_POSITION;
+    float3 mViewPosition : View_POSITION;
+    float3 mWorldPosition : WORLD_POSITION;
+    float3 mPrevWorldPosition : PREV_WORLD_POSITION;
+    float3 mNormal : NORMAL0;
+    float3 mTangent : TANGENT;
+    float3 mBitangent : BITANGENT;
+    float2 mUV : UV0;
+    nointerpolation uint   mMeshletIndex : MESHLET_INDEX0;
+    nointerpolation uint   mMaterialIndex : MATERIAL_INDEX;
+    nointerpolation uint   maoIndex : ao_INDEX;
+};
+
+struct DrawInfoStruct
+{
+	uint mMaterialIndex;
+	uint mBaseInstanceDataOffset;
+	uint mInstanceDataByteSize;
+    uint mInstanceOffset;
+};
+ConstantBuffer<DrawInfoStruct> DrawInfo : register(b0);
+
+PixelShaderInput Main(const SR_VertexLayout aVertexInput, uint aInstanceId : SV_InstanceID)
+{
+    PixelShaderInput output;
+    const SR_InstanceData instanceData = SR_LoadInstanceData(DrawInfo.mBaseInstanceDataOffset + (DrawInfo.mInstanceDataByteSize * (DrawInfo.mInstanceOffset + aInstanceId)));
+
+    float3x3 transform33 = (float3x3)instanceData.mTransform;
+
+    float4 worldPos = mul(instanceData.mTransform, float4(aVertexInput.mPosition, 1.0f));
+    output.mWorldPosition = worldPos.xyz;
+    output.mViewPosition = mul(gSceneConstants.mViewConstants.mWorldToCamera, float4(worldPos.xyz, 1.0f)).xyz;
+    output.mClipPosition = mul(gSceneConstants.mViewConstants.mWorldToClip, float4(worldPos.xyz, 1.0f));
+    output.mNormal = normalize(mul(transform33, aVertexInput.mNormal));
+    output.mTangent = normalize(mul(transform33, aVertexInput.mTangent));
+    output.mBitangent = normalize(mul(transform33, aVertexInput.mBitangent));
+    output.mUV = aVertexInput.mUV;
+    //output.mMeshletIndex = meshletIndex;
+    output.mMaterialIndex = instanceData.mMaterialIndex;
+
+    float4 prevWorldPos = mul(instanceData.mPrevTransform, float4(aVertexInput.mPosition, 1.0f));
+    output.mPrevWorldPosition = prevWorldPos.xyz;
+
+    return output;
+}

@@ -40,6 +40,8 @@ public:
 	void SetPosition(const SC_Vector& aPosition);
 	SC_Vector GetPosition() const;
 
+	SC_Vector GetScale() const;
+
 	SC_Vector GetRight() const;
 	SC_Vector GetUp() const;
 	SC_Vector GetForward() const;
@@ -202,6 +204,15 @@ inline void SC_Matrix::SetPosition(const SC_Vector& aPosition)
 inline SC_Vector SC_Matrix::GetPosition() const
 {
 	return SC_Vector(m[12], m[13], m[14]);
+}
+
+inline SC_Vector SC_Matrix::GetScale() const
+{
+	SC_Vector scale;
+	scale.x = mVectorX.Length();
+	scale.y = mVectorY.Length();
+	scale.z = mVectorZ.Length();
+	return scale;
 }
 
 inline SC_Vector SC_Matrix::GetRight() const

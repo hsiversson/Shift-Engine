@@ -1,7 +1,4 @@
-#ifndef BRDF_HEADER
-#define BRDF_HEADER
-//#pragma once
-
+#pragma once 
 #include "Common.ssh"
 
 ////////////////////////////////////////////
@@ -164,5 +161,3 @@ float3 F_Schlick(float3 aSpecularColor, float vDotH)
 	return saturate(50.0 * aSpecularColor.g) * fc + (1 - fc) * aSpecularColor;
 	
 }
-
-#endif //BRDF_HEADER

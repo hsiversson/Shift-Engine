@@ -43,7 +43,7 @@ void SGF_RenderSystem::UpdateStaticMeshes()
 		SC_Array<SGF_StaticMeshComponent>& meshes = staticMeshComponents->GetList();
 		for (SGF_StaticMeshComponent& staticMeshComp : meshes)
 		{
-			if (SGfx_MeshInstance* meshInstance = staticMeshComp.GetMeshInstance().get())
+			if (SGfx_MeshInstance* meshInstance = staticMeshComp.GetMeshInstance())
 			{
 				const SGF_Entity& entity = staticMeshComp.GetParentEntity();
 				SGF_TransformComponent* transformComp = entity.GetComponent<SGF_TransformComponent>();

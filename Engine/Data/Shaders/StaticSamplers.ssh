@@ -1,6 +1,4 @@
-#ifndef STATIC_SAMPLERS_HEADER
-#define STATIC_SAMPLERS_HEADER
-
+#pragma once 
 SamplerState gPointClamp : register(s0, space1);
 SamplerState gPointWrap : register(s1, space1);
 SamplerState gPointMirror : register(s2, space1);
@@ -18,5 +16,3 @@ SamplerState gAnisotropicWrap : register(s10, space1);
 SamplerState gAnisotropicMirror : register(s11, space1);
 
 SamplerComparisonState gShadowSampler : register(s12, space1);
-
-#endif //STATIC_SAMPLERS_HEADER

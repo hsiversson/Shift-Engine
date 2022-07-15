@@ -51,7 +51,7 @@ void SGfx_ReflectionProbe::Render(SR_CommandList* aCmdList, const SGfx_ViewData&
 
 SR_Texture* SGfx_ReflectionProbe::GetTexture() const
 {
-	return mProbeCubemap.get();
+	return mProbeCubemap;
 }
 
 bool SGfx_ReflectionProbe::CreateResources()
@@ -114,14 +114,14 @@ void SGfx_ReflectionProbe::RenderFace(SR_CommandList* aCmdList, uint32 aFaceInde
 	barriers.Add(SC_Pair(SR_ResourceState_RenderTarget, mProbeRTs[aFaceIndex]->GetResource()));
 	barriers.Add(SC_Pair(SR_ResourceState_DepthWrite, mDepthStencil->GetResource()));
 	aCmdList->TransitionBarrier(barriers);
-	aCmdList->ClearRenderTarget(mProbeRTs[aFaceIndex].get(), SC_Vector4(0.0f));
-	aCmdList->ClearDepthStencil(mDepthStencil.get());
-	aCmdList->SetRenderTarget(mProbeRTs[aFaceIndex].get(), mDepthStencil.get());
+	aCmdList->ClearRenderTarget(mProbeRTs[aFaceIndex], SC_Vector4(0.0f));
+	aCmdList->ClearDepthStencil(mDepthStencil);
+	aCmdList->SetRenderTarget(mProbeRTs[aFaceIndex], mDepthStencil);
 
 	SGfx_SceneConstants sceneConstants = aRenderData.mSceneConstants;
 	sceneConstants.mViewConstants = aCamera.GetViewConstants();
 	mSceneConstantsBuffer[aFaceIndex]->UpdateData(0, &sceneConstants, sizeof(SGfx_SceneConstants));
-	aCmdList->SetRootConstantBuffer(mSceneConstantsBuffer[aFaceIndex].get(), 1);
+	aCmdList->SetRootConstantBuffer(mSceneConstantsBuffer[aFaceIndex], 1);
 
 	SR_Rect rect =
 	{
@@ -134,35 +134,35 @@ void SGfx_ReflectionProbe::RenderFace(SR_CommandList* aCmdList, uint32 aFaceInde
 	aCmdList->SetViewport(rect);
 	aCmdList->SetScissorRect(rect);
 
-	uint32 i = 0;
-	mDrawInfoBuffers[aFaceIndex].Respace(aRenderData.mOpaqueQueue.Count());
-	for (const SGfx_RenderObject& renderObj : aRenderData.mOpaqueQueue)
-	{
-		if (!mDrawInfoBuffers[aFaceIndex][i])
-		{
-			SR_BufferResourceProperties cbDesc;
-			cbDesc.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
-			cbDesc.mElementCount = 1;
-			cbDesc.mElementSize = sizeof(SGfx_MeshShadingDrawInfoStruct);
-			mDrawInfoBuffers[aFaceIndex][i] = SR_RenderDevice::gInstance->CreateBufferResource(cbDesc);
-		}
-
-		SGfx_MeshShadingDrawInfoStruct drawInfo;
-		drawInfo.mTransform = renderObj.mTransform;
-		drawInfo.mPrevTransform = renderObj.mPrevTransform;
-		drawInfo.mVertexBufferDescriptorIndex = renderObj.mVertexBuffer->GetDescriptorHeapIndex();
-		drawInfo.mMeshletBufferDescriptorIndex = renderObj.mMeshletBuffer->GetDescriptorHeapIndex();
-		drawInfo.mVertexIndexBufferDescriptorIndex = renderObj.mVertexIndexBuffer->GetDescriptorHeapIndex();
-		drawInfo.mPrimitiveIndexBufferDescriptorIndex = renderObj.mPrimitiveIndexBuffer->GetDescriptorHeapIndex();
-		drawInfo.mMaterialIndex = renderObj.mMaterialIndex;
-		mDrawInfoBuffers[aFaceIndex][i]->UpdateData(0, &drawInfo, sizeof(SGfx_MeshShadingDrawInfoStruct));
-		aCmdList->SetRootConstantBuffer(mDrawInfoBuffers[aFaceIndex][i].get(), 0);
-
-		aCmdList->SetShaderState(renderObj.mShader);
-		uint32 groupCount = renderObj.mMeshletBuffer->GetProperties().mElementCount;
-		aCmdList->DispatchMesh(groupCount);
-		++i;
-	}
+	//uint32 i = 0;
+	//mDrawInfoBuffers[aFaceIndex].Respace(aRenderData.mOpaqueQueue.Count());
+	//for (const SGfx_RenderObject& renderObj : aRenderData.mOpaqueQueue)
+	//{
+	//	if (!mDrawInfoBuffers[aFaceIndex][i])
+	//	{
+	//		SR_BufferResourceProperties cbDesc;
+	//		cbDesc.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
+	//		cbDesc.mElementCount = 1;
+	//		cbDesc.mElementSize = sizeof(SGfx_MeshShadingDrawInfoStruct);
+	//		mDrawInfoBuffers[aFaceIndex][i] = SR_RenderDevice::gInstance->CreateBufferResource(cbDesc);
+	//	}
+	//
+	//	//SGfx_MeshShadingDrawInfoStruct drawInfo;
+	//	//drawInfo.mTransform = renderObj.mTransform;
+	//	//drawInfo.mPrevTransform = renderObj.mPrevTransform;
+	//	//drawInfo.mVertexBufferDescriptorIndex = renderObj.mVertexBuffer->GetDescriptorHeapIndex();
+	//	//drawInfo.mMeshletBufferDescriptorIndex = renderObj.mMeshletBuffer->GetDescriptorHeapIndex();
+	//	//drawInfo.mVertexIndexBufferDescriptorIndex = renderObj.mVertexIndexBuffer->GetDescriptorHeapIndex();
+	//	//drawInfo.mPrimitiveIndexBufferDescriptorIndex = renderObj.mPrimitiveIndexBuffer->GetDescriptorHeapIndex();
+	//	//drawInfo.mMaterialIndex = renderObj.mMaterialIndex;
+	//	//mDrawInfoBuffers[aFaceIndex][i]->UpdateData(0, &drawInfo, sizeof(SGfx_MeshShadingDrawInfoStruct));
+	//	//aCmdList->SetRootConstantBuffer(mDrawInfoBuffers[aFaceIndex][i].get(), 0);
+	//	//
+	//	//aCmdList->SetShaderState(renderObj.mShader);
+	//	//uint32 groupCount = renderObj.mMeshletBuffer->GetProperties().mElementCount;
+	//	//aCmdList->DispatchMesh(groupCount);
+	//	++i;
+	//}
 	if (aRenderData.mSky)
 		aRenderData.mSky->Render(aCmdList);
 

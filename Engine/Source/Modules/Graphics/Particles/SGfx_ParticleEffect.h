@@ -1,11 +1,25 @@
 #pragma once
 
-class SGfx_ParticleEffectTemplate;
+class SGfx_ParticleAttributes
+{
+	enum Semantic : uint32
+	{
+		Position,
+
+	};
+
+
+
+};
+
+class SGfx_ParticleBehaviour
+{
+
+};
 
 class SGfx_ParticleEffect
 {
 public:
 
 private:
-	SC_Ref<SGfx_ParticleEffectTemplate> mEffectTemplate;
 };

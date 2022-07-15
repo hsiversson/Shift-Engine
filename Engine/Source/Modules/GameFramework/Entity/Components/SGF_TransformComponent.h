@@ -8,6 +8,7 @@ public:
 	SGF_TransformComponent();
 	~SGF_TransformComponent();
 
+	void SetTransform(const SC_Matrix& aMatrix);
 	SC_Matrix GetTransform() const;
 
 	bool Save(SC_Json& aOutSaveData) const override;
@@ -18,3 +19,4 @@ public:
 	SGF_PROPERTY(SC_Vector, mScale, "Scale", "resetvalue=1");
 	SGF_PROPERTY(bool, mIsStatic, "Static");
 };
+SC_ALLOW_MEMCPY_RELOCATE(SGF_TransformComponent);

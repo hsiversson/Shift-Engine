@@ -8,7 +8,7 @@ const SR_RenderTargetProperties& SR_RenderTarget::GetProperties() const
 
 SR_TextureResource* SR_RenderTarget::GetResource() const
 {
-	return mResource.get();
+	return mResource;
 }
 
 SR_RenderTarget::SR_RenderTarget(const SR_RenderTargetProperties& aProperties, SC_Ref<SR_TextureResource> aResource)

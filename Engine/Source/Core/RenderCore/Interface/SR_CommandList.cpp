@@ -39,7 +39,7 @@ void SR_CommandList::Dispatch(SR_ShaderState* aShader, const SC_IntVector& aThre
 {
 	if (!aShader->IsComputeShader())
 	{
-		assert(false);
+		SC_ASSERT(false);
 		return;
 	}
 
@@ -290,4 +290,9 @@ void SR_CommandList::WaitFor(const SC_UniquePtr<SR_TaskEvent>& aEvent)
 const SC_Array<SR_Fence>& SR_CommandList::GetFenceWaits() const
 {
 	return mFenceWaits;
+}
+
+const SR_CommandListType& SR_CommandList::GetType() const
+{
+	return mType;
 }

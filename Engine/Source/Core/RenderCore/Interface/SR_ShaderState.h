@@ -12,6 +12,8 @@ struct SR_ShaderMetaData
 
 struct SR_ShaderStateProperties
 {
+	SR_ShaderStateProperties() : mPrimitiveTopology(SR_PrimitiveTopology::TriangleList) {}
+
 	SR_ShaderMetaData mShaderMetaDatas[static_cast<uint32>(SR_ShaderType::COUNT)];
 	SR_ShaderByteCode mShaderByteCodes[static_cast<uint32>(SR_ShaderType::COUNT)];
 
@@ -38,6 +40,8 @@ struct SR_ShaderStateProperties
 class SR_ShaderState
 {
 public:
+	virtual ~SR_ShaderState();
+
 	const bool IsMeshShader() const { return mIsMeshShader; }
 	const bool IsComputeShader() const { return mIsComputeShader; }
 	const bool IsRaytracingShader() const { return mIsRaytracingShader; }
@@ -48,7 +52,6 @@ public:
 
 protected:
 	SR_ShaderState();
-	virtual ~SR_ShaderState();
 
 	SR_ShaderMetaData mShaderMetaDatas[static_cast<uint32>(SR_ShaderType::COUNT)];
 	SR_RootSignature* mRootSignature;

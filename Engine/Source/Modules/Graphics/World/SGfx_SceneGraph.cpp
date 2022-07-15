@@ -23,40 +23,43 @@ SGfx_SceneGraph::~SGfx_SceneGraph()
 
 void SGfx_SceneGraph::PrepareView(SGfx_View* aView)
 {
-	SGfx_ViewData& prepareData = aView->GetPrepareData();
+	//SGfx_ViewData& prepareData = aView->GetPrepareData();
 
 	//SC_Array<SC_Future<bool>> shadowCullingTasks;
-	if (aView->IsMainView())
-	{
-		SGfx_CascadedShadowMap* csm = mParentWorld->GetRenderer()->GetShadowMapSystem()->GetCSM();
-		const uint32 numCascades = csm->GetSettings().gNumCascades;
+	//if (aView->IsMainView())
+	//{
+	//	SGfx_CascadedShadowMap* csm = mParentWorld->GetRenderer()->GetShadowMapSystem()->GetCSM();
+	//	const uint32 numCascades = csm->GetSettings().gNumCascades;
+	//
+	//	prepareData.mCSMViews.Respace(numCascades);
+	//	for (uint32 i = 0; i < numCascades; ++i)
+	//	{
+	//		SC_Ref<SGfx_View>& cascadeView = prepareData.mCSMViews[i];
+	//		if (!cascadeView)
+	//		{
+	//			cascadeView = SC_MakeRef<SGfx_View>();
+	//			cascadeView->SetOnlyDepth(true);
+	//		}
+	//
+	//		cascadeView->SetCamera(csm->GetCascade(i).mCamera);
+	//
+	//		//SGfx_View* view = prepareData.mCSMViews[i].get();
+	//		//auto task = [this, view]()
+	//		//{
+	//		//	CullMeshes(view);
+	//		//};
+	//		//shadowCullingTasks.Add(SC_ThreadPool::Get().SubmitTask(task));
+	//
+	//		CullMeshes(cascadeView.get());
+	//	}
+	//}
 
-		prepareData.mCSMViews.Respace(numCascades);
-		for (uint32 i = 0; i < numCascades; ++i)
-		{
-			SC_Ref<SGfx_View>& cascadeView = prepareData.mCSMViews[i];
-			if (!cascadeView)
-			{
-				cascadeView = SC_MakeRef<SGfx_View>();
-				cascadeView->SetOnlyDepth(true);
-			}
-
-			cascadeView->SetCamera(csm->GetCascade(i).mCamera);
-
-			//SGfx_View* view = prepareData.mCSMViews[i].get();
-			//auto task = [this, view]()
-			//{
-			//	CullMeshes(view);
-			//};
-			//shadowCullingTasks.Add(SC_ThreadPool::Get().SubmitTask(task));
-
-			CullMeshes(cascadeView.get());
-		}
-	}
-
-	// Prepare Tasks (async?)
-	CullLights(aView);
-	CullMeshes(aView);
+	SC_Array<SC_Future<bool>> futures;
+	futures.Add(SC_ThreadPool::Get().SubmitTask([&]() { CullLights(aView); }));
+	futures.Add(SC_ThreadPool::Get().SubmitTask([&]() { CullMeshes(aView); }));
+	for (SC_Future<bool>& future : futures)
+		future.Wait();
+	;
 
 	//AddRaytracingGeometry(aView);
 
@@ -155,6 +158,8 @@ void SGfx_SceneGraph::CullMeshes(SGfx_View* aView)
 		const SC_Sphere boundingSphere(boundingBox);
 		const float distanceToCamera = (camera.GetPosition() - boundingBox.GetCenter()).Length();
 
+		mesh->UpdateInstanceData(prepareData.mInstanceData.get());
+
 #if ENABLE_RAYTRACING
 		if (!depthOnly && mesh->IncludeInRaytracingScene() && distanceToCamera < 200.0f) // TODO: FIX THIS CULLING
 		{
@@ -178,45 +183,32 @@ void SGfx_SceneGraph::CullMeshes(SGfx_View* aView)
 			SGfx_Mesh* meshTemplate = mesh->GetMeshTemplate();
 
 			// Add to render queues because this mesh is visible inside our current view
-			SGfx_RenderObject renderObject;
 			SGfx_RenderQueueItem renderQueueItem;
 
 #if ENABLE_MESH_SHADERS
 			if (SR_RenderDevice::gInstance->GetSupportCaps().mEnableMeshShaders && meshTemplate->IsUsingMeshlets())
 			{
 				const SGfx_MeshletBuffers& meshletBuffers = meshTemplate->GetMeshletBuffers();
-				renderObject.mVertexBuffer = meshletBuffers.mVertexBuffer.get();
-				renderObject.mMeshletBuffer = meshletBuffers.mMeshletBuffer.get();
-				renderObject.mVertexIndexBuffer = meshletBuffers.mVertexIndexBuffer.get();
-				renderObject.mPrimitiveIndexBuffer = meshletBuffers.mPrimitiveIndexBuffer.get();
-
-				renderQueueItem.mMeshletData.mVertexBuffer = meshletBuffers.mVertexBuffer.get();
-				renderQueueItem.mMeshletData.mMeshletBuffer = meshletBuffers.mMeshletBuffer.get();
-				renderQueueItem.mMeshletData.mVertexIndexBuffer = meshletBuffers.mVertexIndexBuffer.get();
-				renderQueueItem.mMeshletData.mPrimitiveIndexBuffer = meshletBuffers.mPrimitiveIndexBuffer.get();
-
+				renderQueueItem.mMeshletData.mVertexBuffer = meshletBuffers.mVertexBuffer;
+				renderQueueItem.mMeshletData.mMeshletBuffer = meshletBuffers.mMeshletBuffer;
+				renderQueueItem.mMeshletData.mVertexIndexBuffer = meshletBuffers.mVertexIndexBuffer;
+				renderQueueItem.mMeshletData.mPrimitiveIndexBuffer = meshletBuffers.mPrimitiveIndexBuffer;
 				renderQueueItem.mUsingMeshlets = true;
 			}
 			else
 #endif
 			{
-				renderObject.mVertexBufferResource = meshTemplate->GetVertexBufferResource();
-				renderObject.mIndexBufferResource = meshTemplate->GetIndexBufferResource();
-
 				renderQueueItem.mVertexBuffer = meshTemplate->GetVertexBufferResource();
 				renderQueueItem.mIndexBuffer = meshTemplate->GetIndexBufferResource();
-
 				renderQueueItem.mUsingMeshlets = false;
 			}
 
+			renderQueueItem.mTransform = mesh->GetTransform();
+			renderQueueItem.mPrevTransform = mesh->GetPrevTransform();
 
-			renderObject.mTransform = mesh->GetTransform();
-			renderObject.mPrevTransform = mesh->GetPrevTransform();
+			renderQueueItem.mMaterialIndex = mesh->GetMaterialInstance()->GetMaterialIndex();
 
-			renderObject.mMaterialIndex = mesh->GetMaterialInstance()->GetMaterialIndex();
-			renderObject.mOutputVelocity = mesh->GetMaterialInstance()->GetMaterialTemplate()->OutputVelocity();
 
-			renderObject.mSortDistance = distanceToCamera;
 			renderQueueItem.mSortDistance = distanceToCamera;
 
 			SR_ShaderState* depthShader = mesh->GetMaterialInstance()->GetMaterialTemplate()->GetShaderState(meshTemplate->GetVertexLayout(), (depthOnly) ? SGfx_MaterialShaderType::ShadowDepth : SGfx_MaterialShaderType::Depth);
@@ -224,22 +216,28 @@ void SGfx_SceneGraph::CullMeshes(SGfx_View* aView)
 			if (!depthShader || (!depthOnly && !defaultShader))
 				continue;
 
-			renderObject.mShader = depthShader;
 			renderQueueItem.mShader = depthShader;
-			prepareData.mDepthQueue.Add(renderObject);
-			prepareData._mDepthQueue.AddItem(renderQueueItem);
+
+			bool outputVelocity = mesh->GetMaterialInstance()->GetMaterialTemplate()->OutputVelocity();
+			if (outputVelocity)
+				prepareData.mDepthQueue_MotionVectors.AddItem(renderQueueItem);
+			else
+				prepareData.mDepthQueue.AddItem(renderQueueItem);
 
 			if (!depthOnly)
 			{
-				renderObject.mShader = defaultShader;
 				renderQueueItem.mShader = defaultShader;
-				prepareData.mOpaqueQueue.Add(renderObject);
-				prepareData._mOpaqueQueue.AddItem(renderQueueItem);
+				prepareData.mOpaqueQueue.AddItem(renderQueueItem);
 			}
 		}
 	}
-	prepareData._mDepthQueue.Prepare();
-	prepareData._mOpaqueQueue.Prepare();
+
+	SC_Array<SC_Future<bool>> futures;
+	futures.Add(SC_ThreadPool::Get().SubmitTask([&]() { prepareData.mDepthQueue.Prepare(prepareData); }));
+	futures.Add(SC_ThreadPool::Get().SubmitTask([&]() { prepareData.mDepthQueue_MotionVectors.Prepare(prepareData); }));
+	futures.Add(SC_ThreadPool::Get().SubmitTask([&]() { prepareData.mOpaqueQueue.Prepare(prepareData); }));
+	for (SC_Future<bool>& future : futures)
+		future.Wait();
 }
 
 void SGfx_SceneGraph::CullLights(SGfx_View* aView)

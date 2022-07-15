@@ -26,8 +26,6 @@ public:
 
 	void SetDPIScale(float aScale);
 
-	SR_CommandList* GetCommandList() const;
-
 	struct Input : public SC_MessageListener
 	{
 	public:
@@ -67,7 +65,6 @@ private:
 
 	Input mInputHandler;
 
-	SC_Array<SC_Ref<SR_BufferResource>> mConstantBuffers;
 	SC_Ref<SR_RootSignature> mRootSignature;
 	SC_Ref<SR_ShaderState> mShaderState;
 	SC_Ref<SR_TaskEvent> mLastTaskEvent;

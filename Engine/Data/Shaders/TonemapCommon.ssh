@@ -1,121 +1,135 @@
-#ifndef TONEMAP_COMMON_HEADER
-#define TONEMAP_COMMON_HEADER
-
+#pragma once 
 #include "Common.ssh"
 #include "ACES.ssh"
 #include "GammaCommon.ssh"
 
-//
-// Dolby PQ transforms
-//
-float3 ST2084ToLinear(float3 aPQ)
+#define TONEMAP_HDR_ACES_FILM_APPROX
+
+#ifdef TONEMAP_HDR_REINHARD
+float3 ReinhardTonemapping(float3 aInColor)
 {
-	const float m1 = 0.1593017578125; // = 2610. / 4096. * .25;
-	const float m2 = 78.84375; // = 2523. / 4096. *  128;
-	const float c1 = 0.8359375; // = 2392. / 4096. * 32 - 2413./4096.*32 + 1;
-	const float c2 = 18.8515625; // = 2413. / 4096. * 32;
-	const float c3 = 18.6875; // = 2392. / 4096. * 32;
-	const float C = 10000.;
+	return aInColor / (1.0f + aInColor);
+}
+#endif
 
-	float3 Np = pow( aPQ, 1./m2 );
-	float3 L = Np - c1;
-	L = max(0., L);
-	L = L / (c2 - c3 * Np);
-	L = pow( L, 1./m1 );
-	float3 P = L * C;
+#ifdef TONEMAP_HDR_MODIFIED_REINHARD
+float3 ModifiedReinhardTonemapping(float3 aInColor)
+{
+	return (aInColor * (1.0f + (aInColor / LUT.White2))) / (1.0f + aInColor);
+}
+#endif
 
-	return P;
+#ifdef TONEMAP_HDR_CUSTOM_REINHARD
+float3 CustomReinhardTonemapping(float3 aInColor)
+{
+	float3 result = aInColor * LUT.CustomReinhardScale;
+	return result / (result + float3(LUT.CustomReinhardOffset));
+}
+#endif
+
+#ifdef TONEMAP_HDR_FILMIC
+float3 FilmicTonemapping(float3 aInColor)
+{
+	float3 x = max((float3)0, aInColor - 0.004f);
+	float3 gammaColor = (x*(6.2f*x + 0.5f)) / (x*(6.2f*x + 1.7f) + 0.06f);
+	return pow(gammaColor, (float3)2.2f);
+}
+#endif //TONEMAP_FILMIC
+
+#ifdef TONEMAP_HDR_FILMIC_CUSTOMIZABLE
+float3 FilmicTonemappingCustomizable(float3 aInColor)
+{
+	aInColor *= 1.95;
+
+	float A = LUT.ShoulderStrength;
+	float B = LUT.LinearStrength;
+	float C = LUT.LinearAngle;
+	float D = LUT.ToeStrength;
+	float E = LUT.ToeNumerator;
+	float F = LUT.ToeDenominator;
+	return ((aInColor * (A*aInColor + C*B) + D*E)/(aInColor * (A*aInColor + B) + D*F)) - E/F;
+}
+#endif //TONEMAP_HDR_FILMIC_CUSTOMIZABLE
+
+#ifdef TONEMAP_HDR_LOTTES
+float LottesTonemap(float x)
+{
+	x = min(x, LUT.LottesMax);
+	float z = pow(x, LUT.LottesContrast);
+	return z / (pow(z, LUT.LottesShoulder) * LUT.LottesB + LUT.LottesC);
 }
 
-float3 LinearToST2084(float3 aLinear)
+float3 LottesTonemapping(float3 aInColor)
 {
-	const float m1 = 0.1593017578125; // = 2610. / 4096. * .25;
-	const float m2 = 78.84375; // = 2523. / 4096. *  128;
-	const float c1 = 0.8359375; // = 2392. / 4096. * 32 - 2413./4096.*32 + 1;
-	const float c2 = 18.8515625; // = 2413. / 4096. * 32;
-	const float c3 = 18.6875; // = 2392. / 4096. * 32;
-	const float C = 10000.;
+	float peak = max(aInColor.x, max(aInColor.y, aInColor.z));
+	float tonemappedMaximum = LottesTonemap(peak);
 
-	float3 L = aLinear/C;
-	float3 Lm = pow(L, m1);
-	float3 N1 = ( c1 + c2 * Lm );
-	float3 N2 = ( 1.0 + c3 * Lm );
-	float3 N = N1 * rcp(N2);
-	float3 P = pow( N, m2 );
-	
-	return P;
+	float3 ratio = aInColor / peak;
+
+	ratio = pow(ratio, LUT.LottesSaturationDivCrossSaturation);
+	ratio = lerp(ratio, (float3)1, pow(tonemappedMaximum, LUT.LottesCrosstalk));
+	ratio = pow(ratio, LUT.LottesCrossSaturation);
+
+	return ratio * tonemappedMaximum;
 }
+#endif //TONEMAP_LOTTES
 
-float3 ST2084ToScRGB(float3 aColor)
+#ifdef TONEMAP_HDR_ACES
+float3 ACESTonemapping(float3 aInColor)
 {
-	// Nvidia HDR encoding - Remove PQ, convert to linear scRGB
-	const float3x3 AP1_2_sRGB = mul(XYZ_2_sRGB_MAT, AP1_2_XYZ_MAT);
-	const float whitePoint = 80.f;
+	aInColor *= 2;
 
-	// 1000.f nit display
-	float maxODTNits = 1000.0f;
-	float minODTNits = 0.0001f;
+	float3 aces = MR_Transform(BT709_to_AP0, aInColor);
+	float3 oces = RRT(aces);
 
-	//if (OutputDevice == 4 || OutputDevice == 6)
-	//{
-	//	// 2000 nit display
-	//	MaxODTNits = 2000.0f;
-	//	MinODTNits = 0.005f;
-	//}
+//#ifdef GFX_ENCODE_PQ
+//	return odt_academy_Rec2020(oces, ODT_2000nits) / 10000;
+//#endif
 
-	float3 outColor = ST2084ToLinear(aColor);
-		
-	outColor = clamp(outColor, minODTNits, maxODTNits);
-	outColor.x = Y_2_linCV(outColor.x, maxODTNits, minODTNits);
-	outColor.y = Y_2_linCV(outColor.y, maxODTNits, minODTNits);
-	outColor.z = Y_2_linCV(outColor.z, maxODTNits, minODTNits);
-
-	float scRGBScale = maxODTNits / whitePoint;
-	outColor = mul(AP1_2_sRGB, outColor) * scRGBScale;
-
-	return outColor;
+	return ODT_Academy_RGBmonitor_100nits_dim(oces);
 }
+#endif
 
-
-// TESTING
-
-// sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
-static const float3x3 ACESInputMat =
+#ifdef TONEMAP_HDR_ACES_FILM_APPROX
+float3 ACESFilmApproximation(float3 aInColor)
 {
-    {0.59719, 0.35458, 0.04823},
-    {0.07600, 0.90834, 0.01566},
-    {0.02840, 0.13383, 0.83777}
-};
-
-// ODT_SAT => XYZ => D60_2_D65 => sRGB
-static const float3x3 ACESOutputMat =
-{
-    { 1.60475, -0.53108, -0.07367},
-    {-0.10208,  1.10813, -0.00605},
-    {-0.00327, -0.07276,  1.07602}
-};
-
-float3 RRTAndODTFit(float3 v)
-{
-    float3 a = v * (v + 0.0245786f) - 0.000090537f;
-    float3 b = v * (0.983729f * v + 0.4329510f) + 0.238081f;
-    return a / b;
+	float a = 2.51;
+	float b = 0.03;
+	float c = 2.43;
+	float d = 0.59;
+	float e = 0.14;
+	return saturate((aInColor*(a*aInColor+b))/(aInColor*(c*aInColor+d)+e));
 }
+#endif //TONEMAP_HDR_ACES_FILM_APPROX
 
-float3 ACESFitted(float3 color)
+float3 Tonemap(float3 aInColor)
 {
-    color = mul(ACESInputMat, color);
+    float3 tonemappedColor = (float3)0;
 
-    // Apply RRT and ODT
-    color = RRTAndODTFit(color);
+#ifdef TONEMAP_HDR_REINHARD
+    tonemappedColor = ReinhardTonemapping(aInColor);
+#endif
+#ifdef TONEMAP_HDR_MODIFIED_REINHARD
+    tonemappedColor = ModifiedReinhardTonemapping(aInColor);
+#endif
+#ifdef TONEMAP_HDR_CUSTOM_REINHARD
+    tonemappedColor = CustomReinhardTonemapping(aInColor);
+#endif
+#ifdef TONEMAP_HDR_FILMIC
+    tonemappedColor = FilmicTonemapping(aInColor);
+#endif
+#ifdef TONEMAP_HDR_FILMIC_CUSTOMIZABLE
+    tonemappedColor = FilmicTonemappingCustomizable(aInColor) / FilmicTonemappingCustomizable(float3(LUT.LinearWhitePoint)).x;
+#endif
+#ifdef TONEMAP_HDR_LOTTES
+    tonemappedColor = LottesTonemapping(aInColor);
+#endif
+#ifdef TONEMAP_HDR_ACES
+    tonemappedColor = ACESTonemapping(aInColor);
+#endif
+#ifdef TONEMAP_HDR_ACES_FILM_APPROX
+    tonemappedColor = ACESFilmApproximation(aInColor);
+#endif
 
-    color = mul(ACESOutputMat, color);
-
-    // Clamp to [0, 1]
-    color = saturate(color);
-
-    return color;
+    return tonemappedColor;
 }
-
-
-#endif // TONEMAP_COMMON_HEADER

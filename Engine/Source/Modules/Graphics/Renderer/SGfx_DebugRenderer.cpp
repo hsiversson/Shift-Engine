@@ -81,7 +81,7 @@ bool SGfx_DebugRenderer::Init()
 		return false;
 
 	lineShaderProps.mVertexLayout.SetAttribute(SR_VertexAttribute::Position, SR_Format::RGBA32_FLOAT);
-	lineShaderProps.mVertexLayout.SetAttribute(SR_VertexAttribute::Color0, SR_Format::RGBA32_FLOAT);
+	lineShaderProps.mVertexLayout.SetAttribute(SR_VertexAttribute::Color, SR_Format::RGBA32_FLOAT);
 	lineShaderProps.mPrimitiveTopology = SR_PrimitiveTopology::LineList;
 
 	lineShaderProps.mRasterizerProperties.mCullMode = SR_CullMode::None;
@@ -167,16 +167,16 @@ void SGfx_DebugRenderer::Render(SR_CommandList* aCmdList, const SGfx_ViewData& /
 			mLines.RemoveAll();
 		}
 
-		aCmdList->SetVertexBuffer(mLinesBuffer.get());
-		aCmdList->SetShaderState(mLineShader.get());
+		aCmdList->SetVertexBuffer(mLinesBuffer);
+		aCmdList->SetShaderState(mLineShader);
 		aCmdList->SetPrimitiveTopology(SR_PrimitiveTopology::LineList);
 		aCmdList->Draw(mLinesBuffer->GetProperties().mElementCount);
 	}
 
 	if (mDrawGrid)
 	{
-		aCmdList->SetVertexBuffer(mVertexBuffer.get());
-		aCmdList->SetShaderState(mLineShader.get());
+		aCmdList->SetVertexBuffer(mVertexBuffer);
+		aCmdList->SetShaderState(mLineShader);
 		aCmdList->SetPrimitiveTopology(SR_PrimitiveTopology::LineList);
 		aCmdList->Draw(mVertexBuffer->GetProperties().mElementCount);
 	}

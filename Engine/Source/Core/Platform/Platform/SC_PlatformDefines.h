@@ -14,7 +14,7 @@
 	#endif
 
 	#define IS_WINDOWS_PLATFORM			(1)
-	#define IS_DESKTOP_PLATFORM			(1)
+	#define IS_PC_PLATFORM				(1)
 	#define IS_64BIT					(1)
 	#define IS_X86_PLATFORM				(1)
 	#define ENABLE_SIMD_INSTRUCTIONS	(1)
@@ -58,6 +58,13 @@
 #   define IS_GCC_COMPILER				(0)
 #endif
 
+// RTTI Support
+#if defined( _CPPRTTI ) || defined( __GNUG__ )
+	#define ENABLE_RTTI					(1)
+#else
+	#define ENABLE_RTTI					(0)
+#endif
+
 #if !IS_MASTER_BUILD
 	#define ENABLE_PROFILER				(1)
 	#define ENABLE_LOGGING				(1)
@@ -81,8 +88,8 @@
 	#define IS_WINDOWS_PLATFORM			(0)
 #endif
 
-#ifndef IS_DESKTOP_PLATFORM
-	#define IS_DESKTOP_PLATFORM			(0)
+#ifndef IS_PC_PLATFORM
+	#define IS_PC_PLATFORM				(0)
 #endif
 
 #ifndef IS_64BIT

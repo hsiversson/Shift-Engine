@@ -15,24 +15,90 @@
 #include "SR_RootSignature.h"
 #include "SR_TempResourceHeap.h"
 #include "RenderCore/Resources/SR_InstanceBuffer.h"
-#include "RenderCore/RenderTasks/SR_CommandQueueManager.h"
+#include "RenderCore/RenderTasks/SR_QueueManager.h"
 
-struct RENDERDOC_API_1_4_1;
+#define ENABLE_NVAPI			(1)
+#define ENABLE_AGS				(1)
+
+enum class SR_GpuVendor
+{
+	Unknown,
+	Nvidia,
+	AMD,
+	Intel
+};
+enum class SR_GpuArchitecture
+{
+	Unknown,
+	
+	Nv_Kepler,
+	Nv_Maxwell,
+	Nv_Pascal,
+	Nv_Turing,
+	Nv_Volta = Nv_Turing,
+	Nv_Ampere,
+	Nv_Lovlace,
+	Nv_Hopper = Nv_Lovlace,
+
+	Amd_GCN1,
+	Amd_GCN2,
+	Amd_GCN3,
+	Amd_GCN4,
+	Amd_Vega,
+	Amd_RDNA,
+	Amd_RDNA2,
+	Amd_RDNA3,
+
+	Intel_Xe,
+	Intel_Xe2,
+	Intel_Xe3,
+};
+
+struct SR_GpuDeviceInfo
+{
+	SR_GpuDeviceInfo()
+		: mDriverVersion(0)
+		, mVendor(SR_GpuVendor::Unknown)
+		, mArchitecture(SR_GpuArchitecture::Unknown)
+		, mDedicatedVRAM(0)
+		, mNumShaderCores(0)
+		, mTheoreticalMaxPerformance(0.0f)
+	{}
+
+	std::string mDeviceName;
+	std::string mDriverVersionString;
+	uint32 mDriverVersion;
+
+	SR_GpuVendor mVendor;
+	SR_GpuArchitecture mArchitecture;
+
+	uint32 mDedicatedVRAM; // In Megabytes
+	uint32 mNumShaderCores;
+	float mTheoreticalMaxPerformance; // In TFLOPS
+};
 
 struct SR_RenderSupportCaps
 {
-	SR_RenderSupportCaps() { SC_ZeroMemory(this, sizeof(SR_RenderSupportCaps)); }
+	SR_RenderSupportCaps() 
+		: mHighestShaderModel(SR_ShaderModel::SM_5_1)
+		, mRaytracingType(SR_RaytracingType::None)
+		, mEnableMeshShaders(false)
+		, mEnableAsyncCompute(false)
+		, mEnableAsyncCopy(false)
+		, mEnableVRS(false)
+		, mEnableSamplerFeedback(false)
+		, mEnableConservativeRasterization(false)
+	{}
 
+	SR_GpuDeviceInfo mDeviceInfo;
 	SR_ShaderModel mHighestShaderModel;
-	bool mEnableRaytracing : 1;
+	SR_RaytracingType mRaytracingType;
 	bool mEnableMeshShaders : 1;
 	bool mEnableAsyncCompute : 1;
+	bool mEnableAsyncCopy : 1;
 	bool mEnableVRS : 1;
 	bool mEnableSamplerFeedback : 1;
 	bool mEnableConservativeRasterization : 1;
-	bool mUsingNvidiaGPU : 1;
-	bool mUsingAmdGPU : 1;
-	bool mUsingIntelGPU : 1;
 };
 
 enum class SR_TempHeapTypes
@@ -43,6 +109,7 @@ enum class SR_TempHeapTypes
 	COUNT
 };
 
+class SR_RenderThread;
 class SR_RenderDevice
 {
 public:
@@ -93,7 +160,7 @@ public:
 
 	SR_InstanceBuffer* GetPersistentResourceInfo() const;
 
-	SR_CommandQueueManager* GetCommandQueueManager() const;
+	SR_QueueManager* GetQueueManager() const;
 	SC_Ref<SR_CommandList> GetTaskCommandList(); // Returns the command list assigned to the current render task. Should only be called inside render tasks.
 
 	const SR_RenderSupportCaps& GetSupportCaps() const;
@@ -118,19 +185,15 @@ protected:
 	virtual SC_Ref<SR_Texture> LoadTextureInternal(const SC_FilePath& aTextureFilePath);
 	bool PostInit();
 
+	SC_UniquePtr<SR_RenderThread> mRenderThread;
 
-	struct TempRingBuffer
-	{
-
-	};
-	SC_Ref<TempRingBuffer> mTempRingBuffers[static_cast<uint32>(SR_TempHeapTypes::COUNT)];
 	SC_Ref<SR_RootSignature> mRootSignatures[static_cast<uint32>(SR_RootSignatureType::COUNT)];
 
 	SC_Ref<SR_SwapChain> mDefaultSwapChain;
 
 	SC_UniquePtr<SR_InstanceBuffer> mPersistentResourceInfo;
 
-	SC_UniquePtr<SR_CommandQueueManager> mCommandQueueManager;
+	SC_UniquePtr<SR_QueueManager> mQueueManager;
 
 	SC_UniquePtr<SR_TempResourceHeap> mTempResourceHeap;
 

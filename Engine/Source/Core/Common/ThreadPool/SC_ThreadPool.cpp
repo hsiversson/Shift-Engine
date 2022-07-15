@@ -23,7 +23,7 @@ void SC_ThreadPool::Destroy()
 
 SC_ThreadPool& SC_ThreadPool::Get()
 {
-    assert(gInstance != nullptr);
+    SC_ASSERT(gInstance != nullptr);
     return *gInstance;
 }
 

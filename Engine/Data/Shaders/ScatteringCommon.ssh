@@ -1,6 +1,4 @@
-#ifndef SCATTERING_COMMON_HEADER
-#define SCATTERING_COMMON_HEADER
-//#pragma once
+#pragma once 
 #include "Common.ssh"
 #include "SceneConstants.ssh"
 
@@ -501,5 +499,3 @@ SingleScatteringResult IntegrateScatteredLuminance(
 
 	return result;
 }
-
-#endif //SCATTERING_COMMON_HEADER

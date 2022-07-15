@@ -42,12 +42,10 @@ public:
 	uint32 GetMaterialIndex() const;
 	const SC_FilePath& GetSavePath() const;
 
-	const SC_Vector& GetWorldOriginOffset() const;
-
 private:
 	SED_AssimpMesh(aiMesh* aMesh, uint32 aMaterialIndex, const SC_FilePath& aSourceFile);
 
-	void ExtractVertices(SGfx_MeshCreateParams& aOutCreateParams, SC_Vector& aOutWorldOriginCenterOffset) const;
+	void ExtractVertices(SGfx_MeshCreateParams& aOutCreateParams) const;
 	void ExtractIndices(SGfx_MeshCreateParams& aOutCreateParams) const;
 	bool GenerateMeshlets(SGfx_MeshCreateParams& aOutCreateParams) const;
 
@@ -55,7 +53,6 @@ private:
 	aiMesh* mImportedMesh;
 	uint32 mMaterialIndex;
 	SC_FilePath mSourceDir;
-	SC_Vector mWorldOriginOffset;
 };
 
 class SED_AssimpScene

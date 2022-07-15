@@ -1,6 +1,4 @@
-#ifndef MOTION_VECTOR_HEADER
-#define MOTION_VECTOR_HEADER
-
+#pragma once 
 #include "SceneConstants.ssh"
 
 // Outputs relative motion between current frame and previous frame into RG16F.
@@ -12,5 +10,3 @@ float2 CalculateMotionVector(in float3 aWorldPosition, in float3 aPrevWorldPosit
     float2 motionVector = (clipPos.xy / clipPos.w) - (prevClipPos.xy / prevClipPos.w);
     return motionVector;
 }
-
-#endif //MOTION_VECTOR_HEADER

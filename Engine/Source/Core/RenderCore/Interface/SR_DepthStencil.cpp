@@ -8,7 +8,7 @@ const SR_DepthStencilProperties& SR_DepthStencil::GetProperties() const
 
 SR_TextureResource* SR_DepthStencil::GetResource() const
 {
-	return mResource.get();
+	return mResource;
 }
 
 SR_DepthStencil::SR_DepthStencil(const SR_DepthStencilProperties& aProperties, SC_Ref<SR_TextureResource> aResource)

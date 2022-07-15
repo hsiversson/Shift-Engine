@@ -68,12 +68,22 @@ SGF_Entity& SGF_Entity::operator=(SGF_Entity&& aOther)
 
 bool SGF_Entity::operator!=(const SGF_Entity& aOther) const
 {
-	return mHandle == aOther.mHandle;
+	return mHandle != aOther.mHandle;
 }
 
 bool SGF_Entity::operator==(const SGF_Entity& aOther) const
 {
-	return mHandle != aOther.mHandle;
+	return mHandle == aOther.mHandle;
+}
+
+bool SGF_Entity::operator!=(const SGF_EntityHandle& aOther) const
+{
+	return mHandle != aOther;
+}
+
+bool SGF_Entity::operator==(const SGF_EntityHandle& aOther) const
+{
+	return mHandle == aOther;
 }
 
 bool SGF_Entity::HasComponent(const SGF_ComponentId& aId) const
@@ -201,6 +211,15 @@ void SGF_EntityManager::DestroyEntity(const SGF_Entity& aEntity)
 	SC_MutexLock lock(mMutex);
 	mAliveEntityHandles.RemoveCyclic(aEntity);
 	mAvailableEntityHandles.Add(aEntity);
+}
+
+void SGF_EntityManager::GetEntities(SC_Array<SGF_Entity>& aOutEntities)
+{
+	aOutEntities.Reserve(mAliveEntityHandles.Count());
+	for (const SGF_EntityHandle& handle : mAliveEntityHandles)
+	{
+		aOutEntities.Add(SGF_Entity(handle, this, mComponentManager, mWorld));
+	}
 }
 
 void SGF_EntityManager::GrowEntityAllocation()

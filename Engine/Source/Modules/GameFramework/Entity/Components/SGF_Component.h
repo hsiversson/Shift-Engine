@@ -31,6 +31,7 @@ private:
 
 	SGF_Entity mParentEntity;
 };
+SC_ALLOW_MEMCPY_RELOCATE(SGF_Component);
 
 class SGF_ComponentListBase
 {
@@ -76,6 +77,7 @@ public:
 		if (Has(aHandle))
 			return &mComponents[mEntityToComponentMap[aHandle]];
 
+		SC_MutexLock lock(mMutex);
 		ComponentType& newComp = mComponents.Add();
 		uint32 newCompIdx = mComponents.Count() - 1;
 		mEntityToComponentMap[aHandle] = newCompIdx;
@@ -91,6 +93,7 @@ public:
 			uint32 currentLastCompIdx = mComponents.Count() - 1;
 			SGF_EntityHandle currentLastEntityHandle = mComponentToEntityMap[currentLastCompIdx];
 
+			SC_MutexLock lock(mMutex);
 			uint32 compIdx = mEntityToComponentMap[aHandle];
 			mEntityToComponentMap.erase(aHandle);
 			mComponentToEntityMap.erase(compIdx);
@@ -163,6 +166,7 @@ public:
 	}
 #endif
 private:
+	SC_Mutex mMutex;
 	SC_Array<ComponentType> mComponents;
 	SC_UnorderedMap<SGF_EntityHandle, uint32> mEntityToComponentMap;
 	SC_UnorderedMap<uint32, SGF_EntityHandle> mComponentToEntityMap;
@@ -213,7 +217,7 @@ public:
 		if (!HasList<ComponentType>())
 			return nullptr;
 
-		return static_cast<SGF_ComponentList<ComponentType>*>(mComponentLists[ComponentType::Id()].get());
+		return static_cast<SGF_ComponentList<ComponentType>*>(mComponentLists[ComponentType::Id()].Get());
 	}
 
 private:

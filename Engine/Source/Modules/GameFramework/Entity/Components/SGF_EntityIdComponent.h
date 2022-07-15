@@ -14,3 +14,18 @@ public:
 private:
 	SC_UUID mUUID;
 };
+SC_ALLOW_MEMCPY_RELOCATE(SGF_EntityIdComponent);
+
+class SGF_EntityNameComponent : public SGF_Component
+{
+	COMPONENT_DECLARE(SGF_EntityNameComponent, "EntityNameComponent");
+public:
+	SGF_EntityNameComponent();
+	~SGF_EntityNameComponent();
+
+	bool Save(SC_Json& aOutSaveData) const override;
+	bool Load(const SC_Json& aSavedData) override;
+
+	std::string mName;
+};
+SC_ALLOW_MEMCPY_RELOCATE(SGF_EntityNameComponent);

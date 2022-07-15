@@ -23,14 +23,14 @@ extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = "./"; }
 #include "SR_TempResourceHeap_DX12.h"
 #include "SR_Fence_DX12.h"
 #include "RenderCore/Resources/SR_TextureLoading.h"
-#include "RenderCore/ShaderCompiler/SR_DxcCompiler.h"
+#include "RenderCore/ShaderCompiler/SR_DirectXShaderCompiler.h"
 
 #define USE_D3D12_DDS_LOADER (1)
 #if USE_D3D12_DDS_LOADER
 	#include "RenderCore/Resources/DDSTextureLoader.h"
 #endif
 
-#if IS_DESKTOP_PLATFORM
+#if IS_PC_PLATFORM
 	#if ENABLE_NVAPI
 		#include "nvapi.h"
 	#endif
@@ -49,7 +49,9 @@ extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = "./"; }
 	#include "dstorage.h"
 #endif
 
-SR_RenderDevice_DX12* SR_RenderDevice_DX12::gD3D12Instance = nullptr;
+SR_RenderDevice_DX12* SR_RenderDevice_DX12::gInstance = nullptr;
+bool SR_RenderDevice_DX12::gUsingNvApi = false;
+bool SR_RenderDevice_DX12::gUsingAGS = false;
 
 SR_RenderDevice_DX12::SR_RenderDevice_DX12()
 	: SR_RenderDevice(SR_API::D3D12)
@@ -57,10 +59,10 @@ SR_RenderDevice_DX12::SR_RenderDevice_DX12()
 	, mEnableDRED(false)
 #endif
 {
-	if (gD3D12Instance != nullptr)
+	if (gInstance != nullptr)
 		SC_ASSERT(false, "Already created RenderDevice.");
 	else
-		gD3D12Instance = this;
+		gInstance = this;
 
 #if ENABLE_DRED
 	if (SC_CommandLine::HasCommand("dred"))
@@ -224,22 +226,22 @@ SR_CommandQueue* SR_RenderDevice_DX12::GetCommandQueue(const SR_CommandListType&
 
 SR_DescriptorHeap* SR_RenderDevice_DX12::GetDefaultDescriptorHeap() const
 {
-	return mBindlessDescriptorHeap.get();
+	return mBindlessDescriptorHeap;
 }
 
 SR_DescriptorHeap* SR_RenderDevice_DX12::GetSamplerDescriptorHeap() const
 {
-	return mSamplerDescriptorHeap.get();
+	return mSamplerDescriptorHeap;
 }
 
 SR_DescriptorHeap* SR_RenderDevice_DX12::GetRTVDescriptorHeap() const
 {
-	return mRTVDescriptorHeap.get();
+	return mRTVDescriptorHeap;
 }
 
 SR_DescriptorHeap* SR_RenderDevice_DX12::GetDSVDescriptorHeap() const
 {
-	return mDSVDescriptorHeap.get();
+	return mDSVDescriptorHeap;
 }
 
 ID3D12Device* SR_RenderDevice_DX12::GetD3D12Device() const
@@ -370,7 +372,8 @@ void SR_RenderDevice_DX12::OutputDredDebugData()
 	if (FAILED(dred->GetPageFaultAllocationOutput(&dredPageFaultOutput))) 
 		return;
 
-	SC_ERROR("GPU Page Fault: VA: 0x%p", dredPageFaultOutput.PageFaultVA);
+	SC_ERROR("<----- DRED DEBUG OUTPUT BEGIN ----->\n");
+	SC_ERROR("GPU Page Fault: VA: {:0x}", dredPageFaultOutput.PageFaultVA);
 	SC_ERROR("<----- RECENTLY FREED RESOURCES BEGIN ----->");
 	const D3D12_DRED_ALLOCATION_NODE* resourcePage = dredPageFaultOutput.pHeadRecentFreedAllocationNode;
 	while (resourcePage)
@@ -414,7 +417,7 @@ void SR_RenderDevice_DX12::OutputDredDebugData()
 		node = node->pNext;
 	}
 	SC_ERROR("<----- BREADCRUMBS END ----->");
-
+	SC_ERROR("<----- DRED DEBUG OUTPUT END ----->\n");
 }
 #endif //ENABLE_DRED
 
@@ -455,59 +458,25 @@ bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 	{
 		if (adapterDesc.VendorId == 0x10DE)
 		{
-			mSupportCaps.mUsingNvidiaGPU = true;
+			mSupportCaps.mDeviceInfo.mVendor = SR_GpuVendor::Nvidia;
 			SC_LOG("Graphics Vendor: Nvidia");
 		}
 		else if (adapterDesc.VendorId == 0x1002)
 		{
-			mSupportCaps.mUsingAmdGPU = true;
+			mSupportCaps.mDeviceInfo.mVendor = SR_GpuVendor::AMD;
 			SC_LOG("Graphics Vendor: AMD");
 		}
 		else if (adapterDesc.VendorId == 0x163C || adapterDesc.VendorId == 0x8086)
 		{
-			mSupportCaps.mUsingIntelGPU = true;
+			mSupportCaps.mDeviceInfo.mVendor = SR_GpuVendor::Intel;
 			SC_LOG("Graphics Vendor: Intel");
 		}
 
-		std::string deviceName = SC_UTF16ToUTF8(adapterDesc.Description);
+		mSupportCaps.mDeviceInfo.mDeviceName = SC_UTF16ToUTF8(adapterDesc.Description);
+		mSupportCaps.mDeviceInfo.mDedicatedVRAM = uint32(adapterDesc.DedicatedVideoMemory >> 20);
 
-		SC_LOG("Graphics card: {} (id: {} rev: {})", deviceName.c_str(), adapterDesc.DeviceId, adapterDesc.Revision);
-		SC_LOG("Video Memory: {}MB", uint64(adapterDesc.DedicatedVideoMemory >> 20));
-
-#if IS_DESKTOP_PLATFORM
-#if ENABLE_NVAPI
-		if (mSupportCaps.mUsingNvidiaGPU)
-		{
-			NvAPI_Status status = NvAPI_Initialize();
-			if (status == NVAPI_OK)
-			{
-				NvU32 driverVersion;
-				NvAPI_ShortString driverString;
-				status = NvAPI_SYS_GetDriverAndBranchVersion(&driverVersion, driverString);
-				if (status != NVAPI_OK)
-				{
-					NvAPI_ShortString string;
-					NvAPI_GetErrorMessage(status, string);
-					SC_ERROR("NvAPI_SYS_GetDriverAndBranchVersion: {}", string);
-				}
-
-				SC_LOG("Nvidia Driver: {} (Driver String: {})", driverVersion, driverString);
-			}
-		}
-#endif //ENABLE_NVAPI
-#if ENABLE_AGS
-		else if (mSupportCaps.mUsingAmdGPU)
-		{
-			AGSConfiguration config = {};
-			AGSGPUInfo gpuInfo = {};
-			AGSReturnCode status = agsInitialize(AGS_MAKE_VERSION(AMD_AGS_VERSION_MAJOR, AMD_AGS_VERSION_MINOR, AMD_AGS_VERSION_PATCH), &config, nullptr, &gpuInfo);
-			if (status == AGS_SUCCESS)
-			{
-
-			}
-		}
-#endif //ENABLE_AGS
-#endif //IS_DESKTOP_PLATFORM 
+		SC_LOG("Graphics card: {0} (id: {1} rev: {2})", mSupportCaps.mDeviceInfo.mDeviceName.c_str(), adapterDesc.DeviceId, adapterDesc.Revision);
+		SC_LOG("Video Memory: {0}MB", mSupportCaps.mDeviceInfo.mDedicatedVRAM);
 	}
 
 	if (mEnableDebugMode)
@@ -535,7 +504,7 @@ bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 	hr = D3D12CreateDevice(mDXGIAdapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&mD3D12Device));
 
 
-#if IS_DESKTOP_PLATFORM
+#if IS_PC_PLATFORM
 #if ENABLE_NVIDIA_AFTERMATH
 	if (SC_CommandLine::HasCommand("enableaftermath"))
 	{
@@ -614,10 +583,8 @@ bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 	mDSVDescriptorHeap = SC_MakeRef<SR_DescriptorHeap_DX12>(32, SR_DescriptorHeapType::DSV);
 
 	CreateDefaultRootSignatures(); 
-	if (!InitTempStorage())
-		return false;
 
-	mDxcCompiler = SC_MakeUnique<SR_DxcCompiler>();
+	mDxcCompiler = SC_MakeUnique<SR_DirectXShaderCompiler>();
 
 	mTempResourceHeap = SC_MakeUnique<SR_TempResourceHeap_DX12>();
 	if (!mTempResourceHeap->Init())
@@ -792,31 +759,6 @@ bool SR_RenderDevice_DX12::CreateDefaultRootSignatures()
 	return true;
 }
 
-bool SR_RenderDevice_DX12::InitTempStorage()
-{
-	D3D12_HEAP_DESC desc = {};
-	desc.SizeInBytes = MB(512);
-	desc.Alignment = D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT;
-	desc.Properties.Type = D3D12_HEAP_TYPE_DEFAULT;
-
-	//desc.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
-	//HRESULT hr = mD3D12Device->CreateHeap(&desc, IID_PPV_ARGS(&mTempTexturesHeap));
-	//if (FAILED(hr))
-	//	return false;
-
-	desc.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES;
-	HRESULT hr = mD3D12Device->CreateHeap(&desc, IID_PPV_ARGS(&mTempRenderTargetsHeap));
-	if (!VerifyHRESULT(hr))
-		return false;
-
-	desc.SizeInBytes = MB(256);
-	desc.Properties.Type = D3D12_HEAP_TYPE_UPLOAD;
-	desc.Flags = D3D12_HEAP_FLAG_ALLOW_ONLY_BUFFERS;
-	hr = mD3D12Device->CreateHeap(&desc, IID_PPV_ARGS(&mTempUploadHeap));
-
-	return SUCCEEDED(hr);
-}
-
 static const char* GetShaderModelString(const SR_ShaderModel& aShaderModel)
 {
 	switch (aShaderModel)
@@ -846,6 +788,114 @@ static const char* GetShaderModelString(const SR_ShaderModel& aShaderModel)
 
 void SR_RenderDevice_DX12::GatherSupportCaps()
 {
+#if IS_PC_PLATFORM
+#if ENABLE_NVAPI
+	if (mSupportCaps.mDeviceInfo.mVendor == SR_GpuVendor::Nvidia && !SC_CommandLine::HasCommand("nonvapi"))
+	{
+		if (NvAPI_Initialize() == NVAPI_OK)
+		{
+			gUsingNvApi = true;
+
+			NvU32 driverVersion;
+			NvAPI_ShortString driverString;
+			if (NvAPI_SYS_GetDriverAndBranchVersion(&driverVersion, driverString) == NVAPI_OK)
+			{
+				mSupportCaps.mDeviceInfo.mDriverVersion = driverVersion;
+				mSupportCaps.mDeviceInfo.mDriverVersionString = driverString;
+				SC_LOG("NvAPI: Driver: {} (Driver String: {})", driverVersion, driverString);
+			}
+
+			DXGI_ADAPTER_DESC1 adapterDesc = {};
+			mDXGIAdapter->GetDesc1(&adapterDesc);
+
+			NvPhysicalGpuHandle nvGPUHandles[NVAPI_MAX_PHYSICAL_GPUS];
+			NvU32 numGPUs = 0;
+			if (NvAPI_EnumPhysicalGPUs(nvGPUHandles, &numGPUs) == NVAPI_OK)
+			{
+				for (uint32 i = 0; i < numGPUs; ++i)
+				{
+					NvPhysicalGpuHandle& gpuHandle = nvGPUHandles[i];
+					NvU32 deviceId = 0;
+					NvU32 subSystemId = 0;
+					NvU32 revisionId = 0;
+					NvU32 extDeviceId = 0;
+					if (NvAPI_GPU_GetPCIIdentifiers(gpuHandle, &deviceId, &subSystemId, &revisionId, &extDeviceId) == NVAPI_OK)
+					{
+						if (extDeviceId == adapterDesc.DeviceId && revisionId == adapterDesc.Revision && subSystemId == adapterDesc.SubSysId)
+						{
+							NvAPI_ShortString fullName;
+							if (NvAPI_GPU_GetFullName(gpuHandle, fullName) == NVAPI_OK)
+								SC_LOG("NvAPI: {}", fullName);
+
+							NvU32 coreCount = 0;
+							if (NvAPI_GPU_GetGpuCoreCount(gpuHandle, &coreCount) == NVAPI_OK)
+							{
+								SC_LOG("NvAPI: Num Shader Cores: {}", coreCount);
+								mSupportCaps.mDeviceInfo.mNumShaderCores = coreCount;
+							}
+
+							NV_GPU_ARCH_INFO architectureInfo;
+							architectureInfo.version = NV_GPU_ARCH_INFO_VER;
+							if (NvAPI_GPU_GetArchInfo(gpuHandle, &architectureInfo) == NVAPI_OK)
+							{
+								switch (architectureInfo.architecture_id)
+								{
+								case NV_GPU_ARCHITECTURE_GK100:
+								case NV_GPU_ARCHITECTURE_GK110:
+								case NV_GPU_ARCHITECTURE_GK200:
+									mSupportCaps.mDeviceInfo.mArchitecture = SR_GpuArchitecture::Nv_Kepler;
+									SC_LOG("NvAPI: Gpu Architecture: Kepler");
+									break;
+								case NV_GPU_ARCHITECTURE_GM000:
+								case NV_GPU_ARCHITECTURE_GM200:
+									mSupportCaps.mDeviceInfo.mArchitecture = SR_GpuArchitecture::Nv_Maxwell;
+									SC_LOG("NvAPI: Gpu Architecture: Maxwell");
+									break;
+								case NV_GPU_ARCHITECTURE_GP100:
+									mSupportCaps.mDeviceInfo.mArchitecture = SR_GpuArchitecture::Nv_Pascal;
+									SC_LOG("NvAPI: Gpu Architecture: Pascal");
+									break;
+								case NV_GPU_ARCHITECTURE_TU100:
+									mSupportCaps.mDeviceInfo.mArchitecture = SR_GpuArchitecture::Nv_Turing;
+									SC_LOG("NvAPI: Gpu Architecture: Turing");
+									break;
+								case NV_GPU_ARCHITECTURE_GV100:
+								case NV_GPU_ARCHITECTURE_GV110:
+									mSupportCaps.mDeviceInfo.mArchitecture = SR_GpuArchitecture::Nv_Volta;
+									SC_LOG("NvAPI: Gpu Architecture: Volta");
+									break;
+								case NV_GPU_ARCHITECTURE_GA100:
+									mSupportCaps.mDeviceInfo.mArchitecture = SR_GpuArchitecture::Nv_Ampere;
+									SC_LOG("NvAPI: Gpu Architecture: Ampere");
+									break;
+								default:
+									break;
+								}
+							}
+
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+#endif //ENABLE_NVAPI
+#if ENABLE_AGS
+	else if (mSupportCaps.mDeviceInfo.mVendor == SR_GpuVendor::AMD && !SC_CommandLine::HasCommand("noags"))
+	{
+		AGSConfiguration config = {};
+		AGSGPUInfo gpuInfo = {};
+		AGSReturnCode status = agsInitialize(AGS_MAKE_VERSION(AMD_AGS_VERSION_MAJOR, AMD_AGS_VERSION_MINOR, AMD_AGS_VERSION_PATCH), &config, nullptr, &gpuInfo);
+		if (status == AGS_SUCCESS)
+		{
+			gUsingAGS = true;
+
+		}
+	}
+#endif //ENABLE_AGS
+#endif //IS_DESKTOP_PLATFORM 
+
 	mSupportCaps.mEnableAsyncCompute = true;
 	if (SC_CommandLine::HasCommand("noasynccompute"))
 		mSupportCaps.mEnableAsyncCompute = false;
@@ -881,8 +931,20 @@ void SR_RenderDevice_DX12::GatherSupportCaps()
 		return;
 	}
 
-	mSupportCaps.mEnableRaytracing = dx12Options5.RaytracingTier > D3D12_RAYTRACING_TIER_NOT_SUPPORTED;
-	SC_LOG("Raytracing: {}", mSupportCaps.mEnableRaytracing ? "true" : "false");
+	switch (dx12Options5.RaytracingTier)
+	{
+	case D3D12_RAYTRACING_TIER_1_0:
+		mSupportCaps.mRaytracingType = SR_RaytracingType::Default;
+		SC_LOG("Raytracing: HW");
+		break;
+	case D3D12_RAYTRACING_TIER_1_1:
+		mSupportCaps.mRaytracingType = SR_RaytracingType::Inline;
+		SC_LOG("Raytracing: HW Inline");
+		break;
+	default:
+		SC_LOG("Raytracing: None");
+		break;
+	}
 
 	D3D12_FEATURE_DATA_D3D12_OPTIONS6 dx12Options6 = {};
 	hr = mD3D12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS6, &dx12Options6, sizeof(dx12Options6));
@@ -1060,7 +1122,7 @@ SC_Ref<SR_Texture> SR_RenderDevice_DX12::LoadTextureInternal(const SC_FilePath& 
 		texProps.mDimension = SR_TextureDimension::Texture3D;
 		break;
 	default:
-		assert(false);
+		SC_ASSERT(false);
 	}
 
 	return CreateTexture(texProps, texres);

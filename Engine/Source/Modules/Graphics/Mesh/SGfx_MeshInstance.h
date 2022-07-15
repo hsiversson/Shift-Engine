@@ -3,6 +3,7 @@
 #include "Graphics/Material/SGfx_MaterialInstance.h"
 #include "RenderCore/Interface/SR_RaytracingStructs.h"
 
+class SGfx_InstanceData;
 class SGfx_MeshInstance
 {
 public:
@@ -24,12 +25,15 @@ public:
 
 	const SC_AABB& GetBoundingBox() const;
 
-	void UpdateInstanceData() const;
+	void UpdateInstanceData(SGfx_InstanceData* aInstanceData);
 
 #if ENABLE_RAYTRACING
 	bool IncludeInRaytracingScene() const;
 	const SR_RaytracingInstanceData& GetRaytracingData();
 #endif
+
+	uint32 GetInstanceDataOffset() const;
+
 private:
 	void CalculateBoundingBox();
 
@@ -48,5 +52,7 @@ private:
 #if ENABLE_RAYTRACING
 	SR_RaytracingInstanceData mRaytracingData;
 #endif
+
+	uint32 mInstanceDataOffset;
 };
 

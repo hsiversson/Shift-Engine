@@ -2,6 +2,13 @@
 
 struct SGfx_LightCullingConstants
 {
+	SGfx_LightCullingConstants()
+		: mTotalNumLights(0)
+		, mTileGridDescriptorIndex(0)
+		, mLightBufferDescriptorIndex(0)
+		, _unused0{}
+	{}
+
 	SC_Vector2u mNumTiles;
 	uint32 mTotalNumLights;
 
@@ -31,6 +38,24 @@ public:
 
 	SR_Buffer* GetLightBuffer() const;
 	SR_Buffer* GetTileGridBuffer() const;
+
+private:
+	struct LightTile
+	{
+		static constexpr uint32 gTileSize = 32;
+		static constexpr uint32 gNumLightsPerTile = 256;
+
+		uint32 mLightIndices[gNumLightsPerTile];
+		uint32 mNumLights;
+	};
+	struct LightTileFrustum
+	{
+		SC_Plane mPlanes[4]; // Left, Top, Right, Bottom (Near & Far is defined by camera)
+	};
+	SC_Array<LightTile> mLightTiles;
+	SC_Array<LightTileFrustum> mLightTileFrustums;
+
+	void CullLightsCPU();
 
 private:
 	static constexpr uint32 gTileSize = 16;

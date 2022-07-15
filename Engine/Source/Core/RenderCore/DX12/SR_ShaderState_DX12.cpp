@@ -68,6 +68,24 @@ static D3D12_INPUT_ELEMENT_DESC CreateElementDesc(DXGI_FORMAT aFormat, uint32 aS
 	return element;
 }
 
+static const char* locGetVertexAttributeSemantic(const SR_VertexAttribute& aAttributeId)
+{
+	switch (aAttributeId)
+	{
+	case SR_VertexAttribute::Position: return "POSITION";
+	case SR_VertexAttribute::Normal: return "NORMAL";
+	case SR_VertexAttribute::Tangent: return "TANGENT";
+	case SR_VertexAttribute::Bitangent: return "BITANGENT";
+	case SR_VertexAttribute::UV: return "UV";
+	case SR_VertexAttribute::Color: return "COLOR";
+	case SR_VertexAttribute::BoneId: return "BONEID";
+	case SR_VertexAttribute::BoneWeight: return "BONEWEIGHT";
+	}
+
+	SC_ASSERT(false, "Unknown attribute");
+	return "<unknown>";
+}
+
 bool SR_ShaderState_DX12::InitDefault(const SR_ShaderStateProperties& aProperties)
 {
 	uint32 vsIndex = static_cast<uint32>(SR_ShaderType::Vertex);
@@ -79,30 +97,8 @@ bool SR_ShaderState_DX12::InitDefault(const SR_ShaderStateProperties& aPropertie
 
 	SC_Array<D3D12_INPUT_ELEMENT_DESC> inputElements;
 	
-	if (aProperties.mVertexLayout.HasAttribute(SR_VertexAttribute::Position))
-	{
-		inputElements.Add(CreateElementDesc(SR_D3D12ConvertFormat(aProperties.mVertexLayout.GetAttributeFormat(SR_VertexAttribute::Position)), 0, "POSITION"));
-		inputElements.Last().AlignedByteOffset = 0;
-	}
-
-	if (aProperties.mVertexLayout.HasAttribute(SR_VertexAttribute::Normal))
-		inputElements.Add(CreateElementDesc(SR_D3D12ConvertFormat(aProperties.mVertexLayout.GetAttributeFormat(SR_VertexAttribute::Normal)), 0, "NORMAL"));
-
-	if (aProperties.mVertexLayout.HasAttribute(SR_VertexAttribute::Tangent))
-	{
-		inputElements.Add(CreateElementDesc(SR_D3D12ConvertFormat(aProperties.mVertexLayout.GetAttributeFormat(SR_VertexAttribute::Tangent)), 0, "TANGENT"));
-		inputElements.Add(CreateElementDesc(SR_D3D12ConvertFormat(aProperties.mVertexLayout.GetAttributeFormat(SR_VertexAttribute::Bitangent)), 0, "BITANGENT"));
-	}
-
-	if (aProperties.mVertexLayout.HasAttribute(SR_VertexAttribute::UV0))
-		inputElements.Add(CreateElementDesc(SR_D3D12ConvertFormat(aProperties.mVertexLayout.GetAttributeFormat(SR_VertexAttribute::UV0)), 0, "UV"));
-	if (aProperties.mVertexLayout.HasAttribute(SR_VertexAttribute::UV1))
-		inputElements.Add(CreateElementDesc(SR_D3D12ConvertFormat(aProperties.mVertexLayout.GetAttributeFormat(SR_VertexAttribute::UV1)), 1, "UV"));
-
-	if (aProperties.mVertexLayout.HasAttribute(SR_VertexAttribute::Color0))
-		inputElements.Add(CreateElementDesc(SR_D3D12ConvertFormat(aProperties.mVertexLayout.GetAttributeFormat(SR_VertexAttribute::Color0)), 0, "COLOR"));
-	if (aProperties.mVertexLayout.HasAttribute(SR_VertexAttribute::Color1))
-		inputElements.Add(CreateElementDesc(SR_D3D12ConvertFormat(aProperties.mVertexLayout.GetAttributeFormat(SR_VertexAttribute::Color1)), 1, "COLOR"));
+	for (const SR_VertexAttributeData& attribute : aProperties.mVertexLayout.mAttributes)
+		inputElements.Add(CreateElementDesc(SR_D3D12ConvertFormat(attribute.mFormat), attribute.mAttributeIndex, locGetVertexAttributeSemantic(attribute.mAttributeId)));
 
 	streamDesc.mVertexLayout.mDesc.NumElements = inputElements.Count();
 	streamDesc.mVertexLayout.mDesc.pInputElementDescs = inputElements.GetBuffer();
@@ -128,7 +124,7 @@ bool SR_ShaderState_DX12::InitDefault(const SR_ShaderStateProperties& aPropertie
 		break;
 	}
 
-	SR_RootSignature* rootSignature = (aProperties.mRootSignature) ? aProperties.mRootSignature.get() : SR_RenderDevice::gInstance->GetRootSignature(SR_RootSignatureType::Graphics);
+	SR_RootSignature* rootSignature = (aProperties.mRootSignature) ? aProperties.mRootSignature.Get() : SR_RenderDevice::gInstance->GetRootSignature(SR_RootSignatureType::Graphics);
 	SR_RootSignature_DX12* rootSignatureDX12 = static_cast<SR_RootSignature_DX12*>(rootSignature);
 	streamDesc.mRootSignature.mPtr = rootSignatureDX12->GetD3D12RootSignature();
 	mRootSignature = rootSignature;
@@ -138,7 +134,7 @@ bool SR_ShaderState_DX12::InitDefault(const SR_ShaderStateProperties& aPropertie
 	desc.SizeInBytes = sizeof(streamDesc);
 
 	HRESULT result = E_FAIL;
-	result = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device5()->CreatePipelineState(&desc, IID_PPV_ARGS(&mD3D12PipelineState));
+	result = SR_RenderDevice_DX12::gInstance->GetD3D12Device5()->CreatePipelineState(&desc, IID_PPV_ARGS(&mD3D12PipelineState));
 
 	return VerifyHRESULT(result);
 }
@@ -152,7 +148,7 @@ bool SR_ShaderState_DX12::InitAsMeshShader(const SR_ShaderStateProperties& aProp
 
 	bool hasAmplificationShader = aProperties.mShaderByteCodes[asIndex].mSize;
 
-	SR_RootSignature* rootSignature = (aProperties.mRootSignature) ? aProperties.mRootSignature.get(): SR_RenderDevice::gInstance->GetRootSignature(SR_RootSignatureType::GraphicsMS);
+	SR_RootSignature* rootSignature = (aProperties.mRootSignature) ? aProperties.mRootSignature.Get() : SR_RenderDevice::gInstance->GetRootSignature(SR_RootSignatureType::GraphicsMS);
 	SR_RootSignature_DX12* rootSignatureDX12 = static_cast<SR_RootSignature_DX12*>(rootSignature);
 
 	HRESULT result = E_FAIL;
@@ -175,7 +171,7 @@ bool SR_ShaderState_DX12::InitAsMeshShader(const SR_ShaderStateProperties& aProp
 		desc.pPipelineStateSubobjectStream = &streamDesc;
 		desc.SizeInBytes = sizeof(streamDesc);
 
-		result = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device5()->CreatePipelineState(&desc, IID_PPV_ARGS(&mD3D12PipelineState));
+		result = SR_RenderDevice_DX12::gInstance->GetD3D12Device5()->CreatePipelineState(&desc, IID_PPV_ARGS(&mD3D12PipelineState));
 	}
 	else
 	{
@@ -195,7 +191,7 @@ bool SR_ShaderState_DX12::InitAsMeshShader(const SR_ShaderStateProperties& aProp
 		desc.pPipelineStateSubobjectStream = &streamDesc;
 		desc.SizeInBytes = sizeof(streamDesc);
 
-		result = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device5()->CreatePipelineState(&desc, IID_PPV_ARGS(&mD3D12PipelineState));
+		result = SR_RenderDevice_DX12::gInstance->GetD3D12Device5()->CreatePipelineState(&desc, IID_PPV_ARGS(&mD3D12PipelineState));
 	}
 	mRootSignature = rootSignature;
 	mIsMeshShader = true;
@@ -206,7 +202,7 @@ bool SR_ShaderState_DX12::InitAsMeshShader(const SR_ShaderStateProperties& aProp
 bool SR_ShaderState_DX12::InitAsComputeShader(const SR_ShaderStateProperties& aProperties)
 {
 	uint32 csIndex = static_cast<uint32>(SR_ShaderType::Compute);
-	SR_RootSignature* rootSignature = (aProperties.mRootSignature) ? aProperties.mRootSignature.get() : SR_RenderDevice::gInstance->GetRootSignature(SR_RootSignatureType::Compute);
+	SR_RootSignature* rootSignature = (aProperties.mRootSignature) ? aProperties.mRootSignature.Get() : SR_RenderDevice::gInstance->GetRootSignature(SR_RootSignatureType::Compute);
 	SR_RootSignature_DX12* rootSignatureDX12 = static_cast<SR_RootSignature_DX12*>(rootSignature);
 
 	SR_ComputeShaderPipelineStreamDesc streamDesc;
@@ -217,7 +213,7 @@ bool SR_ShaderState_DX12::InitAsComputeShader(const SR_ShaderStateProperties& aP
 	desc.pPipelineStateSubobjectStream = &streamDesc;
 	desc.SizeInBytes = sizeof(streamDesc);
 
-	HRESULT result = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device5()->CreatePipelineState(&desc, IID_PPV_ARGS(&mD3D12PipelineState));
+	HRESULT result = SR_RenderDevice_DX12::gInstance->GetD3D12Device5()->CreatePipelineState(&desc, IID_PPV_ARGS(&mD3D12PipelineState));
 	mRootSignature = rootSignature;
 	mIsComputeShader = true;
 	return VerifyHRESULT(result);
@@ -232,7 +228,7 @@ bool SR_ShaderState_DX12::InitAsRaytracingShader(const SR_ShaderStateProperties&
 	libDesc.DXILLibrary = { aProperties.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Raytracing)].mByteCode.get(), (SIZE_T)aProperties.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Raytracing)].mSize };
 	subObjects.Add({ D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &libDesc });
 
-	SR_RootSignature* rootSignature = (aProperties.mRootSignature) ? aProperties.mRootSignature.get() : SR_RenderDevice::gInstance->GetRootSignature(SR_RootSignatureType::Raytracing);
+	SR_RootSignature* rootSignature = (aProperties.mRootSignature) ? aProperties.mRootSignature.Get() : SR_RenderDevice::gInstance->GetRootSignature(SR_RootSignatureType::Raytracing);
 	SR_RootSignature_DX12* rootSignatureDX12 = static_cast<SR_RootSignature_DX12*>(rootSignature);
 	D3D12_GLOBAL_ROOT_SIGNATURE globalRootSig = { rootSignatureDX12->GetD3D12RootSignature() };
 	subObjects.Add({ D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, &globalRootSig });
@@ -290,7 +286,7 @@ bool SR_ShaderState_DX12::InitAsRaytracingShader(const SR_ShaderStateProperties&
 	desc.pSubobjects = subObjects.GetBuffer();
 	desc.NumSubobjects = subObjects.Count();
 
-	HRESULT result = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device5()->CreateStateObject(&desc, IID_PPV_ARGS(&mD3D12StateObject));
+	HRESULT result = SR_RenderDevice_DX12::gInstance->GetD3D12Device5()->CreateStateObject(&desc, IID_PPV_ARGS(&mD3D12StateObject));
 
 	mRootSignature = rootSignature;
 	mIsRaytracingShader = true;
@@ -322,7 +318,7 @@ void SR_ShaderState_DX12::CreateRaytracingShaderTable(const SR_ShaderStateProper
 	data.Respace(bufferProps.mElementCount);
 
 	const void* main = stateObjectProps->GetShaderIdentifier(L"Main");
-	assert(main);
+	SC_ASSERT(main);
 	if (main)
 		SC_Memcpy(data.GetBuffer() + rayGenOffset, main, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 
@@ -335,13 +331,13 @@ void SR_ShaderState_DX12::CreateRaytracingShaderTable(const SR_ShaderStateProper
 	{
 		name << L"HitGroup" << i;
 		const void* id = stateObjectProps->GetShaderIdentifier(name.str().c_str());
-		assert(id);
+		SC_ASSERT(id);
 		SC_Memcpy(data.GetBuffer() + hitGroupsOffset + (uint64)i * (uint64)recordSize, id, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 		name.str(std::wstring());
 	}
 
 	mRaytracingShaderTable = SR_RenderDevice_DX12::gInstance->CreateBufferResource(bufferProps, *data/*, L"RT Shader Table"*/);
-	SR_BufferResource_DX12* buffer = static_cast<SR_BufferResource_DX12*>(mRaytracingShaderTable.get());
+	SR_BufferResource_DX12* buffer = static_cast<SR_BufferResource_DX12*>(mRaytracingShaderTable.Get());
 
 	D3D12_GPU_VIRTUAL_ADDRESS address = buffer->GetD3D12Resource()->GetGPUVirtualAddress();
 	mDispatchRaysDesc = {};

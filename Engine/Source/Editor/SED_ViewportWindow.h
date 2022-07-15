@@ -1,18 +1,16 @@
 #pragma once
-#include "SED_Window.h"
 #include "Common/MessageQueue/SC_MessageListener.h"
+#include "SED_Window.h"
 #include "SED_Camera.h"
+#include "SED_TransformationGizmo.h"
 
-class SR_Texture;
-class SGfx_View;
-class SGfx_World;
 
 class SED_TransformationGizmo;
 class SED_ViewportWindow;
 class SED_ViewportToolbar
 {
 public:
-	SED_ViewportToolbar(SED_ViewportWindow& aViewportPanel, SED_TransformationGizmo* aGizmo);
+	SED_ViewportToolbar(SED_ViewportWindow& aViewportPanel, SED_TransformationGizmo& aGizmo);
 
 	void OnDraw();
 	
@@ -21,15 +19,19 @@ private:
 	void DrawGizmoOptions();
 
 	SED_ViewportWindow& mViewportParent;
-	SED_TransformationGizmo* mGizmo;
+	SED_TransformationGizmo& mGizmo;
 
 };
 
+class SR_Texture;
+class SGfx_View;
+class SGfx_World;
+class SGF_Entity;
 class SED_ViewportWindow : public SED_Window, SC_MessageListener
 {
 	friend class SED_ViewportToolbar;
 public:
-	SED_ViewportWindow(SGfx_World* aGfxWorld, SED_TransformationGizmo* aGizmo, const char* aId = "Viewport");
+	SED_ViewportWindow(SGfx_World* aGfxWorld, const char* aId = "Viewport");
 	~SED_ViewportWindow();
 
 	const SC_Vector4& GetViewportBounds() const;
@@ -37,9 +39,10 @@ public:
 
 	const SGfx_Camera& GetCamera() const;
 
-
 	void SetCamera(SGfx_Camera* aCamera);
 	SGfx_Camera* GetEditorCamera();
+
+	void SetSelectedEntity(const SGF_Entity& aEntity);
 
 	const char* GetWindowName() const override;
 
@@ -51,6 +54,7 @@ protected:
 	void RecieveMessage(const SC_Message& aMsg) override;
 
 private:
+	SED_TransformationGizmo mGizmo;
 	SED_ViewportToolbar mToolbar;
 
 	SC_Vector4 mViewportBounds;

@@ -7,7 +7,7 @@ const SR_TextureProperties& SR_Texture::GetProperties() const
 }
 SR_TextureResource* SR_Texture::GetResource() const
 {
-	return mResource.get();
+	return mResource;
 }
 
 const SR_TextureResourceProperties& SR_Texture::GetResourceProperties() const

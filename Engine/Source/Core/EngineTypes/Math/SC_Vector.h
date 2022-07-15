@@ -308,14 +308,14 @@ inline SC_TVector3<T> SC_TVector3<T>::GetNormalized() const
 template<class T>
 inline T& SC_TVector3<T>::operator[](uint32 aIndex)
 {
-	assert(aIndex >= 0 && aIndex < 3);
+	SC_ASSERT(aIndex >= 0 && aIndex < 3);
 	return (aIndex == 2) ? z : ((aIndex == 1) ? y : x);
 }
 
 template<class T>
 inline const T& SC_TVector3<T>::operator[](uint32 aIndex) const
 {
-	assert(aIndex >= 0 && aIndex < 3);
+	SC_ASSERT(aIndex >= 0 && aIndex < 3);
 	return (aIndex == 2) ? z : ((aIndex == 1) ? y : x);
 }
 
@@ -331,3 +331,4 @@ using SC_Vector3f = SC_TVector3<float>;
 
 using SC_IntVector = SC_TVector3<int>;
 using SC_IntVector3 = SC_TVector3<int>;
+using SC_Vector3u = SC_TVector3<unsigned int>;

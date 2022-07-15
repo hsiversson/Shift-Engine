@@ -1,4 +1,5 @@
 #pragma once
+#include "GameFramework/Entity/SGF_Entity.h"
 
 struct ImDrawList;
 
@@ -26,12 +27,14 @@ public:
 	void SetViewAndProjection(const SC_Matrix& aView, const SC_Matrix& aProjection);
 	void SetViewportPositionAndSize(const SC_Vector4& aPositionAndSize);
 
-	bool Manipulate(SC_Matrix& aTransform, bool aShouldSnap = false, float aSnapValue = 0.0f);
+	bool Manipulate(bool aShouldSnap = false, float aSnapValue = 0.0f);
 
 	const SED_GizmoMode& GetManipulationMode() const		{ return mMode; }
 	const SED_GizmoSpace& GetManipulationSpace() const		{ return mSpace; }
 	void SetManipulationMode(const SED_GizmoMode& aMode)	{ mMode = aMode; }
 	void SetManipulationSpace(const SED_GizmoSpace& aSpace) { mSpace = aSpace; }
+
+	void SetSelectedEntity(const SGF_Entity& aEntity);
 
 private:
 
@@ -61,6 +64,8 @@ private:
 
 	SC_Vector4 mViewportPosAndSize;
 	SC_Vector mCameraForward;
+
+	SGF_Entity mSelectedEntity;
 
 	SED_GizmoMode mMode;
 	SED_GizmoSpace mSpace;

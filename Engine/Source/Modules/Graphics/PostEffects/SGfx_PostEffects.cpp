@@ -52,7 +52,7 @@ void SGfx_PostEffects::Render(SGfx_View* aView, SR_Texture* aScreenColor)
 
 SR_Texture* SGfx_PostEffects::GetBloomTexture() const
 {
-	return (mBloomData.mEnabled) ? mBloomData.mResult.get() : SGfx_DefaultTextures::GetBlack1x1().get();
+	return (mBloomData.mEnabled) ? mBloomData.mResult : SGfx_DefaultTextures::GetBlack1x1();
 }
 
 void SGfx_PostEffects::RenderAverageLuminance()
@@ -102,28 +102,28 @@ void SGfx_PostEffects::RenderBloom(SGfx_View* aView, SR_Texture* aScreenColor)
 	SR_TempBuffer cb = SR_RenderDevice::gInstance->CreateTempBuffer(cbProps);
 
 	cb.mResource->UpdateData(0, &constants, sizeof(constants));
-	cmdList->SetRootConstantBuffer(cb.mResource.get(), 0);
-	cmdList->Dispatch(mBloomData.mBrightnessFilterShader.get(), targetSize.x, targetSize.y);
-	cmdList->UnorderedAccessBarrier(tempTex.mResource.get());
+	cmdList->SetRootConstantBuffer(cb.mResource, 0);
+	cmdList->Dispatch(mBloomData.mBrightnessFilterShader, targetSize.x, targetSize.y);
+	cmdList->UnorderedAccessBarrier(tempTex.mResource);
 
 	SR_TempTexture mipResult;
-	RenderBloomMipRecursive(renderData, mipResult, tempTex.mTexture.get());
+	RenderBloomMipRecursive(renderData, mipResult, tempTex.mTexture);
 
 	SR_TempTexture result;
-	UpsampleBloomMip(result, tempTex.mTexture.get(), mipResult);
+	UpsampleBloomMip(result, tempTex.mTexture, mipResult);
 
 	if (!mBloomData.mResult)
 	{
 		SC_Ref<SR_TextureResource> res = SR_RenderDevice::gInstance->CreateTextureResource(result.mResource->GetProperties());
 		mBloomData.mResult = SR_RenderDevice::gInstance->CreateTexture(result.mResource->GetProperties().mFormat, res);
 	}
-	cmdList->CopyResource(mBloomData.mResult->GetResource(), result.mResource.get());
+	cmdList->CopyResource(mBloomData.mResult->GetResource(), result.mResource);
 }
 
 void SGfx_PostEffects::RenderBloomMipRecursive(const SGfx_ViewData& aRenderData, SR_TempTexture& aOutMip, SR_Texture* aInMip)
 {
 	SR_TempTexture downsampledMip = Downsample(aInMip);
-	SR_Texture* downsampledMipTex = downsampledMip.mTexture.get();
+	SR_Texture* downsampledMipTex = downsampledMip.mTexture;
 
 	int32 maxResolutionSize = SC_Max(downsampledMipTex->GetResourceProperties().mSize.x, downsampledMipTex->GetResourceProperties().mSize.y);
 	if (maxResolutionSize > 4)
@@ -141,7 +141,7 @@ void SGfx_PostEffects::UpsampleBloomMip(SR_TempTexture& aOutMip, SR_Texture* aFu
 	SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
 	SC_IntVector fullSize = aFullMip->GetResourceProperties().mSize;
 	SC_IntVector upsampleSize = fullSize;
-	SR_Texture* downsampledMipTex = aDownsampledMip.mTexture.get();
+	SR_Texture* downsampledMipTex = aDownsampledMip.mTexture;
 
 	SR_TextureResourceProperties resourceProps;
 	resourceProps.mAllowUnorderedAccess = true;
@@ -182,10 +182,10 @@ void SGfx_PostEffects::UpsampleBloomMip(SR_TempTexture& aOutMip, SR_Texture* aFu
 	SR_TempBuffer cb = SR_RenderDevice::gInstance->CreateTempBuffer(cbProps);
 
 	cb.mResource->UpdateData(0, &constants, sizeof(constants));
-	cmdList->SetRootConstantBuffer(cb.mResource.get(), 0);
+	cmdList->SetRootConstantBuffer(cb.mResource, 0);
 
-	cmdList->Dispatch(mBloomData.mUpsampleShader.get(), SC_IntVector(upsampleSize.XY(), 1));
-	cmdList->UnorderedAccessBarrier(aOutMip.mResource.get());
+	cmdList->Dispatch(mBloomData.mUpsampleShader, SC_IntVector(upsampleSize.XY(), 1));
+	cmdList->UnorderedAccessBarrier(aOutMip.mResource);
 }
 
 SR_TempTexture SGfx_PostEffects::Downsample(SR_Texture* aSource)
@@ -231,10 +231,10 @@ SR_TempTexture SGfx_PostEffects::Downsample(SR_Texture* aSource)
 	cbProps.mDebugName = "BloomDownsampleConstants";
 	SR_TempBuffer cb = SR_RenderDevice::gInstance->CreateTempBuffer(cbProps);
 	cb.mResource->UpdateData(0, &constants, sizeof(constants));
-	cmdList->SetRootConstantBuffer(cb.mResource.get(), 0);
+	cmdList->SetRootConstantBuffer(cb.mResource, 0);
 
-	cmdList->Dispatch(mDownsampleShader.get(), targetSize.x, targetSize.y);
-	cmdList->UnorderedAccessBarrier(tempTex.mResource.get());
+	cmdList->Dispatch(mDownsampleShader, targetSize.x, targetSize.y);
+	cmdList->UnorderedAccessBarrier(tempTex.mResource);
 
 	return tempTex;
 }
@@ -264,5 +264,5 @@ void SGfx_PostEffects::RenderTonemap(SGfx_View* aView)
 
 
 	//cmdList->SetRootConstantBuffer(mPostEffectCBuffers[0].get(), 0);
-	cmdList->Dispatch(mTonemapData.mShader.get(), SC_IntVector(screenRect.mRight, screenRect.mBottom, 1));
+	cmdList->Dispatch(mTonemapData.mShader, SC_IntVector(screenRect.mRight, screenRect.mBottom, 1));
 }

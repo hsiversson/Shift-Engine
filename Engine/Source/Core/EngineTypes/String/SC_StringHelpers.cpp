@@ -53,4 +53,26 @@ void SC_ToUpper(std::wstring& aStr)
 	std::transform(aStr.begin(), aStr.end(), aStr.begin(), ::towupper);
 }
 
+uint32 SC_Strlen(const char* aStr)
+{
+	if (aStr)
+	{
+		size_t len = strlen(aStr);
+		SC_ASSERT(len < UINT_MAX);
+		return (uint32)len;
+	}
+	return 0;
+}
+
+uint32 SC_Strlen(const wchar_t* aStr)
+{
+	if (aStr)
+	{
+		size_t len = wcslen(aStr);
+		SC_ASSERT(len < UINT_MAX);
+		return (uint32)len;
+	}
+	return 0;
+}
+
 #pragma warning(pop)

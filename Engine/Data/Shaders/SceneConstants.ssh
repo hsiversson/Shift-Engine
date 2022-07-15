@@ -1,7 +1,5 @@
-#ifndef SCENE_CONSTANTS_HEADER
-#define SCENE_CONSTANTS_HEADER
-//#pragma once
-
+#pragma once 
+ 
 // Must reflect SGfx_ViewConstants in SGfx_Camera.h
 struct ViewConstants
 {
@@ -125,6 +123,7 @@ struct SceneConstants
 
 ConstantBuffer<SceneConstants> gSceneConstants : register(b1);
 
+#define SR_SceneConstants			gSceneConstants
 #define SR_ViewConstants			gSceneConstants.mViewConstants
 #define SR_ScatteringConstants  	gSceneConstants.mEnvironmentConstants.mScatteringConstants
 #define SR_EnvironmentConstants 	gSceneConstants.mEnvironmentConstants
@@ -156,5 +155,3 @@ float3 SR_ClipToWorld(float3 aClipPos)
 	float3 cameraPos = SR_ClipToCamera(aClipPos);
 	return mul(gSceneConstants.mViewConstants.mCameraToWorld, float4(cameraPos, 1.0f)).xyz;
 }
-
-#endif //SCENE_CONSTANTS_HEADER

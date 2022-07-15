@@ -107,13 +107,13 @@ struct SR_PixelData
 class SR_TextureResource : public SR_Resource
 {
 public:
+	virtual ~SR_TextureResource();
 	const SR_TextureResourceProperties& GetProperties() const;
 
 	virtual void UpdatePixels(const SR_PixelData* aData, uint32 aDataCount);
 
 protected:
 	SR_TextureResource(const SR_TextureResourceProperties& aProperties);
-	virtual ~SR_TextureResource();
 
 	SR_TextureResourceProperties mProperties;
 };

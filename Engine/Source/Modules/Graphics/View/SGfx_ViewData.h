@@ -7,6 +7,7 @@
 #include "Graphics/View/SGfx_RenderQueue.h"
 #include "RenderCore/RenderTasks/SR_TaskEvent.h"
 #include "Platform/Async/SC_Future.h"
+#include "Graphics/Mesh/SGfx_InstanceData.h"
 
 class SGfx_MaterialInstance;
 class SR_Buffer;
@@ -32,6 +33,7 @@ struct SGfx_RenderObject
 
 	SR_ShaderState* mShader;
 	uint32 mMaterialIndex;
+	uint32 mInstanceDataOffset;
 	bool mOutputVelocity;
 };
 
@@ -90,6 +92,7 @@ public:
 		mRenderOpaqueEvent = SC_MakeUnique<SR_TaskEvent>();
 		mRenderDebugObjectsEvent = SC_MakeUnique<SR_TaskEvent>();
 		mPostEffectsEvent = SC_MakeUnique<SR_TaskEvent>();
+		mInstanceData = SC_MakeUnique<SGfx_InstanceData>();
 	}
 
 	void Clear()
@@ -99,13 +102,11 @@ public:
 		mRenderSettings.Clear();
 		mSceneConstants.Clear();
 
-		_mDepthQueue.Clear();
-		_mOpaqueQueue.Clear();
-		_mTransparentQueue.Clear();
+		mDepthQueue.Clear();
+		mDepthQueue_MotionVectors.Clear();
+		mOpaqueQueue.Clear();
+		mTransparentQueue.Clear();
 
-		mDepthQueue.RemoveAll();
-		mOpaqueQueue.RemoveAll();
-		mTranslucencyQueue.RemoveAll();
 		mVisibleLights.RemoveAll();
 		mCSMViews.RemoveAll();
 #if ENABLE_RAYTRACING
@@ -121,6 +122,8 @@ public:
 		mRenderOpaqueEvent->Reset();
 		mRenderDebugObjectsEvent->Reset();
 		mPostEffectsEvent->Reset();
+
+		mInstanceData->Clear();
 	}
 
 	SGfx_Sky* mSky;
@@ -128,13 +131,10 @@ public:
 	SGfx_ViewRenderSettings mRenderSettings;
 	SGfx_SceneConstants mSceneConstants;
 
-	SGfx_RenderQueue_ByState _mDepthQueue;
-	SGfx_RenderQueue_ByState _mOpaqueQueue;
-	SGfx_RenderQueue_FarFirst _mTransparentQueue;
-
-	SC_Array<SGfx_RenderObject> mDepthQueue;		// Switch to a renderQueue
-	SC_Array<SGfx_RenderObject> mOpaqueQueue;		// Switch to a renderQueue
-	SC_Array<SGfx_RenderObject> mTranslucencyQueue; // Switch to a renderQueue
+	SGfx_RenderQueue_ByState mDepthQueue;
+	SGfx_RenderQueue_ByState mDepthQueue_MotionVectors;
+	SGfx_RenderQueue_ByState mOpaqueQueue;
+	SGfx_RenderQueue_FarFirst mTransparentQueue;
 
 	SC_Array<SGfx_LightRenderData> mVisibleLights;
 
@@ -154,4 +154,5 @@ public:
 	SC_UniquePtr<SR_TaskEvent> mRenderDebugObjectsEvent;
 	SC_UniquePtr<SR_TaskEvent> mPostEffectsEvent;
 
+	SC_UniquePtr<SGfx_InstanceData> mInstanceData;
 };

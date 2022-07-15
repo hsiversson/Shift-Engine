@@ -48,8 +48,8 @@ bool SR_Buffer_DX12::InitAsSRV()
 	ID3D12Resource* resource = nullptr;
 	if (mProperties.mType == SR_BufferType::Bytes)
 	{
-		assert(!(mProperties.mFirstElement & 3));
-		assert(!(mProperties.mElementCount & 3));
+		//SC_ASSERT(!(mProperties.mFirstElement & 3));
+		//SC_ASSERT(!(mProperties.mElementCount & 3));
 
 		srvDesc.Format = DXGI_FORMAT_R32_TYPELESS;
 		srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
@@ -60,7 +60,7 @@ bool SR_Buffer_DX12::InitAsSRV()
 	}
 	else if (mProperties.mType == SR_BufferType::RaytracingBuffer)
 	{
-		assert(bufferResourceProperties.mBindFlags & SR_BufferBindFlag_RaytracingBuffer);
+		SC_ASSERT(bufferResourceProperties.mBindFlags & SR_BufferBindFlag_RaytracingBuffer);
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
 		srvDesc.RaytracingAccelerationStructure.Location = mDX12Resource->GetD3D12Resource()->GetGPUVirtualAddress();
 	}
@@ -80,8 +80,8 @@ bool SR_Buffer_DX12::InitAsSRV()
 		resource = mDX12Resource->GetD3D12Resource();
 	}
 
-	mDescriptor = SR_RenderDevice_DX12::gD3D12Instance->GetDefaultDescriptorHeap()->Alloc();
-	SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateShaderResourceView(resource, &srvDesc, D3D12_CPU_DESCRIPTOR_HANDLE{ mDescriptor.mDescriptorHandleCPU });
+	mDescriptor = SR_RenderDevice_DX12::gInstance->GetDefaultDescriptorHeap()->Alloc();
+	SR_RenderDevice_DX12::gInstance->GetD3D12Device()->CreateShaderResourceView(resource, &srvDesc, D3D12_CPU_DESCRIPTOR_HANDLE{ mDescriptor.mDescriptorHandleCPU });
 
 	return true;
 }
@@ -94,8 +94,8 @@ bool SR_Buffer_DX12::InitAsUAV()
 
 	if (mProperties.mType == SR_BufferType::Bytes)
 	{
-		assert(!(mProperties.mFirstElement & 3));
-		assert(!(mProperties.mElementCount & 3));
+		SC_ASSERT(!(mProperties.mFirstElement & 3));
+		SC_ASSERT(!(mProperties.mElementCount & 3));
 
 		uavDesc.Format = DXGI_FORMAT_R32_TYPELESS;
 		uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
@@ -117,8 +117,8 @@ bool SR_Buffer_DX12::InitAsUAV()
 		uavDesc.Buffer.NumElements = mProperties.mElementCount;
 	}
 
-	mDescriptor = SR_RenderDevice_DX12::gD3D12Instance->GetDefaultDescriptorHeap()->Alloc();
-	SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateUnorderedAccessView(mDX12Resource->GetD3D12Resource(), nullptr, &uavDesc, D3D12_CPU_DESCRIPTOR_HANDLE{ mDescriptor.mDescriptorHandleCPU });
+	mDescriptor = SR_RenderDevice_DX12::gInstance->GetDefaultDescriptorHeap()->Alloc();
+	SR_RenderDevice_DX12::gInstance->GetD3D12Device()->CreateUnorderedAccessView(mDX12Resource->GetD3D12Resource(), nullptr, &uavDesc, D3D12_CPU_DESCRIPTOR_HANDLE{ mDescriptor.mDescriptorHandleCPU });
 
 	return true;
 }

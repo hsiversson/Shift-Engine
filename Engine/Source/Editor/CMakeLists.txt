@@ -10,4 +10,4 @@ target_include_directories(Editor PRIVATE
 							${IMGUI_INCLUDE_PATH}
 							${ASSIMP_INCLUDE_PATH})
 
-target_precompile_headers(Editor PRIVATE ${ENGINE_SOURCE_DIRECTORY}/Core/Common/SC_Base.h ${IMGUI_INCLUDE_PATH}/imgui.h)
+target_precompile_headers(Editor PRIVATE ${ENGINE_SOURCE_DIRECTORY}/Core/Common/SC_Base.h ${ENGINE_SOURCE_DIRECTORY}/Editor/SED_WidgetUtils.h ${ENGINE_SOURCE_DIRECTORY}/Editor/SED_Widgets.h ${IMGUI_INCLUDE_PATH}/imgui.h)

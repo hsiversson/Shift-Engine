@@ -35,43 +35,53 @@ void SED_WorldHierarchyWindow::OnDraw()
 	ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_IndentDisable);
 	ImGui::TableHeadersRow();
 
-	for (SC_Ref<SGF_Level>& level : mWorld->mLevels)
+	SGF_EntityManager* entityManager = mWorld->GetEntityManager();
+
+	SC_Array<SGF_Entity> entities;
+	entityManager->GetEntities(entities);
+
+	for (SGF_Entity& entity : entities)
 	{
-		ImGui::TableNextRow();
-
-		ImGui::TableSetColumnIndex(0);
-		if (level->IsVisible())
-		{
-			if (ImGui::ImageButton(SED_Icons::Get()->GetIconByType(SED_Icons::IconType::Visible), { 20.f, 20.f }))
-				level->SetVisible(false);
-		}
-		else
-		{
-			if (ImGui::ImageButton(SED_Icons::Get()->GetIconByType(SED_Icons::IconType::NonVisible), { 20.f, 20.f }))
-				level->SetVisible(true);
-		}
-		ImGui::TableSetColumnIndex(1);
-
-		bool open = ImGui::TreeNodeEx("Unnamed Level", ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth);
-		if (ImGui::BeginPopupContextItem())
-		{
-			ImGui::Button("Right Clicked Level");
-			ImGui::EndPopup();
-		}
-
-		ImGui::TableSetColumnIndex(2);
-		ImGui::TextDisabled("Level");
-
-		if (open)
-		{
-			//for (SC_Ref<SGF_Entity>& entity : level->mEntities)
-			//{
-			//	if (!entity->GetParent())
-			//		DrawEntityNode(entity.get());
-			//}
-			ImGui::TreePop();
-		}
+		DrawEntityNode(entity);
 	}
+
+	//for (SC_Ref<SGF_Level>& level : mWorld->mLevels)
+	//{
+	//	ImGui::TableNextRow();
+	//
+	//	ImGui::TableSetColumnIndex(0);
+	//	if (level->IsVisible())
+	//	{
+	//		if (ImGui::ImageButton(SED_Icons::Get()->GetIconByType(SED_Icons::IconType::Visible), { 20.f, 20.f }))
+	//			level->SetVisible(false);
+	//	}
+	//	else
+	//	{
+	//		if (ImGui::ImageButton(SED_Icons::Get()->GetIconByType(SED_Icons::IconType::NonVisible), { 20.f, 20.f }))
+	//			level->SetVisible(true);
+	//	}
+	//	ImGui::TableSetColumnIndex(1);
+	//
+	//	bool open = ImGui::TreeNodeEx("Unnamed Level", ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth);
+	//	if (ImGui::BeginPopupContextItem())
+	//	{
+	//		ImGui::Button("Right Clicked Level");
+	//		ImGui::EndPopup();
+	//	}
+	//
+	//	ImGui::TableSetColumnIndex(2);
+	//	ImGui::TextDisabled("Level");
+	//
+	//	if (open)
+	//	{
+	//		for (SGF_Entity& entity : level->mEntities)
+	//		{
+	//			//if (!entity->GetParent())
+	//				DrawEntityNode(entity);
+	//		}
+	//		ImGui::TreePop();
+	//	}
+	//}
 	ImGui::EndTable();
 }
 
@@ -104,9 +114,9 @@ void SED_WorldHierarchyWindow::DrawEntityNode(const SGF_Entity& aEntity)
 	if (aEntity == mSelectedEntity)
 		treeNodeFlags |= ImGuiTreeNodeFlags_Selected;
 	//if (aEntity->GetChildren().IsEmpty())
-		treeNodeFlags |= ImGuiTreeNodeFlags_Leaf;
+	treeNodeFlags |= ImGuiTreeNodeFlags_Leaf;
 
-	bool opened = ImGui::TreeNodeEx("test", treeNodeFlags); 
+	bool opened = ImGui::TreeNodeEx(aEntity.GetComponent<SGF_EntityNameComponent>()->mName.c_str(), treeNodeFlags); 
 	
 	if (ImGui::BeginDragDropSource())
 	{

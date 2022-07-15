@@ -1,4 +1,6 @@
 #include "SGfx_RenderQueue.h"
+#include "SGfx_ViewData.h"
+#include "Graphics/Renderer/SGfx_DrawInfo.h"
 
 SGfx_RenderQueue::SGfx_RenderQueue(const SortType& aSortType)
 	: mSortType(aSortType)
@@ -12,93 +14,168 @@ SGfx_RenderQueue::~SGfx_RenderQueue()
 
 }
 
-void SGfx_RenderQueue::Prepare()
+void SGfx_RenderQueue::Prepare(SGfx_ViewData& aPrepareData)
 {
 	Sort();
 
-	assert(!mIsPrepared);
+	SC_ASSERT(!mIsPrepared);
 
 	SGfx_RenderQueueItem* items = mItems.GetBuffer();
 	uint32 numItemsRemaining = mItems.Count();
 	if (!numItemsRemaining)
 		return;
 
+	SC_Array<InstanceData> instanceDatas;
 	while (numItemsRemaining)
 	{
 		SGfx_RenderQueueItem& firstItem = *items;
-		uint32 batchSize = 1;
-		SR_BufferResource* vertexBuffer = firstItem.mVertexBuffer;
-		SR_BufferResource* indexBuffer = firstItem.mIndexBuffer;
-		if (vertexBuffer && indexBuffer)
-		{
-			// Add instance data
+		uint32 numInstances = 1;
 
-			SR_RasterizerState* rasterState = firstItem.mRasterizerState;
-			SR_BlendState* blendState = firstItem.mBlendState;
+		SR_RasterizerState* rasterState = firstItem.mRasterizerState;
+		SR_BlendState* blendState = firstItem.mBlendState;
+
+		bool isItemValid = (firstItem.mVertexBuffer && firstItem.mIndexBuffer);
+#if ENABLE_MESH_SHADERS
+		isItemValid = (firstItem.mUsingMeshlets) ? firstItem.mMeshletData : isItemValid;
+#endif //ENABLE_MESH_SHADERS
+
+		if (isItemValid)
+		{
+			InstanceData& firstInstanceData = instanceDatas.Add();
+			firstInstanceData.mTransform = firstItem.mTransform;
+			firstInstanceData.mPrevTransform = firstItem.mPrevTransform;
+			firstInstanceData.mMaterialIndex = firstItem.mMaterialIndex;
 
 			for (uint32 i = 1; i < numItemsRemaining; ++i)
 			{
 				SGfx_RenderQueueItem& nextItem = items[i];
 				if (nextItem.mRasterizerState != rasterState ||
 					nextItem.mBlendState != blendState ||
-					nextItem.mVertexBuffer != vertexBuffer ||
-					nextItem.mIndexBuffer != indexBuffer ||
-					batchSize != SC_UINT16_MAX)
+					numInstances != SC_UINT16_MAX)
 					break;
 
-				// Add instance data
-				++batchSize;
+#if ENABLE_MESH_SHADERS
+				if (firstItem.mUsingMeshlets &&	(nextItem.mMeshletData != firstItem.mMeshletData))
+					break;
+				else
+#endif //ENABLE_MESH_SHADERS
+				{
+					if ((nextItem.mVertexBuffer != firstItem.mVertexBuffer) || (nextItem.mIndexBuffer != firstItem.mIndexBuffer))
+						break;
+				}
+
+				InstanceData& instanceData = instanceDatas.Add();
+				instanceData.mTransform = firstItem.mTransform;
+				instanceData.mPrevTransform = firstItem.mPrevTransform;
+				instanceData.mMaterialIndex = firstItem.mMaterialIndex;
+				++numInstances;
 			}
 		}
 
-		firstItem.mBatchedSize = uint16(batchSize);
-		items += batchSize;
-		numItemsRemaining -= batchSize;
+		aPrepareData.mInstanceData->Add(firstItem.mBaseInstanceDataOffset, instanceDatas.GetByteSize() / sizeof(SC_Vector4f), reinterpret_cast<const SC_Vector4*>(instanceDatas.GetBuffer()));
+
+		firstItem.mNumInstances = uint16(numInstances);
+		items += numInstances;
+		numItemsRemaining -= numInstances;
+		instanceDatas.RemoveAll();
 	}
 
 	mIsPrepared = true;
 }
 
-void SGfx_RenderQueue::Render(SR_CommandList* aCmdList)
+void SGfx_RenderQueue::Render(SR_CommandList* aCmdList) const
 {
 	uint32 numItemsRemaining = mItems.Count();
 	if (!numItemsRemaining)
 		return;
 
-	assert(mIsPrepared);
+	SC_ASSERT(mIsPrepared);
 
 	// Create temp instance buffer data
 
 	const SGfx_RenderQueueItem* items = mItems.GetBuffer();
-	uint32 instanceIndex = 0;
 	while (numItemsRemaining)
 	{
 		const SGfx_RenderQueueItem& item = *items;
-		uint32 batchSize = item.mBatchedSize;
+		uint32 numInstances = item.mNumInstances;
 
-		// Prefetch??
-
-		SR_BufferResource* vertexBuffer = item.mVertexBuffer;
-		SR_BufferResource* indexBuffer = item.mIndexBuffer;
-		if (vertexBuffer && indexBuffer)
+#if ENABLE_MESH_SHADERS
+		if (item.mUsingMeshlets)
 		{
-			//aCmdList->SetRasterizerState(item.mRasterizerState);
-			//aCmdList->SetBlendState(item.mBlendState);
+			if (item.mMeshletData)
+			{
+				static constexpr uint32 gMaxGroupDispatchCount = 65536;
+				float groupsPerInstance = (float)item.mMeshletData.mMeshletBuffer->GetProperties().mElementCount;
+				uint32 maxInstancePerBatch = static_cast<uint32>(float(gMaxGroupDispatchCount) / groupsPerInstance);
+				uint32 dispatchCount = (numInstances + maxInstancePerBatch - 1) / maxInstancePerBatch;
 
-			// Depth State?
+				for (uint32 i = 0; i < dispatchCount; ++i)
+				{
+					uint32 instanceOffset = maxInstancePerBatch * i;
+					uint32 instanceCount = SC_Min(numInstances - instanceOffset, maxInstancePerBatch);
 
-			// Set InstanceData buffer
+					SGfx_MeshShadingDrawInfoStruct drawInfo;
+					drawInfo.mVertexBufferDescriptorIndex = item.mMeshletData.mVertexBuffer->GetDescriptorHeapIndex();
+					drawInfo.mMeshletBufferDescriptorIndex = item.mMeshletData.mMeshletBuffer->GetDescriptorHeapIndex();
+					drawInfo.mVertexIndexBufferDescriptorIndex = item.mMeshletData.mVertexIndexBuffer->GetDescriptorHeapIndex();
+					drawInfo.mPrimitiveIndexBufferDescriptorIndex = item.mMeshletData.mPrimitiveIndexBuffer->GetDescriptorHeapIndex();
+					drawInfo.mMaterialIndex = item.mMaterialIndex;
+					drawInfo.mBaseInstanceDataOffset = item.mBaseInstanceDataOffset;
+					drawInfo.mInstanceDataByteSize = sizeof(InstanceData);
+					drawInfo.mNumInstances = instanceCount;
+					drawInfo.mInstanceOffset = instanceOffset;
+					drawInfo.mNumMeshlets = item.mMeshletData.mMeshletBuffer->GetProperties().mElementCount;
 
-			aCmdList->SetVertexBuffer(vertexBuffer);
-			aCmdList->SetIndexBuffer(indexBuffer);
-			aCmdList->SetShaderState(item.mShader);
-			aCmdList->SetPrimitiveTopology(SR_PrimitiveTopology::TriangleList);
-			aCmdList->DrawIndexedInstanced(indexBuffer->GetProperties().mElementCount, batchSize);
-			instanceIndex += batchSize;
+					SR_BufferResourceProperties cbProps;
+					cbProps.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
+					cbProps.mElementCount = sizeof(drawInfo);
+					cbProps.mElementSize = 1;
+					cbProps.mDebugName = "DrawInfoConstants";
+					SR_TempBuffer cb = SR_RenderDevice::gInstance->CreateTempBuffer(cbProps);
+
+					cb.mResource->UpdateData(0, &drawInfo, sizeof(drawInfo));
+					aCmdList->SetRootConstantBuffer(cb.mResource, 0);
+
+					aCmdList->SetShaderState(item.mShader);
+					aCmdList->SetPrimitiveTopology(SR_PrimitiveTopology::TriangleList);
+
+					uint32 groupCount = static_cast<uint32>(ceilf(groupsPerInstance * instanceCount));
+					aCmdList->DispatchMesh(groupCount, 1, 1);
+				}
+			}
+		}
+		else
+#endif //ENABLE_MESH_SHADERS
+		{
+			SR_BufferResource* vertexBuffer = item.mVertexBuffer;
+			SR_BufferResource* indexBuffer = item.mIndexBuffer;
+			if (vertexBuffer && indexBuffer)
+			{
+				SGfx_VertexShadingDrawInfoStruct constants;
+				constants.mBaseInstanceDataOffset = item.mBaseInstanceDataOffset;
+				constants.mInstanceDataByteSize = sizeof(InstanceData);
+				constants.mMaterialIndex = item.mMaterialIndex;
+
+				SR_BufferResourceProperties cbProps;
+				cbProps.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
+				cbProps.mElementCount = sizeof(constants);
+				cbProps.mElementSize = 1;
+				cbProps.mDebugName = "DrawConstants";
+				SR_TempBuffer cb = SR_RenderDevice::gInstance->CreateTempBuffer(cbProps);
+
+				cb.mResource->UpdateData(0, &constants, sizeof(constants));
+				aCmdList->SetRootConstantBuffer(cb.mResource, 0);
+
+				aCmdList->SetVertexBuffer(vertexBuffer);
+				aCmdList->SetIndexBuffer(indexBuffer);
+				aCmdList->SetShaderState(item.mShader);
+				aCmdList->SetPrimitiveTopology(SR_PrimitiveTopology::TriangleList);
+				aCmdList->DrawIndexedInstanced(indexBuffer->GetProperties().mElementCount, numInstances);
+			}
 		}
 
-		items += batchSize;
-		numItemsRemaining -= batchSize;
+		items += numInstances;
+		numItemsRemaining -= numInstances;
 	}
 }
 
@@ -148,6 +225,9 @@ void SGfx_RenderQueue::Sort_ByState()
 {
 	auto Comparison = [](const SGfx_RenderQueueItem& aLeft, const SGfx_RenderQueueItem& aRight)
 	{
+		if (aLeft.mUsingMeshlets != aRight.mUsingMeshlets)
+			return aLeft.mUsingMeshlets < aRight.mUsingMeshlets;
+
 		if (aLeft.mRasterizerState != aRight.mRasterizerState)
 			return aLeft.mRasterizerState < aRight.mRasterizerState;
 
@@ -176,6 +256,9 @@ void SGfx_RenderQueue::Sort_FarFirst()
 		if (aLeft.mSortDistance != aRight.mSortDistance)
 			return aLeft.mSortDistance > aRight.mSortDistance;
 
+		if (aLeft.mUsingMeshlets != aRight.mUsingMeshlets)
+			return aLeft.mUsingMeshlets < aRight.mUsingMeshlets;
+
 		if (aLeft.mRasterizerState != aRight.mRasterizerState)
 			return aLeft.mRasterizerState < aRight.mRasterizerState;
 
@@ -200,6 +283,9 @@ void SGfx_RenderQueue::Sort_NearFirst()
 	{
 		if (aLeft.mSortDistance != aRight.mSortDistance)
 			return aLeft.mSortDistance < aRight.mSortDistance;
+
+		if (aLeft.mUsingMeshlets != aRight.mUsingMeshlets)
+			return aLeft.mUsingMeshlets < aRight.mUsingMeshlets;
 
 		if (aLeft.mRasterizerState != aRight.mRasterizerState)
 			return aLeft.mRasterizerState < aRight.mRasterizerState;

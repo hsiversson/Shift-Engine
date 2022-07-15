@@ -1,12 +1,10 @@
-#ifndef INDIRECT_LIGHTING_HEADER
-#define INDIRECT_LIGHTING_HEADER
-
+#pragma once 
 #include "ShadingModels.ssh"
 #include "RTGI.ssh"
 //#include "Raytracing_GI.ssh"
 //#include "SkyCapture.ssh"
 
-#define USE_RTGI (1)
+#define USE_RTGI (0)
 
 /////////////////////////////////////////////////
 /**
@@ -28,7 +26,7 @@ float ComputeIBLMipFromRoughness(in float aRoughness, in float aMipCount)
 float3 CalculateEnvironmentalIBL(in const MaterialData aMaterialData, in const float3 aWorldPosition, in const float3 aViewDirection)
 {
     const EnvironmentConstants environmentConstants = gSceneConstants.mEnvironmentConstants;
-    const float3 V = -aViewDirection; // ToSurface -> ToEye
+    const float3 V = aViewDirection; // ToSurface -> ToEye
     
     TextureCube environmentalIrradianceMap = GetTextureCube(environmentConstants.mDiffuseIrradianceMapDescriptorIndex);
     TextureCube preFilteredEnvironmentCubeMap = GetTextureCube(environmentConstants.mPreFilteredSpecularIrradianceMapDescriptorIndex);
@@ -39,7 +37,7 @@ float3 CalculateEnvironmentalIBL(in const MaterialData aMaterialData, in const f
 
     // Sample Environmental IBL Probe(s) using surface normal as view direction.
     // Fallback to sky sphere when out of range or if no environmental probes are present.
-    float3 irradiance = environmentalIrradianceMap.SampleLevel(gBilinearWrap, aMaterialData.mWorldNormal, 0).rgb;
+    float3 irradiance = SampleAtmosphereColor(aMaterialData.mWorldNormal);//environmentalIrradianceMap.SampleLevel(gBilinearWrap, aMaterialData.mWorldNormal, 0).rgb;
     float3 kd = lerp(1.0f - F, 0.0f, aMaterialData.mMetallic);
     float3 diffuseIBL = kd * aMaterialData.mColor * irradiance;
 
@@ -50,6 +48,36 @@ float3 CalculateEnvironmentalIBL(in const MaterialData aMaterialData, in const f
     float3 specularIBL = (aMaterialData.mSpecularColor * specularBRDF.x + specularBRDF.y) * preFilteredIrradiance;
 
     return diffuseIBL + specularIBL;
+}
+
+/////////////////////////////////////////////////
+/**
+*
+*   Dynamic Sky Indirect
+*
+*/
+
+float3 CalculateDynamicSkyIndirectLighting(in const MaterialData aMaterialData, in const float3 aWorldPosition, in const float3 aViewDirection)
+{
+    float3 skyAtmosphereDown = SampleAtmosphereColor(float3(0,-1,0), true);
+    float3 skyAtmosphereUp = SampleAtmosphereColor(float3(0,1,0), true);
+
+    float nDotV = saturate(dot(aMaterialData.mWorldNormal, aViewDirection));
+    float3 F = F_Schlick(aMaterialData.mSpecularColor, nDotV);
+    float3 kd = lerp(1.0f - F, 0.0f, aMaterialData.mMetallic);
+
+    // Diffuse
+    float3 irradiance = lerp(skyAtmosphereDown, skyAtmosphereUp, saturate(aMaterialData.mWorldNormal.y * 0.5f + 0.5f));
+    float3 lighting = kd * aMaterialData.mColor * irradiance;
+
+    // Specular
+    float3 reflectionVector = reflect(-aViewDirection, aMaterialData.mWorldNormal);
+    float3 skyReflection = SampleAtmosphereColor(reflectionVector, true);
+    float3 skyReflectionRough = lerp(skyAtmosphereDown, skyAtmosphereUp, saturate(reflectionVector.y * 0.5f + 0.5f));
+
+	lighting += lerp(skyReflection, skyReflectionRough, saturate(aMaterialData.mRoughness)) * F;
+
+    return lighting;
 }
 
 /////////////////////////////////////////////////
@@ -73,7 +101,11 @@ float3 CalculateIndirectLighting(in const MaterialData aMaterialData, in const f
     indirectLighting += TraceGI(aMaterialData, aWorldPosition, aViewDirection);
 #else
     // Environmental IBL
-    indirectLighting += CalculateEnvironmentalIBL(aMaterialData, aViewDirection);
+    //indirectLighting += CalculateEnvironmentalIBL(aMaterialData, aWorldPosition, aViewDirection);
+
+    // Dynamic Sky Indirect
+    indirectLighting += CalculateDynamicSkyIndirectLighting(aMaterialData, aWorldPosition, aViewDirection);
+
 #endif
 
 #if USE_RTREFLECTIONS
@@ -84,5 +116,3 @@ float3 CalculateIndirectLighting(in const MaterialData aMaterialData, in const f
 
     return indirectLighting;
 }
-
-#endif //INDIRECT_LIGHTING_HEADER

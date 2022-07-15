@@ -78,7 +78,7 @@ void SED_PropertiesWindow::OnDraw()
 
 		ImGui::Separator();
 
-		//DrawComponent(SGF_TransformComponent::Id(), mSelectedEntity);
+		DrawComponent(SGF_TransformComponent::Id(), mSelectedEntity);
 
 		//for (const SC_Ref<SGF_Component>& comp : mSelectedEntity->GetComponents())
 		//{
@@ -165,28 +165,28 @@ void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<bool>& aPrope
 {
 	std::string label("##_bool_");
 	label += aProperty.GetName();
-	ImGui::Checkbox(label.c_str(), &aProperty.Get());
+	SED_Checkbox(label.c_str(), aProperty.Get());
 }
 
 void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<int32>& aProperty) const
 {
 	std::string label("##_int_");
 	label += aProperty.GetName();
-	ImGui::DragInt(label.c_str(), &aProperty.Get());
+	SED_IntField(label.c_str(), aProperty.Get());
 }
 
 void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<uint32>& aProperty) const
 {
 	std::string label("##_uint_");
 	label += aProperty.GetName();
-	ImGui::DragScalar(label.c_str(), ImGuiDataType_U32, &aProperty.Get());
+	SED_UintField(label.c_str(), aProperty.Get());
 }
 
 void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<float>& aProperty) const
 {
 	std::string label("##_float_");
 	label += aProperty.GetName();
-	ImGui::DragFloat(label.c_str(), &aProperty.Get());
+	SED_FloatField(label.c_str(), aProperty.Get());
 }
 
 ////////////////////////////////
@@ -199,7 +199,7 @@ static void DrawPropertyVectorComponent(const char* aName, const ImVec2& aButton
 	ImGui::PushStyleColor(ImGuiCol_ButtonHovered, hoverColor);
 	ImGui::PushStyleColor(ImGuiCol_ButtonActive, aColor);
 	ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2{ 0, 8 });
-	if (ImGui::Button(aName, aButtonSize))
+	if (SED_Button(aName, aButtonSize))
 		aOutComponent = aResetValue;
 	ImGui::PopStyleColor(3);
 
@@ -207,7 +207,7 @@ static void DrawPropertyVectorComponent(const char* aName, const ImVec2& aButton
 
 	std::string label("##_VectorComponent_");
 	label += aName;
-	ImGui::DragFloat(label.c_str(), &aOutComponent, aSpeed, aMin, aMax, "%.3f");
+	SED_FloatField(label.c_str(), aOutComponent, aSpeed, aMin, aMax, "%.3f");
 	ImGui::PopStyleVar();
 }
 
@@ -260,12 +260,7 @@ void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<SC_Vector>& a
 
 void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<SC_Color>& aProperty) const
 {
-	SC_Color& col = aProperty.Get();
-	SC_LinearColor linear = SC_ConvertColorToLinear(col);
-	if (ImGui::ColorEdit4("##_coloredit_", &linear.r, ImGuiColorEditFlags_Uint8))
-	{
-		col = SC_ConvertLinearToColor(linear);
-	}
+	SED_ColorEditRGBA("##_coloredit_", aProperty.Get());
 }
 
 ////////////////////////////////
@@ -327,7 +322,7 @@ void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SR_Tex
 	SC_Ref<SR_Texture>& texture = aProperty.Get();
 	std::string label("##_texture_");
 	label += aProperty.GetName();
-	ImGui::ImageButton(texture.get(), {128.f, 128.f});
+	ImGui::ImageButton(texture, {128.f, 128.f});
 
 	if (ImGui::BeginDragDropTarget())
 	{
@@ -335,7 +330,7 @@ void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SR_Tex
 		{
 			SR_Texture* newTexture;
 			SC_Memcpy(&newTexture, payload->Data, payload->DataSize);
-			texture.reset(newTexture);
+			texture.Reset(newTexture);
 		}
 
 		ImGui::EndDragDropTarget();
@@ -355,7 +350,7 @@ void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SGfx_M
 		{
 			SGfx_MaterialInstance* newMaterial;
 			SC_Memcpy(&newMaterial, payload->Data, payload->DataSize);
-			material.reset(newMaterial);
+			material.Reset(newMaterial);
 		}
 
 		ImGui::EndDragDropTarget();
@@ -374,7 +369,7 @@ void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SGfx_M
 		{
 			SGfx_MeshInstance* newMesh;
 			SC_Memcpy(&newMesh, payload->Data, payload->DataSize);
-			mesh.reset(newMesh);
+			mesh.Reset(newMesh);
 		}
 
 		ImGui::EndDragDropTarget();

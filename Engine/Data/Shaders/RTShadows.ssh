@@ -1,6 +1,4 @@
-#ifndef RTSHADOWS_HEADER
-#define RTSHADOWS_HEADER
-
+#pragma once 
 #include "Raytracing.ssh"
 
 #define NUM_RAYS (1)
@@ -47,4 +45,3 @@ float TraceShadow(in const MaterialData aMaterialData, float3 aWorldPosition, fl
 
     return 1.0f - (outShadowFactor);
 }
-#endif //RTSHADOWS_HEADER

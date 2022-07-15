@@ -10,52 +10,6 @@ class SGfx_MaterialInstance;
 struct SGfx_MeshCreateParams
 {
 	SGfx_MeshCreateParams() : mIndexStride(0), mVertexIndicesStride(0), mIsMeshletData(false) {}
-	SGfx_MeshCreateParams(const SGfx_MeshCreateParams& aOther) { *this = aOther;}
-	SGfx_MeshCreateParams(SGfx_MeshCreateParams&& aOther) { *this = SC_Move(aOther);}
-	void operator=(const SGfx_MeshCreateParams& aOther)
-	{
-		mSourceFile = aOther.mSourceFile;
-		mAABBMin = aOther.mAABBMin;
-		mAABBMax = aOther.mAABBMax;
-		mVertexLayout = aOther.mVertexLayout;
-		mVertexData = aOther.mVertexData;
-		mIndexData = aOther.mIndexData;
-		mIndexStride = aOther.mIndexStride;
-		mMeshlets = aOther.mMeshlets;
-		mPrimitiveIndices = aOther.mPrimitiveIndices;
-		mVertexIndices = aOther.mVertexIndices;
-		mVertexIndicesStride = aOther.mVertexIndicesStride;
-		mIsMeshletData = aOther.mIsMeshletData;
-	}
-
-	void operator=(SGfx_MeshCreateParams&& aOther)
-	{
-		mSourceFile = aOther.mSourceFile;
-		mAABBMin = aOther.mAABBMin;
-		mAABBMax = aOther.mAABBMax;
-		mVertexLayout = aOther.mVertexLayout;
-		mVertexData.Swap(aOther.mVertexData);
-		mIndexData.Swap(aOther.mIndexData);
-		mIndexStride = aOther.mIndexStride;
-		mMeshlets = aOther.mMeshlets;
-		mPrimitiveIndices = aOther.mPrimitiveIndices;
-		mVertexIndices = aOther.mVertexIndices;
-		mVertexIndicesStride = aOther.mVertexIndicesStride;
-		mIsMeshletData = aOther.mIsMeshletData;
-
-		aOther.mSourceFile = SC_FilePath();
-		aOther.mAABBMin = SC_Vector();
-		aOther.mAABBMax = SC_Vector();
-		aOther.mVertexLayout = SR_VertexLayout();
-		aOther.mVertexData.Reset();
-		aOther.mIndexData.Reset();
-		aOther.mIndexStride = 0;
-		aOther.mMeshlets.Reset();
-		aOther.mPrimitiveIndices.Reset();
-		aOther.mVertexIndices.Reset();
-		aOther.mVertexIndicesStride = 0;
-		aOther.mIsMeshletData = 0;
-	}
 
 	SC_FilePath mSourceFile;
 
@@ -100,7 +54,9 @@ public:
 
 	SR_BufferResource* GetVertexBufferResource() const;
 	SR_Buffer* GetVertexBuffer() const;
+	SR_Buffer* GetNormalBuffer() const;
 	SR_BufferResource* GetIndexBufferResource() const;
+	SR_Buffer* GetIndexBuffer() const;
 
 #if ENABLE_MESH_SHADERS
 	const SGfx_MeshletBuffers& GetMeshletBuffers() const;
@@ -133,7 +89,9 @@ private:
 
 	SC_Ref<SR_BufferResource> mVertexBufferResource;
 	SC_Ref<SR_Buffer> mVertexBuffer;
+	SC_Ref<SR_Buffer> mVertexNormalBuffer;
 	SC_Ref<SR_BufferResource> mIndexBufferResource;
+	SC_Ref<SR_Buffer> mIndexBuffer;
 #if ENABLE_MESH_SHADERS
 	SGfx_MeshletBuffers mMeshletBuffers;
 #endif

@@ -13,6 +13,13 @@ SGF_TransformComponent::~SGF_TransformComponent()
 {
 }
 
+void SGF_TransformComponent::SetTransform(const SC_Matrix& aMatrix)
+{
+	mPosition = aMatrix.GetPosition();
+	mRotation.FromMatrix(aMatrix);
+	mScale = aMatrix.GetScale();
+}
+
 SC_Matrix SGF_TransformComponent::GetTransform() const
 {
 	SC_ScaleMatrix scale(mScale);

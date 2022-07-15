@@ -370,7 +370,7 @@ D3D12_CULL_MODE SR_D3D12ConvertCullMode(SR_CullMode aCullMode)
 	default:
 		break;
 	}
-	assert(false && "Unknown cull mode DX12");
+	SC_ASSERT(false, "Unknown cull mode DX12");
 	return D3D12_CULL_MODE_NONE;
 }
 
@@ -397,7 +397,7 @@ D3D12_COMPARISON_FUNC SR_D3D12ConvertComparisonFunc(SR_ComparisonFunc aCompariso
 	default:
 		break;
 	}
-	assert(false && "Unknown comparison function DX12");
+	SC_ASSERT(false, "Unknown comparison function DX12");
 	return D3D12_COMPARISON_FUNC_NEVER;
 }
 
@@ -424,7 +424,7 @@ D3D12_STENCIL_OP SR_D3D12ConvertStencilOperator(SR_StencilOperator aStencilOpera
 	default:
 		break;
 	}
-	assert(false && "Unknown stencil operator DX12");
+	SC_ASSERT(false, "Unknown stencil operator DX12");
 	return D3D12_STENCIL_OP_KEEP;
 }
 
@@ -469,7 +469,7 @@ D3D12_BLEND SR_D3D12ConvertBlendMode(SR_BlendMode aBlendMode)
 	default:
 		break;
 	}
-	assert(false && "Unknown blend mode DX12");
+	SC_ASSERT(false, "Unknown blend mode DX12");
 	return D3D12_BLEND_ZERO;
 }
 
@@ -490,7 +490,7 @@ D3D12_BLEND_OP SR_D3D12ConvertBlendFunc(SR_BlendFunc aBlendFunc)
 	default:
 		break;
 	}
-	assert(false && "Unknown blend func DX12");
+	SC_ASSERT(false, "Unknown blend func DX12");
 	return D3D12_BLEND_OP_ADD;
 }
 
@@ -584,7 +584,7 @@ D3D12_FILTER SR_D3D12ConvertFilter(SR_FilterMode aMinFilter, SR_FilterMode aMagF
 			filterTypes[i] = D3D12_FILTER_TYPE_LINEAR;
 			break;
 		default:
-			assert(0);
+			SC_ASSERT(false);
 		}
 
 		switch (filter)
@@ -592,20 +592,20 @@ D3D12_FILTER SR_D3D12ConvertFilter(SR_FilterMode aMinFilter, SR_FilterMode aMagF
 		case SR_FilterMode::Point:
 			break;
 		case SR_FilterMode::Linear:
-			assert(reduction == -1 || reduction == D3D12_FILTER_REDUCTION_TYPE_STANDARD || reduction == D3D12_FILTER_REDUCTION_TYPE_COMPARISON);
+			SC_ASSERT(reduction == -1 || reduction == D3D12_FILTER_REDUCTION_TYPE_STANDARD || reduction == D3D12_FILTER_REDUCTION_TYPE_COMPARISON);
 			if (reduction != D3D12_FILTER_REDUCTION_TYPE_COMPARISON)
 				reduction = D3D12_FILTER_REDUCTION_TYPE_STANDARD;
 			break;
 		case SR_FilterMode::Min:
-			assert(reduction == -1 || reduction == D3D12_FILTER_REDUCTION_TYPE_MINIMUM);
+			SC_ASSERT(reduction == -1 || reduction == D3D12_FILTER_REDUCTION_TYPE_MINIMUM);
 			reduction = D3D12_FILTER_REDUCTION_TYPE_MINIMUM;
 			break;
 		case SR_FilterMode::Max:
-			assert(reduction == -1 || reduction == D3D12_FILTER_REDUCTION_TYPE_MAXIMUM);
+			SC_ASSERT(reduction == -1 || reduction == D3D12_FILTER_REDUCTION_TYPE_MAXIMUM);
 			reduction = D3D12_FILTER_REDUCTION_TYPE_MAXIMUM;
 			break;
 		default:
-			assert(0);
+			SC_ASSERT(false);
 		}
 	}
 
@@ -635,7 +635,7 @@ D3D12_TEXTURE_ADDRESS_MODE SR_D3D12ConvertWrapMode(SR_WrapMode aWrapMode)
 	case SR_WrapMode::Border:
 		return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
 	}
-	assert(false && "Unknown wrap mode");
+	SC_ASSERT(false, "Unknown wrap mode");
 	return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 }
 

@@ -1,7 +1,4 @@
-#ifndef COMMON_HEADER
-#define COMMON_HEADER
-//#pragma once
-
+#pragma once 
 #define PI 3.14159265359
 
 float  Squared(float  aX)    { return aX*aX; }
@@ -102,4 +99,3 @@ float LumaRec709(in float3 aColor)
 #include "BindlessResources.ssh"
 #include "StaticSamplers.ssh"
 #include "GeometryCommon.ssh"
-#endif //COMMON_HEADER

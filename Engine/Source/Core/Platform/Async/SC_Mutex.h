@@ -9,15 +9,15 @@ public:
 	SC_Mutex(const SC_Mutex&) = delete;
 	SC_Mutex& operator=(const SC_Mutex&) = delete;
 
-	void Lock();
-	bool TryLock();
-	void Unlock();
+	void Lock() const;
+	bool TryLock() const;
+	void Unlock() const;
 
-	uint32 GetLockedCount();
+	uint32 GetLockedCount() const;
 
 private:
-	SC_MutexImpl mInternalMutex;
-	uint32 mLockCount;
+	mutable SC_MutexImpl mInternalMutex;
+	mutable uint32 mLockCount;
 };
 
 using SC_MutexLock = SC_AutoLock<SC_Mutex>;

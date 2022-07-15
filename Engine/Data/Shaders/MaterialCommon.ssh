@@ -1,7 +1,4 @@
-#ifndef MATERIAL_COMMON_HEADER
-#define MATERIAL_COMMON_HEADER
-//#pragma once
-
+#pragma once 
 #include "SceneConstants.ssh"
 #include "StaticSamplers.ssh"
 
@@ -27,5 +24,3 @@ SR_MaterialInfo SR_GetMaterialInfo(uint aMaterialIndex)
     StructuredBuffer<SR_MaterialInfo> materialInfoBuffer = GetStructuredBuffer<SR_MaterialInfo>(gSceneConstants.mMaterialInfoBufferIndex);
     return materialInfoBuffer[aMaterialIndex];
 }
-
-#endif //MATERIAL_COMMON_HEADER

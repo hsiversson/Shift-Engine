@@ -75,7 +75,7 @@ void SGF_StaticMeshComponent::SetVisible(bool aValue)
 	mIsVisible = aValue;
 
 	const SGF_Entity& entity = GetParentEntity();
-	if (entity)
+	if (entity.GetHandle() != SGF_InvalidEntityHandle)
 	{
 		if (SGF_World* world = entity.GetWorld())
 		{

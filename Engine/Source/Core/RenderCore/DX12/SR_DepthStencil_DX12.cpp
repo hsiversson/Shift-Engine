@@ -55,12 +55,12 @@ bool SR_DepthStencil_DX12::Init()
 		}
 		break;
 	default:
-		assert(false && "Dimension not supported.");
+		SC_ASSERT(false,"Dimension not supported.");
 		break;
 	}
 
-	mDescriptor = SR_RenderDevice_DX12::gD3D12Instance->GetDSVDescriptorHeap()->Alloc();
-	SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateDepthStencilView(mDX12Resource->GetD3D12Resource(), &desc, D3D12_CPU_DESCRIPTOR_HANDLE{mDescriptor.mDescriptorHandleCPU});
+	mDescriptor = SR_RenderDevice_DX12::gInstance->GetDSVDescriptorHeap()->Alloc();
+	SR_RenderDevice_DX12::gInstance->GetD3D12Device()->CreateDepthStencilView(mDX12Resource->GetD3D12Resource(), &desc, D3D12_CPU_DESCRIPTOR_HANDLE{mDescriptor.mDescriptorHandleCPU});
 
 	return true;
 }

@@ -202,12 +202,12 @@ void SGfx_CascadedShadowMap::Generate(SR_CommandList* aCmdList, const SGfx_ViewD
 {
 	aCmdList->BeginEvent("Generate CSM");
 
-	aCmdList->TransitionBarrier(SR_ResourceState_DepthWrite, mCSMResource.get());
+	aCmdList->TransitionBarrier(SR_ResourceState_DepthWrite, mCSMResource);
 
 	for (uint32 i = 0; i < mSettings.gNumCascades; ++i)
 		RenderCascade(aCmdList, i, aRenderData.mCSMViews[i]->GetRenderData());
 
-	aCmdList->TransitionBarrier(SR_ResourceState_DepthRead, mCSMResource.get());
+	aCmdList->TransitionBarrier(SR_ResourceState_DepthRead, mCSMResource);
 
 	aCmdList->EndEvent(); // Generate CSM
 }
@@ -281,45 +281,45 @@ void SGfx_CascadedShadowMap::RenderCascade(SR_CommandList* aCmdList, uint32 aInd
 	std::string eventName("Cascade" + std::to_string(aIndex));
 	aCmdList->BeginEvent(eventName.c_str());
 
-	aCmdList->ClearDepthStencil(cascade.mTarget.get());
-	aCmdList->SetRenderTargets(0, nullptr, cascade.mTarget.get());
+	aCmdList->ClearDepthStencil(cascade.mTarget);
+	aCmdList->SetRenderTargets(0, nullptr, cascade.mTarget);
 	aCmdList->SetViewport(SR_Rect{ 0,0, mSettings.mResolution, mSettings.mResolution });
 	aCmdList->SetScissorRect(SR_Rect{ 0,0, mSettings.mResolution, mSettings.mResolution });
 
 	SGfx_SceneConstants sceneConstants(aRenderData.mSceneConstants);
 	sceneConstants.mViewConstants = cascade.mCamera.GetViewConstants();
 	mSceneConstantsBuffer[aIndex]->UpdateData(0, &sceneConstants, sizeof(SGfx_SceneConstants));
-	aCmdList->SetRootConstantBuffer(mSceneConstantsBuffer[aIndex].get(), 1);
+	aCmdList->SetRootConstantBuffer(mSceneConstantsBuffer[aIndex], 1);
 
-	uint32 i = 0;
-	mDrawInfoBuffers[aIndex].Respace(aRenderData.mDepthQueue.Count());
-	for (const SGfx_RenderObject& renderObj : aRenderData.mDepthQueue)
-	{
-		if (!mDrawInfoBuffers[aIndex][i])
-		{
-			SR_BufferResourceProperties cbDesc;
-			cbDesc.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
-			cbDesc.mElementCount = 1;
-			cbDesc.mElementSize = sizeof(SGfx_MeshShadingDrawInfoStruct);
-			mDrawInfoBuffers[aIndex][i] = SR_RenderDevice::gInstance->CreateBufferResource(cbDesc);
-		}
-
-		SGfx_MeshShadingDrawInfoStruct drawInfo;
-		drawInfo.mTransform = renderObj.mTransform;
-		drawInfo.mPrevTransform = renderObj.mPrevTransform;
-		drawInfo.mVertexBufferDescriptorIndex = renderObj.mVertexBuffer->GetDescriptorHeapIndex();
-		drawInfo.mMeshletBufferDescriptorIndex = renderObj.mMeshletBuffer->GetDescriptorHeapIndex();
-		drawInfo.mVertexIndexBufferDescriptorIndex = renderObj.mVertexIndexBuffer->GetDescriptorHeapIndex();
-		drawInfo.mPrimitiveIndexBufferDescriptorIndex = renderObj.mPrimitiveIndexBuffer->GetDescriptorHeapIndex();
-		drawInfo.mMaterialIndex = renderObj.mMaterialIndex;
-		mDrawInfoBuffers[aIndex][i]->UpdateData(0, &drawInfo, sizeof(SGfx_MeshShadingDrawInfoStruct));
-		aCmdList->SetRootConstantBuffer(mDrawInfoBuffers[aIndex][i].get(), 0);
-
-		aCmdList->SetShaderState(renderObj.mShader);
-		uint32 groupCount = renderObj.mMeshletBuffer->GetProperties().mElementCount;
-		aCmdList->DispatchMesh(groupCount);
-		++i;
-	}
+	//uint32 i = 0;
+	//mDrawInfoBuffers[aIndex].Respace(aRenderData.mDepthQueue.Count());
+	//for (const SGfx_RenderObject& renderObj : aRenderData.mDepthQueue)
+	//{
+	//	if (!mDrawInfoBuffers[aIndex][i])
+	//	{
+	//		SR_BufferResourceProperties cbDesc;
+	//		cbDesc.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
+	//		cbDesc.mElementCount = 1;
+	//		cbDesc.mElementSize = sizeof(SGfx_MeshShadingDrawInfoStruct);
+	//		mDrawInfoBuffers[aIndex][i] = SR_RenderDevice::gInstance->CreateBufferResource(cbDesc);
+	//	}
+	//
+	//	//SGfx_MeshShadingDrawInfoStruct drawInfo;
+	//	//drawInfo.mTransform = renderObj.mTransform;
+	//	//drawInfo.mPrevTransform = renderObj.mPrevTransform;
+	//	//drawInfo.mVertexBufferDescriptorIndex = renderObj.mVertexBuffer->GetDescriptorHeapIndex();
+	//	//drawInfo.mMeshletBufferDescriptorIndex = renderObj.mMeshletBuffer->GetDescriptorHeapIndex();
+	//	//drawInfo.mVertexIndexBufferDescriptorIndex = renderObj.mVertexIndexBuffer->GetDescriptorHeapIndex();
+	//	//drawInfo.mPrimitiveIndexBufferDescriptorIndex = renderObj.mPrimitiveIndexBuffer->GetDescriptorHeapIndex();
+	//	//drawInfo.mMaterialIndex = renderObj.mMaterialIndex;
+	//	//mDrawInfoBuffers[aIndex][i]->UpdateData(0, &drawInfo, sizeof(SGfx_MeshShadingDrawInfoStruct));
+	//	//aCmdList->SetRootConstantBuffer(mDrawInfoBuffers[aIndex][i].get(), 0);
+	//	//
+	//	//aCmdList->SetShaderState(renderObj.mShader);
+	//	//uint32 groupCount = renderObj.mMeshletBuffer->GetProperties().mElementCount;
+	//	//aCmdList->DispatchMesh(groupCount);
+	//	++i;
+	//}
 
 	aCmdList->EndEvent();
 

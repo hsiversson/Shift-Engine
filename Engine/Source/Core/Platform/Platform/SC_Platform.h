@@ -1,23 +1,6 @@
 #pragma once
 
 #include "SC_PlatformDefines.h"
-#include "Platform/Types/SC_TypeDefines.h"
-#include "Platform/Misc/SC_CommonFunctions.h"
-#include "Platform/Misc/SC_MemoryFunctions.h"
-#include "Platform/Misc/SC_Relocation.h"
-#include "Platform/Debugging/SC_Assert.h"
-
-#if IS_WINDOWS_PLATFORM
-	#if !defined(WIN32_LEAN_AND_MEAN)
-		#define WIN32_LEAN_AND_MEAN
-	#endif
-
-	#if !defined(NOMINMAX)
-		#define NOMINMAX
-	#endif
-
-	#include <windows.h>
-#endif
 
 #if IS_MSVC_COMPILER
 
@@ -47,6 +30,7 @@
 	#define SC_RESTRICT				__restrict
 	#define SC_FASTCALL				__fastcall
 	#define SC_ALIGN(aValue)		__declspec(align(aValue))
+	#define SC_NOVTABLE				__declspec(novtable)
 
 #elif IS_CLANG_COMPILER
 
@@ -59,6 +43,7 @@
 	#define SC_RESTRICT				__restrict__
 	#define SC_FASTCALL				
 	#define SC_ALIGN(aValue)		__attribute__((__aligned__(aValue)))
+	#define SC_NOVTABLE				
 
 #elif IS_GCC_COMPILER
 
@@ -71,6 +56,8 @@
 	#define SC_RESTRICT				__restrict__
 	#define SC_FASTCALL				
 	#define SC_ALIGN(aValue)		__attribute__((__aligned__(aValue)))
+	#define SC_NOVTABLE				
+
 
 #else
 	#error Compiler not supported!
@@ -85,6 +72,19 @@
 
 #define SC_STATIC_ASSERT(aCond, aMsg)		static_assert( aCond, #aMsg )
 
-#define SC_ARRAY_SIZE(aArray)				(sizeof(aArray) / sizeof(*aArray));
+#define SC_ARRAY_SIZE(aArray)				(sizeof(aArray) / sizeof(*aArray))
 
 #define SC_OVERLOAD_NEW_DELETE_OPERATORS	(0)
+
+#include "Platform/Types/SC_TypeDefines.h"
+#include "Platform/Misc/SC_CommonFunctions.h"
+#include "Platform/Misc/SC_MemoryFunctions.h"
+#include "Platform/Misc/SC_Relocation.h"
+
+#if IS_PC_PLATFORM
+	#include "SC_Platform_PC.h"
+#else
+	#error Platform not supported yet!
+#endif
+
+#include "Platform/Debugging/SC_Assert.h"

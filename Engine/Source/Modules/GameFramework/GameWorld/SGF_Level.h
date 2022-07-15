@@ -15,7 +15,7 @@ public:
 	bool Load(const SC_FilePath& aFilePath);
 	bool Save(const SC_FilePath& aFilePath);
 
-	void AddEntity(SC_Ref<SGF_Entity> aEntity);
+	void AddEntity(const SGF_Entity& aEntity);
 
 	SGF_Entity* FindEntityWithId(const SC_UUID& aId) const;
 
@@ -27,7 +27,7 @@ public:
 
 private:
 	SC_Mutex mEntitiesMutex;
-	SC_Array<SC_Ref<SGF_Entity>> mEntities;
+	SC_Array<SGF_Entity> mEntities;
 
 	SGF_World* mParentWorld;
 	bool mIsVisible;

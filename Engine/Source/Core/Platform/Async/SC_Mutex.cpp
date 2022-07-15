@@ -1,4 +1,3 @@
-
 #include "SC_Mutex.h"
 
 SC_Mutex::SC_Mutex(int aSpinLockCount /*= 0*/)
@@ -7,7 +6,7 @@ SC_Mutex::SC_Mutex(int aSpinLockCount /*= 0*/)
 	mLockCount = 0;
 }
 
-void SC_Mutex::Lock()
+void SC_Mutex::Lock() const
 {
 	if (!mInternalMutex.TryLock())
 	{
@@ -18,7 +17,7 @@ void SC_Mutex::Lock()
 	++mLockCount;
 }
 
-bool SC_Mutex::TryLock()
+bool SC_Mutex::TryLock() const
 {
 	if (!mInternalMutex.TryLock())
 		return false;
@@ -27,7 +26,7 @@ bool SC_Mutex::TryLock()
 	return true;
 }
 
-void SC_Mutex::Unlock()
+void SC_Mutex::Unlock() const
 {
 	assert((mLockCount > 0));
 	--mLockCount;
@@ -35,7 +34,7 @@ void SC_Mutex::Unlock()
 	mInternalMutex.Unlock();
 }
 
-uint32 SC_Mutex::GetLockedCount()
+uint32 SC_Mutex::GetLockedCount() const
 {
 	return mLockCount;
 }

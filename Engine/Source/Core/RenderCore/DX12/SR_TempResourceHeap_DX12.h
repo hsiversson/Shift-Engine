@@ -21,6 +21,7 @@ private:
 	SC_UniquePtr<SR_Heap_DX12> mResourceHeap_RW_Textures;
 	SC_UniquePtr<SR_Heap_DX12> mResourceHeap_R_Textures;
 	SC_UniquePtr<SR_Heap_DX12> mResourceHeap_ConstantBuffers;
+	SC_UniquePtr<SR_Heap_DX12> mResourceHeap_GenericBuffers;
 };
 
 #endif //ENABLE_DX12

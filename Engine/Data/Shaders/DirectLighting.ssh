@@ -1,7 +1,5 @@
-#ifndef DIRECT_LIGHTING_HEADER
-#define DIRECT_LIGHTING_HEADER
-//#pragma once
-
+#pragma once 
+ 
 #include "ShadingModels.ssh"
 #include "LightsCommon.ssh"
 #include "LightCullingCommon.ssh"
@@ -11,6 +9,7 @@
 #define DEBUG_CASCADE_COLOR     (0)
 #define DEBUG_LIGHT_CULLING     (0)
 
+#define USE_CSM_SHADOWS         (0)
 #define USE_RT_SHADOWS          (1)
 #define USE_RT_LOCAL_SHADOWS    (1)
 
@@ -22,18 +21,21 @@ float3 CalculateDirectionalLightContribution(in const MaterialData aMaterialData
     float lightRadiance = environmentConstants.mSunLightIntensity;
 
     float3 lighting = (float3)0.0f;
+    float shadowFactor = 1.0f;
 
 #if USE_RT_SHADOWS
-    float shadowFactor = TraceShadow(aMaterialData, aWorldPosition, lightDirection, 1000.f, 1.0f);
-#else
+    shadowFactor = TraceShadow(aMaterialData, aWorldPosition, lightDirection, 1000.f, 1.0f);
+#else //USE_RT_SHADOWS
+#if USE_CSM_SHADOWS
 #if DEBUG_CASCADE_COLOR
     float3 debugColor = (float3)0.0f;
-    float shadowFactor = CalculateCascadedShadowFactor(aWorldPosition, aPixelDepth, debugColor);
+    shadowFactor = CalculateCascadedShadowFactor(aWorldPosition, aPixelDepth, debugColor);
     lighting = debugColor;
-#else
-    float shadowFactor = CalculateCascadedShadowFactor(aWorldPosition, aPixelDepth);
-#endif
-#endif
+#else //DEBUG_CASCADE_COLOR
+    shadowFactor = CalculateCascadedShadowFactor(aWorldPosition, aPixelDepth);
+#endif //DEBUG_CASCADE_COLOR
+#endif //USE_CSM_SHADOWS
+#endif //USE_RT_SHADOWS
 
     if (shadowFactor <= 0.0f)
         return lighting;
@@ -109,7 +111,7 @@ float3 CalculateLocalLightContribution(in const MaterialData aMaterialData, in c
         shadowFactor = TraceShadow(aMaterialData, aWorldPosition, L, length(toLight), aLight.mSourceRadius);
 #endif
 
-    float3 contribution = (float3)0;
+    float3 lighting = (float3)0;
     [branch]
     if (attenuation > 0.0f && shadowFactor > 0.0f)
     {
@@ -134,10 +136,10 @@ float3 CalculateLocalLightContribution(in const MaterialData aMaterialData, in c
         }
 
         float3 shading = CalculateShading(aMaterialData, areaLight, areaLight.mLightVector, areaLight.mNdotL, areaLight.mFalloff, aViewDirection);
-        return shading * aLight.mColoredIntensity * attenuation * shadowFactor;
+        lighting = shading * aLight.mColoredIntensity * attenuation * shadowFactor;
     }
 
-    return contribution;
+    return lighting;
 }
 
 #if DEBUG_LIGHT_CULLING
@@ -162,23 +164,21 @@ float3 GetTileCostColor(uint aNumLights)
 
 float3 CalculateDirectLighting(in MaterialData aMaterialData, in const float3 aWorldPosition, in const float3 aViewDirection, in float aPixelDepth)
 {
-    float3 lighting = (float3)0.0f;
+    float3 result = (float3)0.0f;
 
     // Should we only support one directional light?
-    lighting += CalculateDirectionalLightContribution(aMaterialData, aWorldPosition, aViewDirection, aPixelDepth);
+    result += CalculateDirectionalLightContribution(aMaterialData, aWorldPosition, aViewDirection, aPixelDepth);
 
     const SR_TileData tileData = GetTileData(aMaterialData.mClipPosition.xy);
     for (uint i = 0; i < tileData.mNumLights; ++i)
     {
         const SR_LocalLight light = GetLocalLight(tileData.mLightIndices[i]);
-        lighting += CalculateLocalLightContribution(aMaterialData, light, aWorldPosition, aViewDirection);
+        result += CalculateLocalLightContribution(aMaterialData, light, aWorldPosition, aViewDirection);
     }
 
 #if DEBUG_LIGHT_CULLING
-    lighting += GetTileCostColor(tileData.mNumLights);
+    result += GetTileCostColor(tileData.mNumLights);
 #endif
 
-    return lighting;
+    return result;
 }
-
-#endif //DIRECT_LIGHTING_HEADER

@@ -105,6 +105,11 @@ bool SC_FilePath::IsAbsolutePath() const
 	return IsAbsolutePath(*this);
 }
 
+void SC_FilePath::MakeAbsolute()
+{
+	mPath = GetAbsolutePath(*this);
+}
+
 const char* SC_FilePath::GetStr() const
 {
 	return mPath.c_str();
@@ -165,6 +170,12 @@ SC_FilePath::SC_FilePath()
 }
 
 SC_FilePath::SC_FilePath(const char* aPath)
+	: mPath(aPath)
+{
+	FixSlashes();
+}
+
+SC_FilePath::SC_FilePath(const std::string& aPath)
 	: mPath(aPath)
 {
 	FixSlashes();

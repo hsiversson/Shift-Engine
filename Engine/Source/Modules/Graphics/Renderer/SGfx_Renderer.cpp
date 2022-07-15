@@ -15,6 +15,9 @@
 SC_CVAR(bool, gEnableTemporalAA, "Renderer.TAA.Enable", true);
 
 SGfx_Renderer::SGfx_Renderer()
+	: mEnvironment(nullptr)
+	, mCurrentView(nullptr)
+	, mLatestTaskEvent(nullptr)
 {
 
 }
@@ -62,9 +65,14 @@ bool SGfx_Renderer::Init(SGfx_Environment* aEnvironment)
 	mMotionVectors.Init(SC_IntVector(backbufferResolution), SR_Format::RG16_FLOAT, true, true, "MotionVectors");
 
 	SR_ShaderCompileArgs compileArgs;
-	compileArgs.mEntryPoint = "Tonemap";
+	compileArgs.mEntryPoint = "Main";
 	compileArgs.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/PostEffect_Tonemap.ssf";
 	compileArgs.mType = SR_ShaderType::Compute;
+
+	//SC_FilePath watchEntry = compileArgs.mShaderFile;
+	//watchEntry.MakeAbsolute();
+	//watchEntry = SC_FilePath::Normalize(watchEntry);
+	//AddWatchEntry(watchEntry);
 
 	SR_ShaderStateProperties tonemapShaderProps;
 	if (!SR_RenderDevice::gInstance->CompileShader(compileArgs, tonemapShaderProps.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Compute)], &tonemapShaderProps.mShaderMetaDatas[static_cast<uint32>(SR_ShaderType::Compute)]))
@@ -126,25 +134,23 @@ bool SGfx_Renderer::Init(SGfx_Environment* aEnvironment)
 	return true;
 }
 
-static SR_Fence lastFrameFence;
 void SGfx_Renderer::RenderView(SGfx_View* aView)
 {
-	lastFrameFence.Wait();
 	SGfx_ViewData& prepareData = aView->GetPrepareData();
 
 	mCurrentView = aView;
 
 #if ENABLE_RAYTRACING
-	SubmitComputeTask(std::bind(&SGfx_Renderer::ComputeRaytracingScene, this), prepareData.mBuildRaytracingSceneEvent); // needs to be posted before PreRenderUpdates to make sure RaytracingScene descriptor is ready
+	SubmitGraphicsTask(std::bind(&SGfx_Renderer::ComputeRaytracingScene, this), prepareData.mBuildRaytracingSceneEvent); // needs to be posted before PreRenderUpdates to make sure RaytracingScene descriptor is ready
 #endif
 
 	SubmitGraphicsTask(std::bind(&SGfx_Renderer::PreRenderUpdates, this), prepareData.mPreRenderUpdatesEvent);
 
 	SubmitGraphicsTask(std::bind(&SGfx_Renderer::RenderPrePass, this), prepareData.mPrePassEvent);
 
-	SubmitComputeTask(std::bind(&SGfx_Renderer::ComputeLightCulling, this), prepareData.mLightCullingEvent);
+	SubmitGraphicsTask(std::bind(&SGfx_Renderer::ComputeLightCulling, this), prepareData.mLightCullingEvent);
 
-	SubmitComputeTask(std::bind(&SGfx_Renderer::ComputeAmbientOcclusion, this), prepareData.mAmbientOcclusionEvent);
+	//SubmitComputeTask(std::bind(&SGfx_Renderer::ComputeAmbientOcclusion, this), prepareData.mAmbientOcclusionEvent);
 
 	//SubmitGraphicsTask(std::bind(&SGfx_Renderer::RenderShadows, this), prepareData.mShadowsEvent);
 
@@ -154,9 +160,10 @@ void SGfx_Renderer::RenderView(SGfx_View* aView)
 
 	for (SC_Event* taskEvent : mSubmittedTaskEvents)
 		taskEvent->Wait();
-	mSubmittedTaskEvents.RemoveAll();
 
-	lastFrameFence = SR_RenderDevice::gInstance->GetCommandQueueManager()->InsertFence(SR_CommandListType::Graphics);
+	mCurrentView->EndPrepare();
+
+	mSubmittedTaskEvents.RemoveAll();
 	mCurrentView = nullptr;
 }
 
@@ -223,9 +230,26 @@ const SGfx_Renderer::Settings& SGfx_Renderer::GetSettings() const
 	return mSettings;
 }
 
+void SGfx_Renderer::OnChanged(const SC_FilePath& aPath, const ChangeReason& /*aReason*/)
+{
+	SC_LOG("File Changed: {}", aPath.GetStr());
+
+	SR_ShaderCompileArgs compileArgs;
+	compileArgs.mEntryPoint = "Main";
+	compileArgs.mShaderFile = aPath;
+	compileArgs.mType = SR_ShaderType::Compute;
+
+	SR_ShaderStateProperties tonemapShaderProps;
+	if (SR_RenderDevice::gInstance->CompileShader(compileArgs, tonemapShaderProps.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Compute)], &tonemapShaderProps.mShaderMetaDatas[static_cast<uint32>(SR_ShaderType::Compute)]))
+	{
+		mTonemapShader = SR_RenderDevice::gInstance->CreateShaderState(tonemapShaderProps);
+	}
+
+}
+
 void SGfx_Renderer::SubmitGraphicsTask(SR_RenderTaskFunctionSignature aTask, SR_TaskEvent* aEvent)
 {
-	SR_CommandQueueManager* renderTaskManager = SR_RenderDevice::gInstance->GetCommandQueueManager(); 
+	SR_QueueManager* renderTaskManager = SR_RenderDevice::gInstance->GetQueueManager(); 
 
 	renderTaskManager->SubmitTask(aTask, SR_CommandListType::Graphics, aEvent);
 	mSubmittedTaskEvents.Add(&aEvent->mCPUEvent);
@@ -239,7 +263,7 @@ void SGfx_Renderer::SubmitGraphicsTask(SR_RenderTaskFunctionSignature aTask, con
 
 void SGfx_Renderer::SubmitComputeTask(SR_RenderTaskFunctionSignature aTask, SR_TaskEvent* aEvent)
 {
-	SR_CommandQueueManager* renderTaskManager = SR_RenderDevice::gInstance->GetCommandQueueManager();
+	SR_QueueManager* renderTaskManager = SR_RenderDevice::gInstance->GetQueueManager();
 
 	const SR_CommandListType type = (SR_RenderDevice::gInstance->GetSupportCaps().mEnableAsyncCompute) ? SR_CommandListType::Compute : SR_CommandListType::Graphics;
 	renderTaskManager->SubmitTask(aTask, type, aEvent);
@@ -254,7 +278,7 @@ void SGfx_Renderer::SubmitComputeTask(SR_RenderTaskFunctionSignature aTask, cons
 
 void SGfx_Renderer::SubmitCopyTask(SR_RenderTaskFunctionSignature aTask, SR_TaskEvent* aEvent)
 {
-	SR_CommandQueueManager* renderTaskManager = SR_RenderDevice::gInstance->GetCommandQueueManager();
+	SR_QueueManager* renderTaskManager = SR_RenderDevice::gInstance->GetQueueManager();
 	renderTaskManager->SubmitTask(aTask, SR_CommandListType::Copy, aEvent);
 	mSubmittedTaskEvents.Add(&aEvent->mCPUEvent);
 	mLatestTaskEvent = &aEvent->mCPUEvent;
@@ -272,13 +296,17 @@ void SGfx_Renderer::PreRenderUpdates()
 	renderData.mBuildRaytracingSceneEvent->mCPUEvent.Wait();
 #endif
 
+	SR_TempBuffer instanceData = renderData.mInstanceData->GetBuffer();
+
 	SGfx_MaterialGPUDataBuffer::Get().UpdateBuffer();
 	renderData.mSceneConstants.mMaterialInfoBufferIndex = SGfx_MaterialGPUDataBuffer::Get().GetBufferDescriptorIndex();
+	renderData.mSceneConstants.mInstanceDataBufferIndex = (instanceData.mBuffer) ? instanceData.mBuffer->GetDescriptorHeapIndex() : 0;
 	mViewConstantsBuffer->UpdateData(0, &renderData.mSceneConstants, sizeof(SGfx_SceneConstants));
 
 	SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
-	cmdList->SetRootConstantBuffer(mViewConstantsBuffer.get(), 1);
-	mEnvironment->ComputeSkyAtmosphereLUTs(cmdList.get());
+	cmdList->SetRootConstantBuffer(mViewConstantsBuffer, 1);
+	mEnvironment->ComputeSkyAtmosphereLUTs(cmdList);
+
 }
 
 #if ENABLE_RAYTRACING
@@ -303,7 +331,7 @@ void SGfx_Renderer::ComputeRaytracingScene()
 void SGfx_Renderer::RenderShadows()
 {
 	SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
-	mShadowMapSystem->GetCSM()->Generate(cmdList.get(), mCurrentView->GetRenderData());
+	mShadowMapSystem->GetCSM()->Generate(cmdList, mCurrentView->GetRenderData());
 }
 
 void SGfx_Renderer::RenderPrePass()
@@ -315,12 +343,12 @@ void SGfx_Renderer::RenderPrePass()
 
 	SC_Array<SC_Pair<uint32, SR_Resource*>> transitions;
 	transitions.Add(SC_Pair(SR_ResourceState_DepthWrite, mDepthStencil->GetResource()));
-	transitions.Add(SC_Pair(SR_ResourceState_RenderTarget, mMotionVectors.mResource.get()));
+	transitions.Add(SC_Pair(SR_ResourceState_RenderTarget, mMotionVectors.mResource));
 	cmdList->TransitionBarrier(transitions);
 
-	cmdList->ClearRenderTarget(mMotionVectors.mRenderTarget.get(), SC_Vector4(0));
-	cmdList->ClearDepthStencil(mDepthStencil.get());
-	cmdList->SetRenderTargets(0, nullptr, mDepthStencil.get());
+	cmdList->ClearRenderTarget(mMotionVectors.mRenderTarget, SC_Vector4(0));
+	cmdList->ClearDepthStencil(mDepthStencil);
+	cmdList->SetRenderTargets(0, nullptr, mDepthStencil);
 
 	SR_Rect rect = 
 	{
@@ -333,46 +361,17 @@ void SGfx_Renderer::RenderPrePass()
 	cmdList->SetViewport(rect);
 	cmdList->SetScissorRect(rect);
 
-	cmdList->SetRootConstantBuffer(mViewConstantsBuffer.get(), 1);
+	cmdList->SetRootConstantBuffer(mViewConstantsBuffer, 1);
 
-	uint32 i = 0;
-	mDrawInfoBuffers[0].Respace(renderData.mDepthQueue.Count());
-	for (const SGfx_RenderObject& renderObj : renderData.mDepthQueue)
-	{
-		if (!mDrawInfoBuffers[0][i])
-		{
-			SR_BufferResourceProperties cbDesc;
-			cbDesc.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
-			cbDesc.mElementCount = 1;
-			cbDesc.mElementSize = sizeof(SGfx_MeshShadingDrawInfoStruct);
-			mDrawInfoBuffers[0][i] = SR_RenderDevice::gInstance->CreateBufferResource(cbDesc);
-		}
+	cmdList->SetRenderTargets(0, nullptr, mDepthStencil);
+	renderData.mDepthQueue.Render(cmdList);
 
-		if (renderObj.mOutputVelocity)
-			cmdList->SetRenderTarget(mMotionVectors.mRenderTarget.get(), mDepthStencil.get());
-		else
-			cmdList->SetRenderTargets(0, nullptr, mDepthStencil.get());
-
-		SGfx_MeshShadingDrawInfoStruct drawInfo;
-		drawInfo.mTransform = renderObj.mTransform;
-		drawInfo.mPrevTransform = renderObj.mPrevTransform;
-		drawInfo.mVertexBufferDescriptorIndex = renderObj.mVertexBuffer->GetDescriptorHeapIndex();
-		drawInfo.mMeshletBufferDescriptorIndex = renderObj.mMeshletBuffer->GetDescriptorHeapIndex();
-		drawInfo.mVertexIndexBufferDescriptorIndex = renderObj.mVertexIndexBuffer->GetDescriptorHeapIndex();
-		drawInfo.mPrimitiveIndexBufferDescriptorIndex = renderObj.mPrimitiveIndexBuffer->GetDescriptorHeapIndex();
-		drawInfo.mMaterialIndex = renderObj.mMaterialIndex;
-		mDrawInfoBuffers[0][i]->UpdateData(0, &drawInfo, sizeof(SGfx_MeshShadingDrawInfoStruct));
-		cmdList->SetRootConstantBuffer(mDrawInfoBuffers[0][i].get(), 0);
-
-		cmdList->SetShaderState(renderObj.mShader);
-		uint32 groupCount = renderObj.mMeshletBuffer->GetProperties().mElementCount;
-		cmdList->DispatchMesh(groupCount);
-		++i;
-	}
+	cmdList->SetRenderTarget(mMotionVectors.mRenderTarget, mDepthStencil);
+	renderData.mDepthQueue_MotionVectors.Render(cmdList);
 
 	transitions.RemoveAll();
 	transitions.Add(SC_Pair(SR_ResourceState_DepthRead, mDepthStencil->GetResource()));
-	transitions.Add(SC_Pair(SR_ResourceState_Read, mMotionVectors.mResource.get()));
+	transitions.Add(SC_Pair(SR_ResourceState_Read, mMotionVectors.mResource));
 	cmdList->TransitionBarrier(transitions);
 	cmdList->EndEvent(); // Render PrePass
 }
@@ -383,8 +382,8 @@ void SGfx_Renderer::ComputeLightCulling()
 	const SGfx_ViewData& renderData = mCurrentView->GetRenderData();
 
 	cmdList->WaitFor(renderData.mPrePassEvent);
-	cmdList->SetRootConstantBuffer(mViewConstantsBuffer.get(), 1);
-	mLightCulling->CullLights(cmdList.get(), renderData, mDepthStencilSRV.get());
+	cmdList->SetRootConstantBuffer(mViewConstantsBuffer, 1);
+	mLightCulling->CullLights(cmdList, renderData, mDepthStencilSRV);
 }
 
 void SGfx_Renderer::ComputeAmbientOcclusion()
@@ -401,8 +400,8 @@ void SGfx_Renderer::ComputeAmbientOcclusion()
 
 	cmdList->BeginEvent("Ambient Occlusion");
 
-	cmdList->SetRootConstantBuffer(mViewConstantsBuffer.get(), 1);
-	mAmbientOcclusion->Render(cmdList.get(), mDepthStencilSRV, renderData);
+	cmdList->SetRootConstantBuffer(mViewConstantsBuffer, 1);
+	mAmbientOcclusion->Render(cmdList, mDepthStencilSRV, renderData);
 
 	cmdList->EndEvent(); // Ambient Occlusion
 }
@@ -412,15 +411,15 @@ void SGfx_Renderer::RenderOpaque()
 	SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
 	const SGfx_ViewData& renderData = mCurrentView->GetRenderData();
 
-	cmdList->WaitFor(renderData.mAmbientOcclusionEvent);
+	//cmdList->WaitFor(renderData.mAmbientOcclusionEvent);
 
 	cmdList->BeginEvent("Render Opaque");
 
 	SC_Array<SC_Pair<uint32, SR_Resource*>> barriers;
-	barriers.Add(SC_Pair(SR_ResourceState_RenderTarget, mSceneColor.mResource.get()));
+	barriers.Add(SC_Pair(SR_ResourceState_RenderTarget, mSceneColor.mResource));
 	cmdList->TransitionBarrier(barriers);
-	cmdList->ClearRenderTarget(mSceneColor.mRenderTarget.get(), SC_Vector4(0.f, 0.f, 0.f, 0.f));
-	cmdList->SetRenderTarget(mSceneColor.mRenderTarget.get(), mDepthStencil.get());
+	cmdList->ClearRenderTarget(mSceneColor.mRenderTarget, SC_Vector4(0.f, 0.f, 0.f, 0.f));
+	cmdList->SetRenderTarget(mSceneColor.mRenderTarget, mDepthStencil);
 
 	SR_Rect rect =
 	{
@@ -432,41 +431,12 @@ void SGfx_Renderer::RenderOpaque()
 	cmdList->SetViewport(rect);
 	cmdList->SetScissorRect(rect);
 
-	cmdList->SetRootConstantBuffer(mViewConstantsBuffer.get(), 1);
+	cmdList->SetRootConstantBuffer(mViewConstantsBuffer, 1);
 
-	uint32 i = 0;
-	mDrawInfoBuffers[1].Respace(renderData.mOpaqueQueue.Count());
-	for (const SGfx_RenderObject& renderObj : renderData.mOpaqueQueue)
-	{
-		if (!mDrawInfoBuffers[1][i])
-		{
-			SR_BufferResourceProperties cbDesc;
-			cbDesc.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
-			cbDesc.mElementCount = 1;
-			cbDesc.mElementSize = sizeof(SGfx_MeshShadingDrawInfoStruct);
-			mDrawInfoBuffers[1][i] = SR_RenderDevice::gInstance->CreateBufferResource(cbDesc);
-		}
-
-		SGfx_MeshShadingDrawInfoStruct drawInfo;
-		drawInfo.mTransform = renderObj.mTransform;
-		drawInfo.mPrevTransform = renderObj.mPrevTransform;
-		drawInfo.mVertexBufferDescriptorIndex = renderObj.mVertexBuffer->GetDescriptorHeapIndex();
-		drawInfo.mMeshletBufferDescriptorIndex = renderObj.mMeshletBuffer->GetDescriptorHeapIndex();
-		drawInfo.mVertexIndexBufferDescriptorIndex = renderObj.mVertexIndexBuffer->GetDescriptorHeapIndex();
-		drawInfo.mPrimitiveIndexBufferDescriptorIndex = renderObj.mPrimitiveIndexBuffer->GetDescriptorHeapIndex();
-		drawInfo.mMaterialIndex = renderObj.mMaterialIndex;
-		drawInfo.aoTex = mAmbientOcclusion->GetTexture()->GetDescriptorHeapIndex();
-		mDrawInfoBuffers[1][i]->UpdateData(0, &drawInfo, sizeof(SGfx_MeshShadingDrawInfoStruct));
-		cmdList->SetRootConstantBuffer(mDrawInfoBuffers[1][i].get(), 0);
-
-		cmdList->SetShaderState(renderObj.mShader);
-		uint32 groupCount = renderObj.mMeshletBuffer->GetProperties().mElementCount;
-		cmdList->DispatchMesh(groupCount);
-		++i;
-	}
+	renderData.mOpaqueQueue.Render(cmdList);
 
 	if (renderData.mSky)
-		renderData.mSky->Render(cmdList.get());
+		renderData.mSky->Render(cmdList);
 
 	cmdList->EndEvent(); // Render Opaque
 }
@@ -477,8 +447,8 @@ void SGfx_Renderer::RenderDebugObjects()
 	const SGfx_ViewData& renderData = mCurrentView->GetRenderData();
 	cmdList->BeginEvent("DebugDraw");
 
-	cmdList->TransitionBarrier(SR_ResourceState_RenderTarget, mDebugTarget.mResource.get());
-	cmdList->ClearRenderTarget(mDebugTarget.mRenderTarget.get(), SC_Vector4(0.f, 0.f, 0.f, 0.f));
+	cmdList->TransitionBarrier(SR_ResourceState_RenderTarget, mDebugTarget.mResource);
+	cmdList->ClearRenderTarget(mDebugTarget.mRenderTarget, SC_Vector4(0.f, 0.f, 0.f, 0.f));
 
 	SR_Rect rect =
 	{
@@ -490,13 +460,13 @@ void SGfx_Renderer::RenderDebugObjects()
 	cmdList->SetViewport(rect);
 	cmdList->SetScissorRect(rect);
 
-	cmdList->SetRenderTarget(mDebugTarget.mRenderTarget.get(), mDepthStencil.get());
-	cmdList->SetRootConstantBuffer(mViewConstantsBuffer.get(), 1);
+	cmdList->SetRenderTarget(mDebugTarget.mRenderTarget, mDepthStencil);
+	cmdList->SetRootConstantBuffer(mViewConstantsBuffer, 1);
 
 	mDebugRenderer->SetDrawGrid(mSettings.mDrawGridHelper);
-	mDebugRenderer->Render(cmdList.get(), renderData);
+	mDebugRenderer->Render(cmdList, renderData);
 
-	cmdList->TransitionBarrier(SR_ResourceState_Read, mDebugTarget.mResource.get());
+	cmdList->TransitionBarrier(SR_ResourceState_Read, mDebugTarget.mResource);
 	cmdList->EndEvent();
 }
 
@@ -512,12 +482,12 @@ void SGfx_Renderer::ComputePostEffects()
 		(uint32)renderData.mSceneConstants.mViewConstants.mViewportSizeAndScale.y
 	};
 
-	cmdList->SetRootConstantBuffer(mViewConstantsBuffer.get(), 1);
+	cmdList->SetRootConstantBuffer(mViewConstantsBuffer, 1);
 
 	if (mSettings.mEnableTemporalAA && gEnableTemporalAA)
 	{
 		cmdList->BeginEvent("TAA");
-		cmdList->TransitionBarrier(SR_ResourceState_UnorderedAccess, mSceneColor2.mResource.get());
+		cmdList->TransitionBarrier(SR_ResourceState_UnorderedAccess, mSceneColor2.mResource);
 		struct TAAConstants
 		{
 			uint32 mTextureDescriptorIndex;
@@ -526,7 +496,7 @@ void SGfx_Renderer::ComputePostEffects()
 			uint32 mDepthStencilTextureDescriptorIndex;
 			uint32 mOutputTextureDescriptorIndex;
 			SC_Vector4 mTargetResolutionAndRcp;
-		} taaConstants;
+		} taaConstants = {};
 		taaConstants.mTextureDescriptorIndex = mSceneColor.mTexture->GetDescriptorHeapIndex();
 		taaConstants.mHistoryTextureDescriptorIndex = mHistoryBuffer.mTexture->GetDescriptorHeapIndex();
 		taaConstants.mMotionVectorTextureDescriptorIndex = mMotionVectors.mTexture->GetDescriptorHeapIndex();
@@ -543,19 +513,19 @@ void SGfx_Renderer::ComputePostEffects()
 			mPostEffectCBuffers[1] = SR_RenderDevice::gInstance->CreateBufferResource(cbDesc);
 		}
 		mPostEffectCBuffers[1]->UpdateData(0, &taaConstants, sizeof(TAAConstants));
-		cmdList->SetRootConstantBuffer(mPostEffectCBuffers[1].get(), 0);
-		cmdList->Dispatch(mTAAResolveShader.get(), SC_IntVector(screenRect.mRight, screenRect.mBottom, 1));
+		cmdList->SetRootConstantBuffer(mPostEffectCBuffers[1], 0);
+		cmdList->Dispatch(mTAAResolveShader, SC_IntVector(screenRect.mRight, screenRect.mBottom, 1));
 
 		SC_Array<SC_Pair<uint32, SR_Resource*>> barriers;
-		barriers.Add(SC_Pair(SR_ResourceState_CopySrc, mSceneColor2.mResource.get()));
-		barriers.Add(SC_Pair(SR_ResourceState_CopyDst, mHistoryBuffer.mResource.get()));
+		barriers.Add(SC_Pair(SR_ResourceState_CopySrc, mSceneColor2.mResource));
+		barriers.Add(SC_Pair(SR_ResourceState_CopyDst, mHistoryBuffer.mResource));
 		cmdList->TransitionBarrier(barriers);
 
-		cmdList->CopyResource(mHistoryBuffer.mResource.get(), mSceneColor2.mResource.get());
+		cmdList->CopyResource(mHistoryBuffer.mResource, mSceneColor2.mResource);
 
 		barriers.RemoveAll();
-		barriers.Add(SC_Pair(SR_ResourceState_Read, mSceneColor2.mResource.get()));
-		barriers.Add(SC_Pair(SR_ResourceState_Read, mHistoryBuffer.mResource.get()));
+		barriers.Add(SC_Pair(SR_ResourceState_Read, mSceneColor2.mResource));
+		barriers.Add(SC_Pair(SR_ResourceState_Read, mHistoryBuffer.mResource));
 		cmdList->TransitionBarrier(barriers);
 
 		cmdList->EndEvent(); // TAA
@@ -564,11 +534,11 @@ void SGfx_Renderer::ComputePostEffects()
 	cmdList->BeginEvent("Compute Post Effects");
 
 	cmdList->BeginEvent("Bloom");
-	mPostEffects->Render(mCurrentView, (mSettings.mEnableTemporalAA) ? mSceneColor2.mTexture.get() : mSceneColor.mTexture.get());
+	mPostEffects->Render(mCurrentView, (mSettings.mEnableTemporalAA) ? mSceneColor2.mTexture : mSceneColor.mTexture);
 	cmdList->EndEvent();
 
 	cmdList->BeginEvent("Tonemap");
-	cmdList->TransitionBarrier(SR_ResourceState_UnorderedAccess, mScreenColor.mResource.get());
+	cmdList->TransitionBarrier(SR_ResourceState_UnorderedAccess, mScreenColor.mResource);
 
 	struct DispatchInfo
 	{
@@ -595,10 +565,10 @@ void SGfx_Renderer::ComputePostEffects()
 	}
 
 	mPostEffectCBuffers[0]->UpdateData(0, &dispatchInfo, sizeof(DispatchInfo));
-	cmdList->SetRootConstantBuffer(mPostEffectCBuffers[0].get(), 0);
-	cmdList->Dispatch(mTonemapShader.get(), SC_IntVector(screenRect.mRight, screenRect.mBottom, 1));
+	cmdList->SetRootConstantBuffer(mPostEffectCBuffers[0], 0);
+	cmdList->Dispatch(mTonemapShader, SC_IntVector(screenRect.mRight, screenRect.mBottom, 1));
 
-	cmdList->TransitionBarrier(SR_ResourceState_Read, mScreenColor.mResource.get());
+	cmdList->TransitionBarrier(SR_ResourceState_Read, mScreenColor.mResource);
 	cmdList->EndEvent(); // tonemap
 
 	cmdList->EndEvent(); // Compute Post Effects

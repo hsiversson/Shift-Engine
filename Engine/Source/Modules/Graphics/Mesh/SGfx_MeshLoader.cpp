@@ -27,9 +27,10 @@ bool SGfx_MeshLoader::Save(const SC_FilePath& aFilePath, const SGfx_MeshCreatePa
 		meshTOC.mPrimitiveIndicesStride = sizeof(SGfx_PackedPrimitiveTriangle);
 		meshTOC.mVertexIndicesStride = aCreateParams.mVertexIndicesStride;
 		meshTOC.mNumVertexIndices = aCreateParams.mVertexIndices.Count() / meshTOC.mVertexIndicesStride;
-		meshTOC.mVertexLayout = aCreateParams.mVertexLayout;
+		meshTOC.mNumVertexAttributes = aCreateParams.mVertexLayout.mAttributes.Count();
 
 		outStream.write(reinterpret_cast<const char*>(&meshTOC), sizeof(MeshTOC));
+		outStream.write(reinterpret_cast<const char*>(aCreateParams.mVertexLayout.mAttributes.GetBuffer()), aCreateParams.mVertexLayout.mAttributes.GetByteSize());
 		outStream.write(reinterpret_cast<const char*>(aCreateParams.mVertexData.GetBuffer()), vertexStrideSize * meshTOC.mNumVertices);
 		outStream.write(reinterpret_cast<const char*>(aCreateParams.mMeshlets.GetBuffer()), meshTOC.mMeshletStride * meshTOC.mNumMeshlets);
 		outStream.write(reinterpret_cast<const char*>(aCreateParams.mPrimitiveIndices.GetBuffer()), meshTOC.mPrimitiveIndicesStride * meshTOC.mNumPrimitiveIndices);
@@ -56,10 +57,12 @@ bool SGfx_MeshLoader::Load(const SC_FilePath& aFilePath, SGfx_MeshCreateParams& 
 		aOutCreateParams.mIsMeshletData = fileTOC.mHasMeshletData;
 		aOutCreateParams.mAABBMin = meshTOC.mAABBMin;
 		aOutCreateParams.mAABBMax = meshTOC.mAABBMax;
-		aOutCreateParams.mVertexLayout = meshTOC.mVertexLayout;
 		aOutCreateParams.mVertexIndicesStride = meshTOC.mVertexIndicesStride;
 
-		const uint32 vertexDataSize = meshTOC.mNumVertices * meshTOC.mVertexLayout.GetVertexStrideSize();
+		aOutCreateParams.mVertexLayout.mAttributes.Respace(meshTOC.mNumVertexAttributes);
+		inStream.read(reinterpret_cast<char*>(aOutCreateParams.mVertexLayout.mAttributes.GetBuffer()), aOutCreateParams.mVertexLayout.mAttributes.GetByteSize());
+
+		const uint32 vertexDataSize = meshTOC.mNumVertices * aOutCreateParams.mVertexLayout.GetVertexStrideSize();
 		const uint32 meshletDataSize = meshTOC.mNumMeshlets * meshTOC.mMeshletStride;
 		const uint32 primitiveIndicesDataSize = meshTOC.mNumPrimitiveIndices * meshTOC.mPrimitiveIndicesStride;
 		const uint32 vertexIndicesDataSize = meshTOC.mNumVertexIndices * meshTOC.mVertexIndicesStride;

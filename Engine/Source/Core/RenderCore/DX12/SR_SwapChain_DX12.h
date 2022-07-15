@@ -33,7 +33,9 @@ private:
 
 	void UpdateInternal();
 
-#if IS_DESKTOP_PLATFORM
+	void UpdateHDRMetaData();
+
+#if IS_PC_PLATFORM
 	bool InitFrameLatencyWaitable();
 #endif
 
@@ -42,7 +44,7 @@ private:
 	SR_ComPtr<IDXGIFactory6> mDXGIFactory6;
 	SR_ComPtr<IDXGISwapChain1> mDXGISwapChain;
 	SR_ComPtr<IDXGISwapChain4> mDXGISwapChain4;
-#if IS_DESKTOP_PLATFORM
+#if IS_PC_PLATFORM
 	HANDLE myFrameLatencyWaitableObject;
 #endif
 

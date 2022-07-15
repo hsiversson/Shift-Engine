@@ -11,6 +11,23 @@ class SR_CommandList;
 
 struct alignas(16) SGfx_SkyAtmosphereConstants
 {
+	SGfx_SkyAtmosphereConstants()
+		: mPlanetRadiusKm(0.0f)
+		, mPlanetAtmosphereRadiusKm(0.0f)
+		, mTransmittanceLUTDescriptorIndex(0)
+		, mMultiScatteringLUTDescriptorIndex(0)
+		, mRayleighDensityExpScale(0.0f)
+		, _unused0(0.0f)
+		, mMiePhaseG(0.0f)
+		, mMieDensityExpScale(0.0f)
+		, mAbsorptionDensity0LayerWidth(0.0f)
+		, mAbsorptionDensity0ConstantTerm(0.0f)
+		, mAbsorptionDensity0LinearTerm(0.0f)
+		, mAbsorptionDensity1ConstantTerm(0.0f)
+		, mAbsorptionDensity1LinearTerm(0.0f)
+		, _unused1(0.0f)
+	{}
+
 	float mPlanetRadiusKm; // in Kilometers
 	float mPlanetAtmosphereRadiusKm;  // in Kilometers
 	uint32 mTransmittanceLUTDescriptorIndex;
@@ -44,6 +61,7 @@ struct alignas(16) SGfx_SkyAtmosphereConstants
 
 struct alignas(16) SGfx_SkyIrradianceConstants
 {
+	SGfx_SkyIrradianceConstants() : mIrradianceBrdfLUTDescriptorIndex(0), mDiffuseIrradianceMapDescriptorIndex(0), mPreFilteredSpecularIrradianceMapDescriptorIndex(0), mNumPreFilteredIrradianceMapMips(0) {}
 	uint32 mIrradianceBrdfLUTDescriptorIndex;
 	uint32 mDiffuseIrradianceMapDescriptorIndex;
 	uint32 mPreFilteredSpecularIrradianceMapDescriptorIndex;

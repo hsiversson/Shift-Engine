@@ -6,7 +6,8 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${IO_FILES})
 
 ##################################
 # Target Settings
-target_include_directories(InputOutput PRIVATE ${ENGINE_SOURCE_DIRECTORY}/Core)
+target_include_directories(InputOutput PRIVATE ${ENGINE_SOURCE_DIRECTORY}/Core
+											   ${NLOHMANN_JSON_INCLUDE_PATH})
 
 ##################################
 # Precompiled Header

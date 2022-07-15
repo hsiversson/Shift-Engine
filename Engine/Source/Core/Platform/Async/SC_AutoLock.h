@@ -5,7 +5,7 @@ class SC_AutoLock : public SC_CopyDisabled
 {
 public:
 	SC_AutoLock() : mInternalMutex(nullptr) {}
-	SC_AutoLock(Mutex& aInMutex) : mInternalMutex(&aInMutex) { mInternalMutex->Lock(); }
+	SC_AutoLock(const Mutex& aInMutex) : mInternalMutex(&aInMutex) { mInternalMutex->Lock(); }
 	SC_AutoLock(SC_AutoLock&& aInLock) : mInternalMutex(aInLock.mInternalMutex) { aInLock.mInternalMutex = nullptr; }
 	~SC_AutoLock() { Unlock(); }
 
@@ -42,5 +42,5 @@ public:
 	}
 
 private:
-	Mutex* mInternalMutex;
+	const Mutex* mInternalMutex;
 };

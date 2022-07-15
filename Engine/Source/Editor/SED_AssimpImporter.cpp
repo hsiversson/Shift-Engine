@@ -5,8 +5,10 @@
 #include "GameFramework/Entity/SGF_Entity.h"
 #include "GameFramework/Entity/Components/SGF_TransformComponent.h"
 #include "GameFramework/Entity/Components/SGF_StaticMeshComponent.h"
+#include "GameFramework/Entity/Components/SGF_EntityIdComponent.h"
+#include "GameFramework/GameWorld/SGF_World.h"
 #include "GameFramework/GameWorld/SGF_Level.h"
-#include "RenderCore/ShaderCompiler/SR_DxcCompiler.h"
+#include "RenderCore/ShaderCompiler/SR_DirectXShaderCompiler.h"
 
 #include "assimp/Importer.hpp"
 #include "assimp/scene.h"
@@ -14,7 +16,6 @@
 
 #include <filesystem>
 #include <fstream>
-#include "GameFramework/Entity/Components/SGF_EntityIdComponent.h"
 
 SED_AssimpMaterial::SED_AssimpMaterial(aiMaterial* aMaterial, const SC_FilePath& aSourceFile)
 	: mImportedMaterial(aMaterial)
@@ -72,7 +73,7 @@ SED_AssimpMaterial::SED_AssimpMaterial(aiMaterial* aMaterial, const SC_FilePath&
 	mMaterialProperties.mShaderProperties.mDepthStencilProperties.mWriteDepth = false;
 	mMaterialProperties.mShaderProperties.mDepthStencilProperties.mDepthComparisonFunc = SR_ComparisonFunc::Equal;
 
-	SR_DxcCompiler compiler;
+	SR_DirectXShaderCompiler compiler;
 	SR_ShaderCompileArgs args;
 	args.mEntryPoint = "MainPS";
 	args.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/DefaultMeshShader.ssf";
@@ -129,7 +130,7 @@ SED_AssimpMesh::SED_AssimpMesh(aiMesh* aMesh, uint32 aMaterialIndex, const SC_Fi
 	, mMaterialIndex(aMaterialIndex)
 	, mSourceDir(aSourceFile.GetParentDirectory())
 {
-	SR_VertexLayout vertexLayout;
+	SR_VertexLayout& vertexLayout = mMeshParams.mVertexLayout;
 	vertexLayout.SetAttribute(SR_VertexAttribute::Position, SR_Format::RGB32_FLOAT);
 	if (!vertexLayout.HasAttribute(SR_VertexAttribute::Position))
 	{
@@ -147,26 +148,37 @@ SED_AssimpMesh::SED_AssimpMesh(aiMesh* aMesh, uint32 aMaterialIndex, const SC_Fi
 	}
 
 	if (mImportedMesh->HasTextureCoords(0))
-		vertexLayout.SetAttribute(SR_VertexAttribute::UV0, SR_Format::RG32_FLOAT);
+		vertexLayout.SetAttribute(SR_VertexAttribute::UV, SR_Format::RG32_FLOAT, 0);
 	if (mImportedMesh->HasTextureCoords(1))
-		vertexLayout.SetAttribute(SR_VertexAttribute::UV1, SR_Format::RG32_FLOAT);
+		vertexLayout.SetAttribute(SR_VertexAttribute::UV, SR_Format::RG32_FLOAT, 1);
 
 	if (mImportedMesh->HasVertexColors(0))
-		vertexLayout.SetAttribute(SR_VertexAttribute::Color0, SR_Format::RGBA32_FLOAT);
+		vertexLayout.SetAttribute(SR_VertexAttribute::Color, SR_Format::RGBA32_FLOAT, 0);
 	if (mImportedMesh->HasVertexColors(1))
-		vertexLayout.SetAttribute(SR_VertexAttribute::Color1, SR_Format::RGBA32_FLOAT);
+		vertexLayout.SetAttribute(SR_VertexAttribute::Color, SR_Format::RGBA32_FLOAT, 1);
 
-	mMeshParams.mVertexLayout = vertexLayout;
-	ExtractVertices(mMeshParams, mWorldOriginOffset);
+	if (mImportedMesh->HasBones())
+	{
+		for (uint32 boneIndex = 0; boneIndex < mImportedMesh->mNumBones; ++boneIndex)
+		{
+			SR_VertexAttribute boneAttribute = static_cast<SR_VertexAttribute>(static_cast<uint32>(SR_VertexAttribute::BoneId) + boneIndex);
+			SR_VertexAttribute boneWeightAttribute = static_cast<SR_VertexAttribute>(static_cast<uint32>(SR_VertexAttribute::BoneWeight) + boneIndex);
+			vertexLayout.SetAttribute(boneAttribute, SR_Format::R32_UINT, boneIndex);
+			vertexLayout.SetAttribute(boneWeightAttribute, SR_Format::R32_FLOAT, boneIndex);
+		}
+	}
+
+	ExtractVertices(mMeshParams);
 	ExtractIndices(mMeshParams);
 	GenerateMeshlets(mMeshParams);
-
 	mMeshParams.mIsMeshletData = true;
 }
 
-void SED_AssimpMesh::ExtractVertices(SGfx_MeshCreateParams& aOutCreateParams, SC_Vector& /*aOutWorldOriginCenterOffset*/) const
+void SED_AssimpMesh::ExtractVertices(SGfx_MeshCreateParams& aOutCreateParams) const
 {
 	SR_VertexLayout& vertexLayout = aOutCreateParams.mVertexLayout;
+	const SC_Array<SR_VertexAttributeData>& vertexAttributes = vertexLayout.mAttributes;
+
 	const uint32 vertexStrideSize = vertexLayout.GetVertexStrideSize();
 	const uint32 vertexDataArraySize = mImportedMesh->mNumVertices * vertexStrideSize;
 	aOutCreateParams.mVertexData.Respace(vertexDataArraySize);
@@ -176,75 +188,68 @@ void SED_AssimpMesh::ExtractVertices(SGfx_MeshCreateParams& aOutCreateParams, SC
 	aOutCreateParams.mAABBMax = SC_Vector(SC_FLT_LOWEST);
 	for (uint32 i = 0; i < mImportedMesh->mNumVertices; ++i)
 	{
-		SC_Vector vPosition = SC_Vector(mImportedMesh->mVertices[i].x, mImportedMesh->mVertices[i].y, mImportedMesh->mVertices[i].z);
-
-		SC_Memcpy(&aOutCreateParams.mVertexData[currentDataArrayPos], &vPosition, sizeof(SC_Vector));
-		currentDataArrayPos += sizeof(SC_Vector);
-
-		if (vertexLayout.HasAttribute(SR_VertexAttribute::Normal))
+		for (const SR_VertexAttributeData& vAttribute : vertexAttributes)
 		{
-			SC_Vector vNormal = SC_Vector(mImportedMesh->mNormals[i].x, mImportedMesh->mNormals[i].y, mImportedMesh->mNormals[i].z);
-			vNormal.Normalize();
-			SC_Memcpy(&aOutCreateParams.mVertexData[currentDataArrayPos], &vNormal, sizeof(SC_Vector));
-			currentDataArrayPos += sizeof(SC_Vector);
-		}
+			if (vAttribute.mAttributeId == SR_VertexAttribute::Position)
+			{
+				SC_Vector vPosition = SC_Vector(mImportedMesh->mVertices[i].x, mImportedMesh->mVertices[i].y, mImportedMesh->mVertices[i].z);
+				SC_Memcpy(&aOutCreateParams.mVertexData[currentDataArrayPos], &vPosition, sizeof(SC_Vector));
+				currentDataArrayPos += sizeof(SC_Vector);
 
-		if (vertexLayout.HasAttribute(SR_VertexAttribute::Tangent))
-		{
-			SC_Vector vTangentAndBitangent[2];
-			vTangentAndBitangent[0] = SC_Vector(mImportedMesh->mTangents[i].x, mImportedMesh->mTangents[i].y, mImportedMesh->mTangents[i].z);
-			vTangentAndBitangent[0].Normalize();
-			vTangentAndBitangent[1] = SC_Vector(mImportedMesh->mBitangents[i].x, mImportedMesh->mBitangents[i].y, mImportedMesh->mBitangents[i].z);
-			vTangentAndBitangent[1].Normalize();
-			SC_Memcpy(&aOutCreateParams.mVertexData[currentDataArrayPos], &vTangentAndBitangent, (sizeof(SC_Vector) * 2));
-			currentDataArrayPos += (sizeof(SC_Vector) * 2);
+				aOutCreateParams.mAABBMin.x = SC_Min(vPosition.x, aOutCreateParams.mAABBMin.x);
+				aOutCreateParams.mAABBMin.y = SC_Min(vPosition.y, aOutCreateParams.mAABBMin.y);
+				aOutCreateParams.mAABBMin.z = SC_Min(vPosition.z, aOutCreateParams.mAABBMin.z);
+				aOutCreateParams.mAABBMax.x = SC_Max(vPosition.x, aOutCreateParams.mAABBMax.x);
+				aOutCreateParams.mAABBMax.y = SC_Max(vPosition.y, aOutCreateParams.mAABBMax.y);
+				aOutCreateParams.mAABBMax.z = SC_Max(vPosition.z, aOutCreateParams.mAABBMax.z);
+			}
+			else if (vAttribute.mAttributeId == SR_VertexAttribute::Normal)
+			{
+				SC_Vector vNormal = SC_Vector(mImportedMesh->mNormals[i].x, mImportedMesh->mNormals[i].y, mImportedMesh->mNormals[i].z);
+				vNormal.Normalize();
+				SC_Memcpy(&aOutCreateParams.mVertexData[currentDataArrayPos], &vNormal, sizeof(SC_Vector));
+				currentDataArrayPos += sizeof(SC_Vector);
+			}
+			else if (vAttribute.mAttributeId == SR_VertexAttribute::Tangent)
+			{
+				SC_Vector vTangent = SC_Vector(mImportedMesh->mTangents[i].x, mImportedMesh->mTangents[i].y, mImportedMesh->mTangents[i].z);
+				vTangent.Normalize();
+				SC_Memcpy(&aOutCreateParams.mVertexData[currentDataArrayPos], &vTangent, sizeof(SC_Vector));
+				currentDataArrayPos += sizeof(SC_Vector);
+			}
+			else if (vAttribute.mAttributeId == SR_VertexAttribute::Bitangent)
+			{
+				SC_Vector vBitangent = SC_Vector(mImportedMesh->mBitangents[i].x, mImportedMesh->mBitangents[i].y, mImportedMesh->mBitangents[i].z);
+				vBitangent.Normalize();
+				SC_Memcpy(&aOutCreateParams.mVertexData[currentDataArrayPos], &vBitangent, sizeof(SC_Vector));
+				currentDataArrayPos += sizeof(SC_Vector);
+			}
+			else if (vAttribute.mAttributeId == SR_VertexAttribute::UV)
+			{
+				SC_Vector4 vUV;
+				vUV.x = mImportedMesh->mTextureCoords[vAttribute.mAttributeIndex][i].x;
+				vUV.y = mImportedMesh->mTextureCoords[vAttribute.mAttributeIndex][i].y;
+				SC_Memcpy(&aOutCreateParams.mVertexData[currentDataArrayPos], &vUV, sizeof(SC_Vector2));
+				currentDataArrayPos += sizeof(SC_Vector2);
+			}
+			else if (vAttribute.mAttributeId == SR_VertexAttribute::Color)
+			{
+				SC_Vector4 vColor;
+				vColor.x = mImportedMesh->mColors[vAttribute.mAttributeIndex][i].r;
+				vColor.y = mImportedMesh->mColors[vAttribute.mAttributeIndex][i].g;
+				vColor.z = mImportedMesh->mColors[vAttribute.mAttributeIndex][i].b;
+				vColor.w = mImportedMesh->mColors[vAttribute.mAttributeIndex][i].a;
+				SC_Memcpy(&aOutCreateParams.mVertexData[currentDataArrayPos], &vColor, sizeof(SC_Vector4));
+				currentDataArrayPos += sizeof(SC_Vector4);
+			}
+			else if (vAttribute.mAttributeId == SR_VertexAttribute::BoneId)
+			{
+			}
+			else if (vAttribute.mAttributeId == SR_VertexAttribute::BoneWeight)
+			{
+			}
 		}
-
-		if (vertexLayout.HasAttribute(SR_VertexAttribute::UV0))
-		{
-			SC_Vector2 vUV = SC_Vector2(mImportedMesh->mTextureCoords[0][i].x, mImportedMesh->mTextureCoords[0][i].y);
-			SC_Memcpy(&aOutCreateParams.mVertexData[currentDataArrayPos], &vUV, sizeof(SC_Vector2));
-			currentDataArrayPos += sizeof(SC_Vector2);
-		}
-
-		if (vertexLayout.HasAttribute(SR_VertexAttribute::UV1))
-		{
-			SC_Vector2 vUV = SC_Vector2(mImportedMesh->mTextureCoords[1][i].x, mImportedMesh->mTextureCoords[1][i].y);
-			SC_Memcpy(&aOutCreateParams.mVertexData[currentDataArrayPos], &vUV, sizeof(SC_Vector2));
-			currentDataArrayPos += sizeof(SC_Vector2);
-		}
-
-		if (vertexLayout.HasAttribute(SR_VertexAttribute::Color0))
-		{
-			SC_Vector4 vColor = SC_Vector4(mImportedMesh->mColors[0][i].r, mImportedMesh->mColors[0][i].g, mImportedMesh->mColors[0][i].b, mImportedMesh->mColors[0][i].a);
-			SC_Memcpy(&aOutCreateParams.mVertexData[currentDataArrayPos], &vColor, sizeof(SC_Vector4));
-			currentDataArrayPos += sizeof(SC_Vector4);
-		}
-
-		if (vertexLayout.HasAttribute(SR_VertexAttribute::Color1))
-		{
-			SC_Vector4 vColor = SC_Vector4(mImportedMesh->mColors[1][i].r, mImportedMesh->mColors[1][i].g, mImportedMesh->mColors[1][i].b, mImportedMesh->mColors[1][i].a);
-			SC_Memcpy(&aOutCreateParams.mVertexData[currentDataArrayPos], &vColor, sizeof(SC_Vector4));
-			currentDataArrayPos += sizeof(SC_Vector4);
-		}
-
-		aOutCreateParams.mAABBMin.x = SC_Min(vPosition.x, aOutCreateParams.mAABBMin.x);
-		aOutCreateParams.mAABBMin.y = SC_Min(vPosition.y, aOutCreateParams.mAABBMin.y);
-		aOutCreateParams.mAABBMin.z = SC_Min(vPosition.z, aOutCreateParams.mAABBMin.z);
-		aOutCreateParams.mAABBMax.x = SC_Max(vPosition.x, aOutCreateParams.mAABBMax.x);
-		aOutCreateParams.mAABBMax.y = SC_Max(vPosition.y, aOutCreateParams.mAABBMax.y);
-		aOutCreateParams.mAABBMax.z = SC_Max(vPosition.z, aOutCreateParams.mAABBMax.z);
 	}
-
-	//aOutWorldOriginCenterOffset = (aOutCreateParams.mAABBMin + aOutCreateParams.mAABBMax) * 0.5f;
-	//if (aOutWorldOriginCenterOffset != SC_Vector(0.0f))
-	//{
-	//	for (uint32 i = 0; i < mImportedMesh->mNumVertices; ++i)
-	//	{
-	//		SC_Vector* position = (SC_Vector*)(&aOutCreateParams.mVertexData[i * vertexStrideSize]);
-	//		*position = (*position) - aOutWorldOriginCenterOffset;
-	//	}
-	//}
 }
 
 void SED_AssimpMesh::ExtractIndices(SGfx_MeshCreateParams& aOutCreateParams) const
@@ -349,11 +354,6 @@ const SC_FilePath& SED_AssimpMesh::GetSavePath() const
 	return mMeshParams.mSourceFile;
 }
 
-const SC_Vector& SED_AssimpMesh::GetWorldOriginOffset() const
-{
-	return mWorldOriginOffset;
-}
-
 SED_AssimpScene::SED_AssimpScene()
 	: mImportedScene(nullptr)
 
@@ -372,34 +372,12 @@ bool SED_AssimpScene::Init(const SC_FilePath& aSourceFile)
 	mSourceFile = aSourceFile;
 
 	mMaterials.Respace(mImportedScene->mNumMaterials);
-	SC_Array<SC_Future<bool>> materialFutures;
-	materialFutures.Reserve(mImportedScene->mNumMaterials);
 	for (uint32 materialIdx = 0; materialIdx < mImportedScene->mNumMaterials; ++materialIdx)
-	{
-		auto CreateMaterial = [&, materialIdx]()
-		{
-			mMaterials[materialIdx] = SC_Move(SED_AssimpMaterial(mImportedScene->mMaterials[materialIdx], mSourceFile));
-		};
-		materialFutures.Add(SC_ThreadPool::Get().SubmitTask(CreateMaterial));
-	}
+		mMaterials[materialIdx] = SC_Move(SED_AssimpMaterial(mImportedScene->mMaterials[materialIdx], mSourceFile));
 
 	mMeshes.Respace(mImportedScene->mNumMeshes);
-	SC_Array<SC_Future<bool>> meshFutures;
-	meshFutures.Reserve(mImportedScene->mNumMeshes);
-
 	for (uint32 meshIdx = 0; meshIdx < mImportedScene->mNumMeshes; ++meshIdx)
-	{
-		auto CreateMesh = [&, meshIdx]()
-		{
-			mMeshes[meshIdx] = SC_Move(SED_AssimpMesh(mImportedScene->mMeshes[meshIdx], mImportedScene->mMeshes[meshIdx]->mMaterialIndex, mSourceFile));
-		};
-		meshFutures.Add(SC_ThreadPool::Get().SubmitTask(CreateMesh));
-	}
-
-	for (auto& future : materialFutures)
-		future.Wait();
-	for (auto& future : meshFutures)
-		future.Wait();
+		mMeshes[meshIdx] = SC_Move(SED_AssimpMesh(mImportedScene->mMeshes[meshIdx], mImportedScene->mMeshes[meshIdx]->mMaterialIndex, mSourceFile));
 
 	return true;
 }
@@ -420,20 +398,8 @@ bool SED_AssimpScene::ConvertToLevelAndSave(SGF_Level& aOutLevel)
 		return false;
 
 	SC_FilePath saveDir("/ImportedMeshes");
-
-	SC_Array<SC_Future<bool>> futures;
-	futures.Reserve(mMeshes.Count());
 	for (const SED_AssimpMesh& mesh : mMeshes)
-	{
-		auto SaveMesh = [&]()
-		{
-			mesh.SaveToDisk(saveDir);
-		};
-		futures.Add(SC_ThreadPool::Get().SubmitTask(SaveMesh));
-	}
-
-	for (auto& future : futures)
-		future.Wait();
+		mesh.SaveToDisk(saveDir);
 
 	VisitNode(mImportedScene->mRootNode, aOutLevel);
 	return true;
@@ -452,39 +418,29 @@ void SED_AssimpScene::VisitNode(aiNode* aNode, SGF_Level& aOutLevel)
 
 	for (uint32 i = 0; i < aNode->mNumMeshes; ++i)
 	{
-		//SC_Ref<SGF_Entity> entity = SC_MakeRef<SGF_Entity>();
-		//entity->SetName(aNode->mName.C_Str());
-		//entity->SetWorld(aOutLevel.GetWorld());
-		//
-		//uint32 meshIdx = aNode->mMeshes[i];
-		//SED_AssimpMesh& importedMesh = mMeshes[meshIdx];
-		//
-		//entity->AddComponent<SGF_EntityIdComponent>();
-		//SGF_TransformComponent* transform = entity->AddComponent<SGF_TransformComponent>();
-		//transform->mPosition = position;
-		//transform->mRotation = rotation;
-		//transform->mScale = scale;
-		//
-		//SGF_StaticMeshComponent* meshComponent = entity->AddComponent<SGF_StaticMeshComponent>();
-		//meshComponent->SetMesh(SGfx_MeshInstance::Create(importedMesh.GetMesh()));
-		//meshComponent->SetMaterial(SGfx_MaterialInstance::Create(mMaterials[importedMesh.GetMaterialIndex()].GetMaterial()));
-		//
-		//aOutLevel.AddEntity(entity);
+		uint32 meshIdx = aNode->mMeshes[i];
+		SED_AssimpMesh& importedMesh = mMeshes[meshIdx];
+		std::string nodeName = aNode->mName.C_Str();
+
+		SGF_EntityManager* entityManager = aOutLevel.GetWorld()->GetEntityManager();
+		SGF_Entity entity = entityManager->CreateEntity();
+		entity.AddComponent<SGF_EntityIdComponent>();
+		entity.AddComponent<SGF_EntityNameComponent>()->mName = nodeName;
+
+		SGF_TransformComponent* transform = entity.AddComponent<SGF_TransformComponent>();
+		transform->mPosition = position;
+		transform->mRotation = rotation;
+		transform->mScale = scale;
+
+		SGF_StaticMeshComponent* meshComponent = entity.AddComponent<SGF_StaticMeshComponent>();
+		meshComponent->SetMesh(SGfx_MeshInstance::Create(importedMesh.GetMesh()));
+		meshComponent->SetMaterial(SGfx_MaterialInstance::Create(mMaterials[importedMesh.GetMaterialIndex()].GetMaterial()));
+
+		aOutLevel.AddEntity(entity);
 	}
 
-	SC_Array<SC_Future<bool>> futures;
-	futures.Reserve(aNode->mNumChildren);
 	for (uint32 i = 0; i < aNode->mNumChildren; ++i)
-	{
-		auto VisitChild = [&, i]()
-		{
-			VisitNode(aNode->mChildren[i], aOutLevel);
-		};
-		futures.Add(SC_ThreadPool::Get().SubmitTask(VisitChild));
-	}
-
-	for (auto& future : futures)
-		future.Wait();
+		VisitNode(aNode->mChildren[i], aOutLevel);
 }
 
 SED_AssimpImporter::SED_AssimpImporter()

@@ -1,5 +1,6 @@
 #pragma once
 #include "RenderCore/Interface/SR_Heap.h"
+#include "RenderCore/Resources/SR_RingBuffer.h"
 
 #if ENABLE_DX12
 
@@ -13,7 +14,7 @@ public:
 
 	bool Init();
 
-	void ResetOffset();
+	void EndFrame();
 
 	const uint64 GetOffset(uint64 aSize, uint64 aAlignment) override;
 
@@ -21,6 +22,7 @@ public:
 	uint64 GetHeapOffset() const;
 private:
 	SR_ComPtr<ID3D12Heap> mD3D12Heap;
+	SR_RingBuffer mRingBuffer;
 	volatile uint64 mHeapOffset;
 };
 

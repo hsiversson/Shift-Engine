@@ -1,4 +1,5 @@
 #pragma once
+#include "RenderCore/Defines/SR_RenderEnums.h"
 
 enum class SR_HeapResourceType
 {
@@ -19,14 +20,16 @@ enum class SR_HeapType
 
 struct SR_HeapProperties
 {
-	SR_HeapProperties() : mByteSize(0), mResourceType(SR_HeapResourceType::COUNT), mType(SR_HeapType::COUNT), mCreateResourcesUninitialized(false), mDebugName(nullptr) {}
+	SR_HeapProperties() : mByteSize(0), mResourceType(SR_HeapResourceType::COUNT), mType(SR_HeapType::COUNT), mCmdQueueType(SR_CommandListType::Unknown), mCreateResourcesUninitialized(false), mDebugName(nullptr), mDebugPrint(false) {}
 
 	uint64 mByteSize;
 	SR_HeapResourceType mResourceType;
 	SR_HeapType mType;
+	SR_CommandListType mCmdQueueType;
 	bool mCreateResourcesUninitialized;
 
 	const char* mDebugName;
+	bool mDebugPrint;
 };
 
 class SR_Heap

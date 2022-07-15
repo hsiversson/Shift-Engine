@@ -158,7 +158,7 @@ SR_ImGui* SR_ImGui::gInstance = nullptr;
 
 SR_ImGui::SR_ImGui()
 {
-	assert(gInstance == nullptr);
+	SC_ASSERT(gInstance == nullptr);
 	gInstance = this;
 }
 
@@ -178,6 +178,7 @@ bool SR_ImGui::Init(void* aNativeWindowHandle, float aDPIScale)
 
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	io.ConfigWindowsMoveFromTitleBarOnly = true;
+	io.ConfigViewportsNoAutoMerge = true;
 
 	SetStyle();
 	io.FontDefault = io.Fonts->AddFontFromFileTTF((SC_EnginePaths::Get().GetEngineDataDirectory() + "/Fonts/OpenSans/OpenSans-Regular.ttf").GetStr(), 18.0f);
@@ -198,8 +199,6 @@ bool SR_ImGui::Init(void* aNativeWindowHandle, float aDPIScale)
 
 void SR_ImGui::BeginFrame()
 {
-	mLastTaskEvent->mFence.Wait();
-	mLastTaskEvent->Reset();
 
 #if IS_WINDOWS_PLATFORM
 	NewFrameWin64();
@@ -282,20 +281,17 @@ void SR_ImGui::Render(SR_RenderTarget* aRenderTarget)
 
 		SR_Rect r = { 0, 0, (uint32)drawData->DisplaySize.x, (uint32)drawData->DisplaySize.y };
 
-		cmdList->SetViewport(r);
-		cmdList->SetScissorRect(r);
+		cmdList->SetViewport(r, 0.0f, 1.0f);
 		cmdList->SetPrimitiveTopology(SR_PrimitiveTopology::TriangleList);
-		cmdList->SetVertexBuffer(renderBuffer.mVertexBuffer.get());
-		cmdList->SetIndexBuffer(renderBuffer.mIndexBuffer.get());
-		cmdList->SetShaderState(mShaderState.get());
+		cmdList->SetVertexBuffer(renderBuffer.mVertexBuffer);
+		cmdList->SetIndexBuffer(renderBuffer.mIndexBuffer);
+		cmdList->SetShaderState(mShaderState);
 		cmdList->SetBlendFactor(SC_Vector4(0.0f));
 
 		int globalVtxOffset = 0;
 		int globalIdxOffset = 0;
 		ImVec2 clipOffset = drawData->DisplayPos;
-		uint32 i = 0;
-		int cb = 0;
-		for (int n = 0; n < drawData->CmdListsCount; n++)
+		for (int n = 0; n < drawData->CmdListsCount; ++n)
 		{
 			const ImDrawList* imguiCmdList = drawData->CmdLists[n];
 			for (const ImDrawCmd& cmd : imguiCmdList->CmdBuffer)
@@ -304,11 +300,11 @@ void SR_ImGui::Render(SR_RenderTarget* aRenderTarget)
 				{
 					if (cmd.UserCallback == ImDrawCallback_ResetRenderState)
 					{
-						cmdList->SetViewport(SR_Rect{ 0, 0, (uint32)drawData->DisplaySize.x, (uint32)drawData->DisplaySize.y });
+						cmdList->SetViewport(r, 0.0f, 1.0f);
 						cmdList->SetPrimitiveTopology(SR_PrimitiveTopology::TriangleList);
-						cmdList->SetVertexBuffer(renderBuffer.mVertexBuffer.get());
-						cmdList->SetIndexBuffer(renderBuffer.mIndexBuffer.get());
-						cmdList->SetShaderState(mShaderState.get());
+						cmdList->SetVertexBuffer(renderBuffer.mVertexBuffer);
+						cmdList->SetIndexBuffer(renderBuffer.mIndexBuffer);
+						cmdList->SetShaderState(mShaderState);
 						cmdList->SetBlendFactor(SC_Vector4(0.0f));
 					}
 					else
@@ -317,36 +313,29 @@ void SR_ImGui::Render(SR_RenderTarget* aRenderTarget)
 				else
 				{
 					// Apply Scissor, Bind texture, Draw
-					const SC_Vector2 clipMin(cmd.ClipRect.x - clipOffset.x, cmd.ClipRect.y - clipOffset.y);
-					const SC_Vector2 clipMax(cmd.ClipRect.z - clipOffset.x, cmd.ClipRect.w - clipOffset.y);
-					if (clipMax.x < clipMin.x || clipMax.y < clipMin.y)
-						continue;
+					SR_Rect clipRect = { uint32(cmd.ClipRect.x - clipOffset.x), uint32(cmd.ClipRect.y - clipOffset.y), uint32(cmd.ClipRect.z - clipOffset.x), uint32(cmd.ClipRect.w - clipOffset.y) };
+					if (clipRect.mRight > clipRect.mLeft && clipRect.mBottom > clipRect.mTop)
+					{
+						SR_Texture* texture = (SR_Texture*)cmd.TextureId; // use this for accessing through bindless
+						if (texture)
+							vertexConstants.mTextureIndex = texture->GetDescriptorHeapIndex();
+						else
+							vertexConstants.mTextureIndex = mFontTexture->GetDescriptorHeapIndex();
 
-					SR_Texture* texture = (SR_Texture*)cmd.TextureId; // use this for accessing through bindless
-					if (texture)
-						vertexConstants.mTextureIndex = texture->GetDescriptorHeapIndex();
-					else
-						vertexConstants.mTextureIndex = mFontTexture->GetDescriptorHeapIndex();
+						SR_BufferResourceProperties cbDesc;
+						cbDesc.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
+						cbDesc.mElementCount = 1;
+						cbDesc.mElementSize = sizeof(SR_ImGuiVertexConstants);
+						SR_TempBuffer cb = SR_RenderDevice::gInstance->CreateTempBuffer(cbDesc);
 
-					SR_BufferResourceProperties cbDesc;
-					cbDesc.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
-					cbDesc.mElementCount = 1;
-					cbDesc.mElementSize = sizeof(SR_ImGuiVertexConstants);
-					if (cb > (mConstantBuffers.ICount() - 1))
-						mConstantBuffers.Add(SR_RenderDevice::gInstance->CreateBufferResource(cbDesc));
-					else if (!mConstantBuffers[cb])
-						mConstantBuffers[cb] = SR_RenderDevice::gInstance->CreateBufferResource(cbDesc);
+						cb.mResource->UpdateData(0, &vertexConstants, sizeof(SR_ImGuiVertexConstants));
+						cmdList->SetRootConstantBuffer(cb.mResource, 0);
 
-					mConstantBuffers[cb]->UpdateData(0, &vertexConstants, sizeof(SR_ImGuiVertexConstants));
-					cmdList->SetRootConstantBuffer(mConstantBuffers[cb].get(), 0);
+						cmdList->SetScissorRect(clipRect);
 
-					const SR_Rect scissorRect = { (uint32)clipMin.x, (uint32)clipMin.y, (uint32)clipMax.x, (uint32)clipMax.y };
-					cmdList->SetScissorRect(scissorRect);
-
-					cmdList->DrawIndexedInstanced(cmd.ElemCount, 1, cmd.IdxOffset + globalIdxOffset, cmd.VtxOffset + globalVtxOffset, 0);
-					++cb;
+						cmdList->DrawIndexedInstanced(cmd.ElemCount, 1, cmd.IdxOffset + globalIdxOffset, cmd.VtxOffset + globalVtxOffset, 0);
+					}
 				}
-				++i;
 			}
 			globalVtxOffset += imguiCmdList->VtxBuffer.Size;
 			globalIdxOffset += imguiCmdList->IdxBuffer.Size;
@@ -354,8 +343,9 @@ void SR_ImGui::Render(SR_RenderTarget* aRenderTarget)
 		cmdList->TransitionBarrier(SR_ResourceState_Present, aRenderTarget->GetResource());
 	};
 
-	SR_RenderDevice::gInstance->GetCommandQueueManager()->SubmitTask(Task, SR_CommandListType::Graphics, mLastTaskEvent.get());
+	SR_RenderDevice::gInstance->GetQueueManager()->SubmitTask(Task, SR_CommandListType::Graphics, mLastTaskEvent);
 	mLastTaskEvent->mCPUEvent.Wait();
+	mLastTaskEvent->Reset();
 }
 
 void SR_ImGui::SetDPIScale(float aScale)
@@ -490,8 +480,8 @@ bool SR_ImGui::CreateShaderState()
 	}
 
 	shaderProps.mVertexLayout.SetAttribute(SR_VertexAttribute::Position, SR_Format::RG32_FLOAT);
-	shaderProps.mVertexLayout.SetAttribute(SR_VertexAttribute::UV0, SR_Format::RG32_FLOAT);
-	shaderProps.mVertexLayout.SetAttribute(SR_VertexAttribute::Color0, SR_Format::RGBA8_UNORM);
+	shaderProps.mVertexLayout.SetAttribute(SR_VertexAttribute::UV, SR_Format::RG32_FLOAT);
+	shaderProps.mVertexLayout.SetAttribute(SR_VertexAttribute::Color, SR_Format::RGBA8_UNORM);
 
 	shaderProps.mRTVFormats.mNumColorFormats = 1;
 	shaderProps.mRTVFormats.mColorFormats[0] = SR_Format::RGBA8_UNORM;

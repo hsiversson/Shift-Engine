@@ -8,7 +8,13 @@
 #pragma comment(lib,"dxguid.lib")
 
 #if ENABLE_PIX
-#include "WinPixEventRuntime/pix3.h"
+	#define USE_PIX (1)
+
+	#if !IS_RETAIL_BUILD
+		#define USE_PIX_RETAIL (1)
+	#endif
+
+	#include "WinPixEventRuntime/pix3.h"
 #endif
 
 // For COM interface (ComPtr)

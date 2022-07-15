@@ -1,6 +1,4 @@
-#ifndef LIGHTS_COMMON_HEADER
-#define LIGHTS_COMMON_HEADER
-
+#pragma once 
 #include "BindlessResources.ssh"
 #include "SceneConstants.ssh"
 
@@ -44,6 +42,27 @@ struct SR_DirectionalLight
     float3 mColoredIntensity;
 };
 
+struct SR_DirectLightingResult
+{
+	float3 mDiffuse;
+	float3 mSpecular;
+	float mShadowFactor;
+};
+
+struct SR_IndirectLightingResult
+{
+	float3 mDiffuse;
+	float3 mReflection; // Specular
+	float mAmbientOcclusion;
+	float mSpecularOcclusion;
+};
+
+struct SR_LightingResult
+{
+	SR_DirectLightingResult mDirect;
+	SR_IndirectLightingResult mIndirect;
+};
+
 StructuredBuffer<SR_LocalLight> GetLightBuffer()
 {
     return GetStructuredBuffer<SR_LocalLight>(SR_LightCullingConstants.mLightBufferDescriptorIndex);
@@ -54,5 +73,3 @@ SR_LocalLight GetLocalLight(uint aLightIndex)
     StructuredBuffer<SR_LocalLight> localLights = GetStructuredBuffer<SR_LocalLight>(SR_LightCullingConstants.mLightBufferDescriptorIndex);
     return localLights[aLightIndex];
 }
-
-#endif //LIGHTS_COMMON_HEADER

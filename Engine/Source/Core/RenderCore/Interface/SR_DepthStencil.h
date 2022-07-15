@@ -11,12 +11,13 @@ struct SR_DepthStencilProperties : public SR_TextureRange
 class SR_DepthStencil
 {
 public:
+	virtual ~SR_DepthStencil();
+
 	const SR_DepthStencilProperties& GetProperties() const;
 	SR_TextureResource* GetResource() const;
 
 protected:
 	SR_DepthStencil(const SR_DepthStencilProperties& aProperties, SC_Ref<SR_TextureResource> aResource);
-	virtual ~SR_DepthStencil();
 
 	virtual void ReleaseDescriptor() {}
 

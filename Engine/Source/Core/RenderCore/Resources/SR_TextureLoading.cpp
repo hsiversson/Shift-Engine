@@ -37,7 +37,7 @@ SR_TextureSizes::SR_TextureSizes(const SR_TextureResourceProperties& aProperties
 	mBitsPerPixel = bitsPerPixel;
 
 	mMipChainBytesPerTexture = 0;
-	assert(aProperties.mNumMips <= SR_MaxMipCount);
+	SC_ASSERT(aProperties.mNumMips <= SR_MaxMipCount);
 	for (uint32 i = 0; i < aProperties.mNumMips; ++i)
 	{
 		uint32 width = SC_Max(aProperties.mSize.x >> i, 1);
@@ -74,7 +74,7 @@ uint32 SR_TextureSizes::GetDDSDataOffset(const SR_TextureLevel& aLevel)
 	tex += aLevel.mFace;
 	uint32 texOffset = tex * mMipChainBytesPerTexture;
 
-	assert(aLevel.mMipLevel < SR_MaxMipCount);
+	SC_ASSERT(aLevel.mMipLevel < SR_MaxMipCount);
 	const Mip& mip = mMips[aLevel.mMipLevel];
 	return texOffset + mip.mMipOffset;
 }

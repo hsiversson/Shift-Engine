@@ -46,11 +46,11 @@ bool SR_TextureResource_DX12::Init(const SR_PixelData* aInitialData, uint32 aDat
 
 	if (mProperties.mHeap)
 	{
-		const D3D12_RESOURCE_ALLOCATION_INFO allocInfo = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->GetResourceAllocationInfo(0, 1, &resourceDesc);
+		const D3D12_RESOURCE_ALLOCATION_INFO allocInfo = SR_RenderDevice_DX12::gInstance->GetD3D12Device()->GetResourceAllocationInfo(0, 1, &resourceDesc);
 
 		SR_Heap_DX12* heap = static_cast<SR_Heap_DX12*>(mProperties.mHeap);
 
-		hr = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreatePlacedResource(
+		hr = SR_RenderDevice_DX12::gInstance->GetD3D12Device()->CreatePlacedResource(
 			heap->GetD3D12Heap(),
 			heap->GetOffset(allocInfo.SizeInBytes, allocInfo.Alignment),
 			&resourceDesc,
@@ -68,7 +68,7 @@ bool SR_TextureResource_DX12::Init(const SR_PixelData* aInitialData, uint32 aDat
 		heapProps.CreationNodeMask = 1;
 		heapProps.VisibleNodeMask = 1;
 
-		hr = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateCommittedResource(
+		hr = SR_RenderDevice_DX12::gInstance->GetD3D12Device()->CreateCommittedResource(
 			&heapProps,
 			D3D12_HEAP_FLAG_NONE,
 			&resourceDesc,
@@ -100,7 +100,7 @@ D3D12_TEXTURE_COPY_LOCATION SR_TextureResource_DX12::GetCopyLocation(uint32 aSub
 	D3D12_TEXTURE_COPY_LOCATION location = { mD3D12Resource };
 	D3D12_RESOURCE_DESC desc = SR_GetD3D12ResourceDesc(mProperties);
 	location.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-	SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->GetCopyableFootprints(&desc, aSubresourceIndex, 1, 0, &location.PlacedFootprint, nullptr, nullptr, nullptr);
+	SR_RenderDevice_DX12::gInstance->GetD3D12Device()->GetCopyableFootprints(&desc, aSubresourceIndex, 1, 0, &location.PlacedFootprint, nullptr, nullptr, nullptr);
 	return location;
 }
 

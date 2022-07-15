@@ -30,7 +30,20 @@ void SGfx_LightCulling::Prepare(SGfx_ViewData& aPrepareData)
 {
 	mDelayedDeleteResources.RemoveAll();
 
+	//const uint32 totalLightCount = aPrepareData.mVisibleLights.Count();
+
 	const SC_IntVector2 resolution = aPrepareData.mSceneConstants.mViewConstants.mViewportSizeAndScale.XY();
+	const SC_IntVector2 numLightTilesCPU = SC_Vector2(resolution + gTileSize - 1) / (float)gTileSize;
+	const uint32 totalLightTilesCPU = numLightTilesCPU.x * numLightTilesCPU.y;
+
+	mLightTiles.Respace(totalLightTilesCPU);
+	mLightTileFrustums.Respace(totalLightTilesCPU);
+
+	for (uint32 i = 0; i < totalLightTilesCPU; ++i) // Build CPU side light tiles and pre-cull the lights
+	{
+
+	}
+
 
 	mConstants.mNumTiles = SC_Vector2(resolution + gTileSize - 1) / (float)gTileSize;
     mConstants.mTotalNumLights = aPrepareData.mVisibleLights.Count();
@@ -114,9 +127,9 @@ void SGfx_LightCulling::CullLights(SR_CommandList* aCmdList, const SGfx_ViewData
     }
 
     mCullConstants->UpdateData(0, &constants, sizeof(constants));
-    aCmdList->SetRootConstantBuffer(mCullConstants.get(), 0);
+    aCmdList->SetRootConstantBuffer(mCullConstants, 0);
 
-    aCmdList->Dispatch(mLightCullingShader.get(), resolution.x, resolution.y);
+    aCmdList->Dispatch(mLightCullingShader, resolution.x, resolution.y);
     aCmdList->EndEvent();
 }
 
@@ -127,10 +140,14 @@ const SGfx_LightCullingConstants& SGfx_LightCulling::GetConstants() const
 
 SR_Buffer* SGfx_LightCulling::GetLightBuffer() const
 {
-    return mLightBuffer.get();
+    return mLightBuffer;
 }
 
 SR_Buffer* SGfx_LightCulling::GetTileGridBuffer() const
 {
-	return mTileGridBuffer.get();
+	return mTileGridBuffer;
+}
+
+void SGfx_LightCulling::CullLightsCPU()
+{
 }

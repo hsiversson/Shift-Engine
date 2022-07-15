@@ -143,3 +143,42 @@ namespace SC_DetectionIdiomNamespace
 
 template <template<class...> class Op, class... Args>
 using SC_DetectionIdiom = typename SC_DetectionIdiomNamespace::SC_Detector<SC_DetectionIdiomNamespace::SC_NoneSuch, void, Op, Args...>::ValueType;
+
+//-------------------------------------------------------------//
+//	Pointer Traits
+
+template <class T, class = void>
+struct SC_CanScalarDelete : SC_FalseType {};
+template <class T>
+struct SC_CanScalarDelete<T, std::void_t<decltype(delete std::declval<T*>())>> : SC_TrueType {};
+
+template <class T, class = void>
+struct SC_CanArrayDelete : SC_FalseType {};
+template <class T>
+struct SC_CanArrayDelete<T, std::void_t<decltype(delete[] std::declval<T*>())>> : SC_TrueType {};
+
+template <class Fn, class Arg, class = void>
+struct SC_CanCallFunctionObject : SC_FalseType {};
+template <class Fn, class Arg>
+struct SC_CanCallFunctionObject<Fn, Arg, std::void_t<decltype(std::declval<Fn>()(std::declval<Arg>()))>> : SC_TrueType {};
+
+//-------------------------------------------------------------//
+//	Function Traits
+
+template <typename T> struct SC_RemoveFnConstVolatileReference { typedef T Type; };
+template <typename Fn, class... Args> struct SC_RemoveFnConstVolatileReference<Fn(Args...) const> { typedef Fn Type(Args...); };
+template <typename Fn, class... Args> struct SC_RemoveFnConstVolatileReference<Fn(Args...) const&> { typedef Fn Type(Args...); };
+template <typename Fn, class... Args> struct SC_RemoveFnConstVolatileReference<Fn(Args...) const&&> { typedef Fn Type(Args...); };
+template <typename Fn, class... Args> struct SC_RemoveFnConstVolatileReference<Fn(Args...) volatile const> { typedef Fn Type(Args...); };
+template <typename Fn, class... Args> struct SC_RemoveFnConstVolatileReference<Fn(Args...) volatile const&> { typedef Fn Type(Args...); };
+template <typename Fn, class... Args> struct SC_RemoveFnConstVolatileReference<Fn(Args...) volatile const&&> { typedef Fn Type(Args...); };
+template <typename Fn, class... Args> struct SC_RemoveFnConstVolatileReference<Fn(Args...) volatile > { typedef Fn Type(Args...); };
+template <typename Fn, class... Args> struct SC_RemoveFnConstVolatileReference<Fn(Args...) volatile&> { typedef Fn Type(Args...); };
+template <typename Fn, class... Args> struct SC_RemoveFnConstVolatileReference<Fn(Args...) volatile&&> { typedef Fn Type(Args...); };
+
+template <typename T> struct SC_IsFunctionInternal { static constexpr const bool gValue = false; };
+template <class Ret, class... Args> struct SC_IsFunctionInternal<Ret(Args...)> { static constexpr const bool gValue = true; };
+template <class T> struct SC_IsFunction : SC_IsFunctionInternal<typename SC_RemoveFnConstVolatileReference<T>::Type> {};
+
+template <typename T> struct SC_IsMemberFunctionPointer { static constexpr const bool gValue = false; };
+template <typename Function, typename Class> struct SC_IsMemberFunctionPointer<Function Class::*> : SC_IsFunction<Function> { typedef typename SC_RemoveFnConstVolatileReference<Function>::Type Signature; };

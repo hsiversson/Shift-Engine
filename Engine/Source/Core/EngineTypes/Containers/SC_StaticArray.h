@@ -1,61 +1,38 @@
 #pragma once
 
-template<class T, SC_SizeT ArraySize>
+template<class T, SC_SizeT Size>
 class SC_StaticArray
 {
 public:
 	SC_StaticArray() {}
 	~SC_StaticArray() {}
 
-	const SC_SizeT& Count()		{ return mCurrentItemCount; }
-	const SC_SizeT& Capacity()	{ return ArraySize; }
+	SC_SizeT Count() const { return Size; }
+	SC_SizeT Capacity() const { return Size; }
+	SC_SizeT GetByteSize() const { return Size * sizeof(T); }
 
-	T& First()				{ return mInternalData[0]; }
-	const T& First() const	{ return mInternalData[0]; }
-	T& Last()				{ return mCurrentItemCount[mCurrentItemCount - 1]; }
-	const T& Last() const	{ return mCurrentItemCount[mCurrentItemCount - 1]; }
+	T& First() { return mInternalData[0]; }
+	T& Last() { return mInternalData[Size - 1]; }
+	const T& First() const { return mInternalData[0]; }
+	const T& Last() const { return mInternalData[Size - 1]; }
 
-	T* begin()				{ return &First(); }
-	const T* begin() const	{ return &First(); }
-	T* end()				{ return &Last(); }
-	const T* end() const	{ return &Last(); }
+	T* begin() { return &mInternalData[0]; }
+	T* end() { return &mInternalData[Size - 1]; }
+	const T* begin() const { return &mInternalData[0]; }
+	const T* end() const { return &mInternalData[Size - 1]; }
 
-	T& Add()
+	const T& operator[] (uint32 aIndex) const
 	{
-		return mInternalData[0];
+		SC_ASSERT(aIndex < Size, "Out of bounds! (anIndex: {0} Size: {1})", aIndex, Size);
+		return mInternalData[aIndex];
 	}
 
-	T& Add(const T& /*aItem*/)
+	T& operator[] (uint32 aIndex)
 	{
-		return mInternalData[0];
-	}
-
-	T& Add(T&& /*aItem*/)
-	{
-		return mInternalData[0];
-	}
-
-	void RemoveAll()
-	{
-
-	}
-
-	void RemoveLast()
-	{
-
-	}
-
-	void RemoveCyclic(const T& /*aItem*/)
-	{
-
-	}
-
-	void Remove(const T& /*aItem*/)
-	{
-
+		SC_ASSERT(aIndex < Size, "Out of bounds! (anIndex: {0} Size: {1})", aIndex, Size);
+		return mInternalData[aIndex];
 	}
 
 private:
-	T mInternalData[ArraySize];
-	SC_SizeT mCurrentItemCount;
+	T mInternalData[Size];
 };

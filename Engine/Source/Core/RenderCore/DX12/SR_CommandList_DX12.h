@@ -113,7 +113,6 @@ private:
 		SR_DepthStencilState* mDepthStencilState;
 	} mStateCache;
 
-
 	SR_ComPtr<ID3D12CommandAllocator> mD3D12CommandAllocator;
 	SR_ComPtr<ID3D12GraphicsCommandList> mD3D12CommandList;
 	SR_ComPtr<ID3D12GraphicsCommandList6> mD3D12CommandList6;

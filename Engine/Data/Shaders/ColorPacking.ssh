@@ -1,5 +1,4 @@
-#ifndef COLOR_PACKING_HEADER
-#define COLOR_PACKING_HEADER
+#pragma once
 
 uint PackRG11B10_FLOAT(float3 aRGB)
 {
@@ -19,5 +18,3 @@ float3 UnpackRG11B10_FLOAT( uint aPackedRGB )
     float b = f16tof32((aPackedRGB >> 17) & 0x7FE0);
     return float3(r, g, b);
 }
-
-#endif //COLOR_PACKING_HEADER

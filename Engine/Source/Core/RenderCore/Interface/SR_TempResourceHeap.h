@@ -37,7 +37,7 @@ protected:
 
 	SC_Array<SR_TempTexture> mTextureKeepAliveList;
 	SC_Array<SR_TempBuffer> mBufferKeepAliveList;
-	SC_Queue<SC_Pair<SR_Fence, SC_Array<SR_TempTexture>>> mTempTextureRemovalQueue;
-	SC_Queue<SC_Pair<SR_Fence, SC_Array<SR_TempBuffer>>> mTempBufferRemovalQueue;
+	SC_Queue<SC_Pair<uint32, SC_Array<SR_TempTexture>>> mTempTextureRemovalQueue;
+	SC_Queue<SC_Pair<uint32, SC_Array<SR_TempBuffer>>> mTempBufferRemovalQueue;
 };
 

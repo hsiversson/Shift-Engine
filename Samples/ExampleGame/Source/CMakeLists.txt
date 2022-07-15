@@ -23,7 +23,8 @@ target_link_libraries(ExampleGame
                         Memory
 						EngineTypes
                         Platform
-                        ImGui)
+                        ImGui
+                        NlohmannJson)
 LinkVendorLibraries(ExampleGame)
 ConfigTargetPostBuildLibInstall(ExampleGame)
 

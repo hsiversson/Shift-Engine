@@ -61,7 +61,7 @@ static void BuildAdjacencyList(
 	points.Respace(vertCount);
 	{
 		std::unique_ptr<uint32[]> temp(new (std::nothrow) uint32[vertCount + aNumIndices]);
-		assert(temp);
+		SC_ASSERT(temp);
 
 		uint32_t* vertexToCorner = temp.get();
 		uint32_t* vertexCornerList = temp.get() + vertCount;
@@ -77,7 +77,7 @@ static void BuildAdjacencyList(
 
 			if (k >= vertCount)
 			{
-				assert(false);
+				SC_ASSERT(false);
 				return;
 			}
 
@@ -116,8 +116,8 @@ static void BuildAdjacencyList(
 					while (head != SC_UINT32_MAX)
 					{
 						uint32 face = head / 3;
-						assert(face < faceCount);
-						assert((aIndexData[face * 3] == vert) || (aIndexData[face * 3 + 1] == vert) || (aIndexData[face * 3 + 2] == vert));
+						SC_ASSERT(face < faceCount);
+						SC_ASSERT((aIndexData[face * 3] == vert) || (aIndexData[face * 3 + 1] == vert) || (aIndexData[face * 3 + 2] == vert));
 
 						if ((aIndexData[face * 3] == current->mIndex) || (aIndexData[face * 3 + 1] == current->mIndex) || (aIndexData[face * 3 + 2] == current->mIndex))
 						{
@@ -141,7 +141,7 @@ static void BuildAdjacencyList(
 				}
 				else
 				{
-					assert(freeEntry < vertCount);
+					SC_ASSERT(freeEntry < vertCount);
 
 					auto newEntry = &entriesV[freeEntry];
 					++freeEntry;
@@ -221,9 +221,9 @@ static void BuildAdjacencyList(
 			if (i0 == IndexType(-1) || i1 == IndexType(-1) || i2 == IndexType(-1))
 				continue;
 
-			assert(i0 < vertCount);
-			assert(i1 < vertCount);
-			assert(i2 < vertCount);
+			SC_ASSERT(i0 < vertCount);
+			SC_ASSERT(i1 < vertCount);
+			SC_ASSERT(i2 < vertCount);
 
 			uint32 v1 = points[i0];
 			uint32 v2 = points[i1];
@@ -602,15 +602,15 @@ static float ComputeScore(const InlineMeshlet<IndexType>& aMeshlet, const SC_Vec
 template <typename IndexType>
 static bool IsMeshletFull(uint32 aMaxVertices, uint32 aMaxPrimitives, const InlineMeshlet<IndexType>& meshlet)
 {
-	assert(meshlet.mUniqueVertexIndices.Count() <= aMaxVertices);
-	assert(meshlet.mPrimitiveIndices.Count() <= aMaxPrimitives);
+	SC_ASSERT(meshlet.mUniqueVertexIndices.Count() <= aMaxVertices);
+	SC_ASSERT(meshlet.mPrimitiveIndices.Count() <= aMaxPrimitives);
 
 	return (meshlet.mUniqueVertexIndices.Count() >= aMaxVertices) || (meshlet.mPrimitiveIndices.Count() >= aMaxPrimitives);
 }
 
 static SC_Vector4 MinimumBoundingSphere(SC_Vector* points, uint32 count)
 {
-	assert(points != nullptr && count != 0);
+	SC_ASSERT(points != nullptr && count != 0);
 
 	// Find the min & max points indices along each axis.
 	uint32 minAxis[3] = { 0, 0, 0 };
@@ -721,7 +721,7 @@ static void BuildMeshlets(
 			aIndexData[index * 3 + 1],
 			aIndexData[index * 3 + 2],
 		};
-		assert((triangle[0] < vertexCount) && (triangle[1] < vertexCount) && (triangle[2] < vertexCount));
+		SC_ASSERT((triangle[0] < vertexCount) && (triangle[1] < vertexCount) && (triangle[2] < vertexCount));
 		SC_UNUSED(vertexCount);
 		
 		if (AddCandidateToMeshlet(aMaxVertices, aMaxPrimitives, *currentMeshlet, triangle))
@@ -782,9 +782,9 @@ static void BuildMeshlets(
 					aIndexData[candidate * 3 + 2],
 				};
 
-				assert(triIndices[0] < vertexCount);
-				assert(triIndices[1] < vertexCount);
-				assert(triIndices[2] < vertexCount);
+				SC_ASSERT(triIndices[0] < vertexCount);
+				SC_ASSERT(triIndices[1] < vertexCount);
+				SC_ASSERT(triIndices[2] < vertexCount);
 
 				const SC_Vector* tv0 = reinterpret_cast<const SC_Vector*>(&aVertexData[triIndices[0] * vertexStride]);
 				const SC_Vector* tv1 = reinterpret_cast<const SC_Vector*>(&aVertexData[triIndices[1] * vertexStride]);

@@ -17,6 +17,7 @@ using SC_SizeT		  = std::size_t;
 using SC_PtrDiff	  = std::ptrdiff_t;
 using SC_IntPtr		  = std::intptr_t;
 using SC_MaxAlignType = std::max_align_t;
+using SC_Nullptr	  = std::nullptr_t;
 
 static constexpr int8  SC_INT8_MIN  = INT8_MIN;
 static constexpr int8  SC_INT8_MAX  = INT8_MAX;

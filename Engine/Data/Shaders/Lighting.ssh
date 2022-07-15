@@ -1,9 +1,6 @@
-#ifndef LIGHTING_HEADER
-#define LIGHTING_HEADER
-
+#pragma once 
 #include "DirectLighting.ssh"
 #include "IndirectLighting.ssh"
-
 
 float3 CalculateLighting(in MaterialData aMaterialData, in const float3 aWorldPosition, in const float3 aViewDirection, in float aPixelDepth)
 {
@@ -15,5 +12,3 @@ float3 CalculateLighting(in MaterialData aMaterialData, in const float3 aWorldPo
 
     return (directLighting + indirectLighting);
 }
-
-#endif //LIGHTING_HEADER

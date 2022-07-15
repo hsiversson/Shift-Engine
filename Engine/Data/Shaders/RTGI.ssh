@@ -1,11 +1,9 @@
-#ifndef RTGI_HEADER
-#define RTGI_HEADER
-
+#pragma once 
 #include "SceneConstants.ssh"
 #include "Raytracing.ssh"
 #include "MaterialData.ssh"
 #include "AtmosphereCommon.ssh"
-
+#include "DirectLighting.ssh"
 
 #define MAX_NUM_RAYS (1)
 
@@ -20,14 +18,14 @@ float3 TraceGI(in const MaterialData aMaterialData, in const float3 aWorldPositi
 
     RayDesc ray;
     ray.Origin = aWorldPosition;
-    ray.TMin = 0.0001f;
+    ray.TMin = 0.01f;
     ray.TMax = 100.f;
     uint rayFlags = 0;
 
-    uint numRays = lerp(1, MAX_NUM_RAYS, aMaterialData.mRoughness);
+    uint numRays = 16;//lerp(1, MAX_NUM_RAYS, aMaterialData.mRoughness);
     float stepAccum = 1.0f / (float)numRays;
 
-    float3 outLight = 0.0f;
+    float3 irradiance = 0.0f;
     for (uint i = 0; i < numRays; ++i)
     {
         float2 E = Hammersley16(i, numRays, random);
@@ -40,29 +38,44 @@ float3 TraceGI(in const MaterialData aMaterialData, in const float3 aWorldPositi
         if (rayQuery.CommittedStatus() == COMMITTED_TRIANGLE_HIT)
         {
             //outShadowFactor += stepAccum;
-            //uint instanceIndex = rayQuery.CommittedInstanceIndex();
-            uint primitiveIndex = rayQuery.CommittedPrimitiveIndex();
-            //uint geometryIndex = rayQuery.CommittedGeometryIndex();
-            float2 committedBarycentric = rayQuery.CommittedTriangleBarycentrics();
-            float3 barycentric = float3(1 - committedBarycentric.x - committedBarycentric.y, committedBarycentric.x, committedBarycentric.y);
+            uint instanceIndex = rayQuery.CommittedInstanceID();
+            uint triangleIndex = rayQuery.CommittedPrimitiveIndex();
+            const SR_InstanceData instanceData = SR_LoadInstanceData(instanceIndex);
 
-            float3 color = float3(float(primitiveIndex & 1), float(primitiveIndex & 3) / 4, float(primitiveIndex & 7) / 8);
+            Buffer<uint> indexBuffer = GetBuffer<uint>(instanceData.mIndexBufferDescriptorIndex);
+            uint3 vertexIndices = GetTriangleIndices(indexBuffer, triangleIndex);
 
-            //GetMeshData();
+            Buffer<float3> normalBuffer = GetBuffer<float3>(instanceData.mNormalBufferDescriptorIndex);
+            float3 vertexNormals[3];
+            vertexNormals[0] = normalBuffer[vertexIndices.x];
+            vertexNormals[1] = normalBuffer[vertexIndices.y];
+            vertexNormals[2] = normalBuffer[vertexIndices.z];
 
-            //SR_MaterialInfo materialInfo = SR_GetMaterialInfo(materialIndex);
+            float3 barycentrics = ConvertBarycentricsFromCommitted(rayQuery.CommittedTriangleBarycentrics());
+            float3 normal = InterpolateVertexAttribute<float3>(vertexNormals, barycentrics);
 
-            //bool isFrontFace = rayQuery.CommittedTriangleFrontFace();
-            outLight += barycentric;
+            float3x3 transform33 = (float3x3)instanceData.mTransform;
+            float3 transformedNormal = normalize(mul(transform33, normal));
+
+            MaterialData materialData = BuildMaterialData((float4)0, float4(0.5f, 0.5f, 0.5f, 1.0f), transformedNormal, float4(0.5f, 0.0f, 1.0f, 1.0f));
+            float3 hitPos = rayQuery.WorldRayOrigin() + rayQuery.CommittedRayT() * rayQuery.WorldRayDirection();
+
+            irradiance += 0.0f;//CalculateDirectLighting(materialData, hitPos, -ray.Direction, 0.0f) * 2;
+
         }
         else
         {
             // Sample Sky
-            outLight += SampleAtmosphereColor(ray.Direction) * 2.0f;
+            irradiance += SampleAtmosphereColor(rayQuery.WorldRayDirection());
         }
     }
 
-    return outLight / (float)numRays;
-}
+    irradiance /= (float)numRays;
 
-#endif //RTGI_HEADER
+    float nDotV = saturate(dot(aMaterialData.mWorldNormal, aViewDirection));
+    float3 F = F_Schlick(aMaterialData.mSpecularColor, nDotV);
+    float3 kd = lerp(1.0f - F, 0.0f, aMaterialData.mMetallic);
+    float3 outLight = kd * aMaterialData.mColor * irradiance;
+
+    return outLight;
+}

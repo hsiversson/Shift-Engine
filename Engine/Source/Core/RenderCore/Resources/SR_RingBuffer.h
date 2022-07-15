@@ -10,11 +10,11 @@ public:
 	{
 		SR_Fence mFence;
 		uint64 mFrame;
-		uint32 mFirstOffset;
+		uint64 mFirstOffset;
 	};
 
 public:
-	SR_RingBuffer(const SC_Ref<SR_BufferResource>& aBuffer = nullptr, uint32 aAlignment = 1);
+	SR_RingBuffer(uint64 aSize, uint64 aAlignment = 1);
 	SR_RingBuffer(const SR_RingBuffer&) = delete;
 	SR_RingBuffer(SR_RingBuffer&& aOther);
 	~SR_RingBuffer();
@@ -22,24 +22,26 @@ public:
 	void operator=(const SR_RingBuffer&) = delete;
 	void operator=(SR_RingBuffer&& aOther);
 
-
-	bool GetOffset(uint32& aOffsetOut, uint32 aSize, uint32 aAlignment = 0, const SR_Fence& aFence = SR_Fence());
+	bool GetOffset(uint64& aOffsetOut, uint64 aSize, uint64 aAlignment = 0, const SR_Fence& aFence = SR_Fence());
 	void Update();
 	void UpdateFrame(bool aAllocationFlag, const SR_Fence& aFence);
 
 private:
+	void RecenterBase();
+
+	SC_Mutex mMutex;
 	SC_RingArray<FrameData> mInFlightFrames;
 	SC_Ref<SR_BufferResource> mBuffer;
-	uint32 mSize;
-	uint32 mAllocBlockMaxSize;
-	uint32 mAlignment;
+	uint64 mSize;
+	uint64 mAllocBlockMaxSize;
+	uint64 mAlignment;
 
-	uint32 mBeginOffset;
-	uint32 mEndOffset;
-	uint32 mOffsetBase;
+	volatile uint64 mBeginOffset;
+	volatile uint64 mEndOffset;
+	volatile uint64 mOffsetBase;
 
-	uint64 mLatestFinishedFrame;
-	uint64 mLatestUpdatedFrame;
-	uint64 mLatestAllocFrame;
+	volatile uint64 mLatestFinishedFrame;
+	volatile uint64 mLatestUpdatedFrame;
+	volatile uint64 mLatestAllocFrame;
 	SR_Fence mLatestAllocFence;
 };

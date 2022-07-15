@@ -1,5 +1,7 @@
 #include "SR_RenderDevice.h"
 
+#include "RenderCore/RenderTasks/SR_RenderThread.h"
+
 #if ENABLE_DX12
 #include "RenderCore/DX12/SR_RenderDevice_DX12.h"
 #endif
@@ -41,7 +43,7 @@ public:
 		if (mCache.find(f) != mCache.end())
 			return;
 
-		if (mCache[f].use_count() <= 2) // The cache holds one ref
+		if (mCache[f].GetRefCount() <= 2) // The cache holds one ref
 		{
 			mCache.erase(f);
 		}
@@ -65,47 +67,50 @@ SR_RenderDevice::~SR_RenderDevice()
 
 void SR_RenderDevice::Present()
 {
-	mTempResourceHeap->EndFrame();
-
-	SR_SwapChain* sc = GetSwapChain();
-	WaitForFence(sc->GetLastFrameFence());
-
-	sc->Present();
+	uint32 frameIdx = SC_Time::gFrameCounter;
+	auto presentTask = [&, frameIdx]()
+	{
+		SR_SwapChain* sc = GetSwapChain();
+		sc->Present();
+		mTempResourceHeap->EndFrame();
+		SR_RenderThread::Get()->EndFrame(frameIdx);
+	};
+	SR_RenderThread::Get()->PostTask(presentTask);
 }
 
 SC_Ref<SR_CommandList> SR_RenderDevice::CreateCommandList(const SR_CommandListType& /*aType*/)
 {
-	assert(false && "Not implemented yet!");
+	SC_ASSERT(false, "Not implemented yet!");
 	return nullptr;
 }
 
 SC_Ref<SR_Texture> SR_RenderDevice::CreateTexture(const SR_TextureProperties& /*aTextureProperties*/, const SC_Ref<SR_TextureResource>& /*aResource*/)
 {
-	assert(false && "Not implemented yet!");
+	SC_ASSERT(false, "Not implemented yet!");
 	return nullptr;
 }
 
 SC_Ref<SR_RenderTarget> SR_RenderDevice::CreateRenderTarget(const SR_RenderTargetProperties& /*aRenderTargetProperties*/, const SC_Ref<SR_TextureResource>& /*aResource*/)
 {
-	assert(false && "Not implemented yet!");
+	SC_ASSERT(false, "Not implemented yet!");
 	return nullptr;
 }
 
 SC_Ref<SR_DepthStencil> SR_RenderDevice::CreateDepthStencil(const SR_DepthStencilProperties& /*aDepthStencilProperties*/, const SC_Ref<SR_TextureResource>& /*aResource*/)
 {
-	assert(false && "Not implemented yet!");
+	SC_ASSERT(false, "Not implemented yet!");
 	return nullptr;
 }
 
 SC_Ref<SR_TextureResource> SR_RenderDevice::CreateTextureResource(const SR_TextureResourceProperties& /*aTextureResourceProperties*/, const SR_PixelData* /*aInitialData = nullptr*/, uint32 /*aDataCount = 0*/)
 {
-	assert(false && "Not implemented yet!");
+	SC_ASSERT(false, "Not implemented yet!");
 	return nullptr;
 }
 
 SR_TempTexture SR_RenderDevice::CreateTempTexture(const SR_TextureResourceProperties& aTextureProperties, bool aIsTexture, bool aIsRenderTarget, bool aIsWritable)
 {
-	assert(mTempResourceHeap);
+	SC_ASSERT(mTempResourceHeap);
 	return mTempResourceHeap->GetTexture(aTextureProperties, aIsTexture, aIsRenderTarget, aIsWritable);
 }
 
@@ -123,55 +128,55 @@ SC_Ref<SR_Texture> SR_RenderDevice::LoadTexture(const SC_FilePath& aTextureFileP
 
 SC_Ref<SR_Buffer> SR_RenderDevice::CreateBuffer(const SR_BufferProperties& /*aBufferProperties*/, const SC_Ref<SR_BufferResource>& /*aResource*/)
 {
-	assert(false && "Not implemented yet!");
+	SC_ASSERT(false, "Not implemented yet!");
 	return nullptr;
 }
 
 SC_Ref<SR_BufferResource> SR_RenderDevice::CreateBufferResource(const SR_BufferResourceProperties& /*aBufferResourceProperties*/, const void* /*aInitialData*/)
 {
-	assert(false && "Not implemented yet!");
+	SC_ASSERT(false, "Not implemented yet!");
 	return nullptr;
 }
 
 SR_TempBuffer SR_RenderDevice::CreateTempBuffer(const SR_BufferResourceProperties& aBufferResourceProperties, bool aIsWritable)
 {
-	assert(mTempResourceHeap);
+	SC_ASSERT(mTempResourceHeap);
 	return mTempResourceHeap->GetBuffer(aBufferResourceProperties, aIsWritable);
 }
 
 SC_Ref<SR_Heap> SR_RenderDevice::CreateHeap(const SR_HeapProperties& /*aHeapProperties*/)
 {
-	assert(false && "Not implemented yet!");
+	SC_ASSERT(false, "Not implemented yet!");
 	return nullptr;
 }
 
 SC_Ref<SR_FenceResource> SR_RenderDevice::CreateFenceResource()
 {
-	assert(false && "Not implemented yet!");
+	SC_ASSERT(false, "Not implemented yet!");
 	return nullptr;
 }
 
 bool SR_RenderDevice::CompileShader(const SR_ShaderCompileArgs& /*aArgs*/, SR_ShaderByteCode& /*aOutByteCode*/, SR_ShaderMetaData* /*aOutMetaData*/)
 {
-	assert(false && "Not implemented yet!");
+	SC_ASSERT(false, "Not implemented yet!");
 	return false;
 }
 
 bool SR_RenderDevice::CompileShader(const std::string& /*aShadercode*/, const SR_ShaderCompileArgs& /*aArgs*/, SR_ShaderByteCode& /*aOutByteCode*/, SR_ShaderMetaData* /*aOutMetaData*/)
 {
-	assert(false && "Not implemented yet!");
+	SC_ASSERT(false, "Not implemented yet!");
 	return false;
 }
 
 SC_Ref<SR_ShaderState> SR_RenderDevice::CreateShaderState(const SR_ShaderStateProperties& /*aProperties*/)
 {
-	assert(false && "Not implemented yet!");
+	SC_ASSERT(false, "Not implemented yet!");
 	return nullptr;
 }
 
 SC_Ref<SR_SwapChain> SR_RenderDevice::CreateSwapChain(const SR_SwapChainProperties& /*aProperties*/, void* /*aNativeWindowHandle*/)
 {
-	assert(false && "Not implemented yet!");
+	SC_ASSERT(false, "Not implemented yet!");
 	return nullptr;
 }
 
@@ -193,19 +198,19 @@ void SR_RenderDevice::WaitForFence(SR_Fence& aFence)
 
 SR_CommandQueue* SR_RenderDevice::GetGraphicsCommandQueue() const
 {
-	assert(false && "Not implemented yet!");
+	SC_ASSERT(false, "Not implemented yet!");
 	return nullptr;
 }
 
 SR_CommandQueue* SR_RenderDevice::GetCommandQueue(const SR_CommandListType& /*aType*/) const
 {
-	assert(false && "Not implemented yet!");
+	SC_ASSERT(false, "Not implemented yet!");
 	return nullptr;
 }
 
 SR_DescriptorHeap* SR_RenderDevice::GetDefaultDescriptorHeap() const
 {
-	assert(false && "Not implemented yet!");
+	SC_ASSERT(false, "Not implemented yet!");
 	return nullptr;
 }
 
@@ -216,29 +221,29 @@ SR_DescriptorHeap* SR_RenderDevice::GetSamplerDescriptorHeap() const
 
 SR_DescriptorHeap* SR_RenderDevice::GetRTVDescriptorHeap() const
 {
-	assert(false && "Not implemented yet!");
+	SC_ASSERT(false, "Not implemented yet!");
 	return nullptr;
 }
 
 SR_DescriptorHeap* SR_RenderDevice::GetDSVDescriptorHeap() const
 {
-	assert(false && "Not implemented yet!");
+	SC_ASSERT(false, "Not implemented yet!");
 	return nullptr;
 }
 
 SR_RootSignature* SR_RenderDevice::GetRootSignature(const SR_RootSignatureType& aType) const
 {
-	return mRootSignatures[static_cast<uint32>(aType)].get();
+	return mRootSignatures[static_cast<uint32>(aType)];
 }
 
 void SR_RenderDevice::SetSwapChain(SR_SwapChain* aSwapChain)
 {
-	mDefaultSwapChain.reset(aSwapChain);
+	mDefaultSwapChain.Reset(aSwapChain);
 }
 
 SR_SwapChain* SR_RenderDevice::GetSwapChain() const
 {
-	return mDefaultSwapChain.get();
+	return mDefaultSwapChain;
 }
 
 SR_InstanceBuffer* SR_RenderDevice::GetPersistentResourceInfo() const
@@ -246,17 +251,17 @@ SR_InstanceBuffer* SR_RenderDevice::GetPersistentResourceInfo() const
 	return mPersistentResourceInfo.get();
 }
 
-SR_CommandQueueManager* SR_RenderDevice::GetCommandQueueManager() const
+SR_QueueManager* SR_RenderDevice::GetQueueManager() const
 {
-	return mCommandQueueManager.get();
+	return mQueueManager.get();
 }
 
 SC_Ref<SR_CommandList> SR_RenderDevice::GetTaskCommandList()
 {
-	if (!mCommandQueueManager)
+	if (!mQueueManager)
 		return nullptr;
 
-	return mCommandQueueManager->GetCommandList(mCommandQueueManager->gCurrentTaskType);
+	return mQueueManager->GetCommandList(mQueueManager->gCurrentTaskType);
 }
 
 const SR_RenderSupportCaps& SR_RenderDevice::GetSupportCaps() const
@@ -284,12 +289,12 @@ void SR_RenderDevice::EndRenderDocCapture()
 
 SC_SizeT SR_RenderDevice::GetAvailableVRAM() const
 {
-	assert(false && "Not implemented yet!");
+	SC_ASSERT(false, "Not implemented yet!");
 	return 0;
 }
 SC_SizeT SR_RenderDevice::GetUsedVRAM() const
 {
-	assert(false && "Not implemented yet!");
+	SC_ASSERT(false, "Not implemented yet!");
 	return 0;
 }
 
@@ -302,7 +307,7 @@ bool SR_RenderDevice::Create(const SR_API& aAPIType)
 {
 	if (gInstance)
 	{
-		assert(false && "RenderDevice can only be created once!");
+		SC_ASSERT(false, "RenderDevice can only be created once!");
 		return false;
 	}
 
@@ -352,7 +357,7 @@ SR_RenderDevice::SR_RenderDevice(const SR_API& aAPI)
 #endif
 	, mRenderAPIType(aAPI)
 {
-	assert(gInstance == nullptr && "Only 1 render device may exist!");
+	SC_ASSERT(gInstance == nullptr && "Only 1 render device may exist!");
 	gInstance = this;
 
 	if (SC_CommandLine::HasCommand("debugrender"))
@@ -372,13 +377,14 @@ SR_RenderDevice::SR_RenderDevice(const SR_API& aAPI)
 		{
 			pRENDERDOC_GetAPI GetRenderDocAPI = (pRENDERDOC_GetAPI)GetProcAddress(renderDocModule, "RENDERDOC_GetAPI");
 			int result = GetRenderDocAPI(eRENDERDOC_API_Version_1_4_2, (void**)&mRenderDocAPI);
-			assert(result == 1);
+			SC_ASSERT(result == 1);
 		}
 	}
 	else
 		mRenderDocAPI = nullptr;
 #endif
 
+	mRenderThread = SC_MakeUnique<SR_RenderThread>();
 }
 
 bool SR_RenderDevice::Init(void* /*aWindowHandle*/)
@@ -399,8 +405,8 @@ bool SR_RenderDevice::PostInit()
 		return false;
 	}
 
-	mCommandQueueManager = SC_MakeUnique<SR_CommandQueueManager>();
-	if (!mCommandQueueManager->Init())
+	mQueueManager = SC_MakeUnique<SR_QueueManager>();
+	if (!mQueueManager->Init())
 		return false;
 
 	return true;

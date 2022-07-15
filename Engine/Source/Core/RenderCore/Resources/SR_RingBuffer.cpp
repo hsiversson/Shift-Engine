@@ -1,29 +1,39 @@
 #include "SR_RingBuffer.h"
 #include "RenderCore/Interface/SR_BufferResource.h"
 
-SR_RingBuffer::SR_RingBuffer(const SC_Ref<SR_BufferResource>& aBuffer /*= nullptr*/, uint32 aAlignment /*= 1*/)
-	: mBuffer(aBuffer)
-	, mSize(0)
-	, mAllocBlockMaxSize(0)
+SR_RingBuffer::SR_RingBuffer(uint64 aSize, uint64 aAlignment /*= 1*/)
+	: mSize(aSize)
+	, mAllocBlockMaxSize(aSize/4)
 	, mAlignment(aAlignment)
-	, mBeginOffset(0)
+	, mBeginOffset(mSize)
 	, mEndOffset(0)
 	, mOffsetBase(0)
 	, mLatestFinishedFrame(SC_UINT64_MAX)
 	, mLatestUpdatedFrame(SC_UINT64_MAX)
 	, mLatestAllocFrame(SC_UINT64_MAX)
 {
-	if (mBuffer)
-	{
-		const SR_BufferResourceProperties& props = aBuffer->GetProperties();
-		mSize = props.mElementCount * props.mElementSize;
-		mAllocBlockMaxSize = mSize / 4;
-	}
 }
 
-SR_RingBuffer::SR_RingBuffer(SR_RingBuffer&& /*aOther*/)
+SR_RingBuffer::SR_RingBuffer(SR_RingBuffer&& aOther)
+	: mSize(aOther.mSize)
+	, mAllocBlockMaxSize(aOther.mAllocBlockMaxSize)
+	, mAlignment(aOther.mAlignment)
+	, mBeginOffset(aOther.mBeginOffset)
+	, mEndOffset(aOther.mEndOffset)
+	, mOffsetBase(aOther.mOffsetBase)
+	, mLatestFinishedFrame(aOther.mLatestFinishedFrame)
+	, mLatestUpdatedFrame(aOther.mLatestUpdatedFrame)
+	, mLatestAllocFrame(aOther.mLatestAllocFrame)
 {
-
+	aOther.mSize = 0;
+	aOther.mAllocBlockMaxSize = 0;
+	aOther.mAlignment = 0;
+	aOther.mBeginOffset = 0;
+	aOther.mEndOffset = 0;
+	aOther.mOffsetBase = 0;
+	aOther.mLatestFinishedFrame = SC_UINT64_MAX;
+	aOther.mLatestUpdatedFrame = SC_UINT64_MAX;
+	aOther.mLatestAllocFrame = SC_UINT64_MAX;
 }
 
 SR_RingBuffer::~SR_RingBuffer()
@@ -36,9 +46,10 @@ void SR_RingBuffer::operator=(SR_RingBuffer&& /*aOther*/)
 
 }
 
-bool SR_RingBuffer::GetOffset(uint32& aOutOffset, uint32 aSize, uint32 aAlignment /*= 0*/, const SR_Fence& aFence /*= SR_Fence()*/)
+bool SR_RingBuffer::GetOffset(uint64& aOutOffset, uint64 aSize, uint64 aAlignment /*= 0*/, const SR_Fence& aFence /*= SR_Fence()*/)
 {
-	assert((aSize & (mAlignment - 1)) == 0);
+	SC_MutexLock lock(mMutex);
+	SC_ASSERT((aSize & (mAlignment - 1)) == 0);
 
 	if (aSize == 0)
 	{
@@ -46,11 +57,11 @@ bool SR_RingBuffer::GetOffset(uint32& aOutOffset, uint32 aSize, uint32 aAlignmen
 		return true;
 	}
 
-	uint32 alignedSize = aSize;
-	uint32 maxMisalignment = 0;
+	uint64 alignedSize = aSize;
+	uint64 maxMisalignment = 0;
 	if (aAlignment > 1)
 	{
-		assert(SC_IsPow2(aAlignment));
+		SC_ASSERT(SC_IsPow2(aAlignment));
 		if (aAlignment > mAlignment)
 		{
 			maxMisalignment = aAlignment - mAlignment;
@@ -60,7 +71,7 @@ bool SR_RingBuffer::GetOffset(uint32& aOutOffset, uint32 aSize, uint32 aAlignmen
 
 	if (alignedSize > mAllocBlockMaxSize)
 	{
-		assert(mAllocBlockMaxSize || !mSize);
+		SC_ASSERT(mAllocBlockMaxSize || !mSize);
 		return false;
 	}
 
@@ -69,7 +80,7 @@ bool SR_RingBuffer::GetOffset(uint32& aOutOffset, uint32 aSize, uint32 aAlignmen
 	if (SR_RenderDevice::gInstance->mLatestFinishedFrame != mLatestFinishedFrame)
 		Update();
 
-	uint32 remainingBytes = mBeginOffset - mEndOffset;
+	uint64 remainingBytes = mBeginOffset - mEndOffset;
 	if (alignedSize > remainingBytes)
 		return false; // full
 
@@ -79,7 +90,7 @@ bool SR_RingBuffer::GetOffset(uint32& aOutOffset, uint32 aSize, uint32 aAlignmen
 		if (alignedSize > remainingBytes)
 			return false; // full
 
-		mEndOffset += mSize - (mOffsetBase + mEndOffset);
+		SC_Atomic::Add(mEndOffset, mSize - (mOffsetBase + mEndOffset));
 	}
 
 	UpdateFrame(true, aFence);
@@ -88,7 +99,9 @@ bool SR_RingBuffer::GetOffset(uint32& aOutOffset, uint32 aSize, uint32 aAlignmen
 	if (maxMisalignment)
 		aOutOffset = SC_Align(aOutOffset, aAlignment);
 
-	mEndOffset += alignedSize;
+	SC_Atomic::Add(mEndOffset, alignedSize);
+
+	//SC_LOG("Allocated temp resource with size ({}) [Frame: {}].", aSize, SC_Time::gFrameCounter);
 	return true;
 }
 
@@ -99,11 +112,13 @@ void SR_RingBuffer::Update()
 	while (mInFlightFrames.Count())
 	{
 		FrameData& frameInFlight = mInFlightFrames.Peek();
-		if (frameInFlight.mFrame > latestFinished || SR_RenderDevice::gInstance->IsFencePending(frameInFlight.mFence))
+		if (frameInFlight.mFrame > latestFinished || frameInFlight.mFence.IsPending())
 			break;
 
-		mBeginOffset += frameInFlight.mFirstOffset;
+		SC_Atomic::Add(mBeginOffset, frameInFlight.mFirstOffset);
 		mInFlightFrames.Remove();
+
+		//SC_LOG("Released temp resources with size [Frame: {}].", frameInFlight.mFrame);
 	}
 
 	mLatestFinishedFrame = latestFinished;
@@ -120,7 +135,7 @@ void SR_RingBuffer::UpdateFrame(bool aAllocationFlag, const SR_Fence& aFence)
 		frame.mFirstOffset = mEndOffset;
 		mInFlightFrames.Add(frame);
 
-		//RecenterBase
+		RecenterBase();
 		mLatestUpdatedFrame = frameIndex;
 
 		if (aAllocationFlag)
@@ -129,4 +144,12 @@ void SR_RingBuffer::UpdateFrame(bool aAllocationFlag, const SR_Fence& aFence)
 			mLatestAllocFence = aFence;
 		}
 	}
+}
+
+void SR_RingBuffer::RecenterBase()
+{
+	mOffsetBase += mEndOffset;
+	mBeginOffset -= mEndOffset;
+	mEndOffset = 0;
+	mOffsetBase = mOffsetBase % mSize;
 }

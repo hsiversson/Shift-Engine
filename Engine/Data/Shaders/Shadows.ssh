@@ -1,6 +1,4 @@
-#ifndef SHADOWS_HEADER
-#define SHADOWS_HEADER
-
+#pragma once 
 #include "StaticSamplers.ssh"
 #include "SceneConstants.ssh"
 
@@ -107,5 +105,3 @@ float CalculateCascadedShadowFactor(float3 aWorldPosition, float aPixelDepth)
     float cascadeBlend = 0.0f;
     return CalculateCascadedShadowFactor(aWorldPosition, aPixelDepth, currentCascadeIndex, nextCascadeIndex, cascadeBlend);
 }
-
-#endif //SHADOWS_HEADER

@@ -1,7 +1,7 @@
 
 #include "SGfx_MaterialInstance.h"
 #include "SGfx_MaterialCache.h"
-#include "RenderCore/ShaderCompiler/SR_DxcCompiler.h"
+#include "RenderCore/ShaderCompiler/SR_DirectXShaderCompiler.h"
 #include "RenderCore/Resources/SR_TextureLoading.h"
 
 SC_Ref<SGfx_MaterialInstance> SGfx_MaterialInstance::GetDefault()
@@ -59,7 +59,7 @@ SGfx_MaterialInstance::~SGfx_MaterialInstance()
 
 SGfx_Material* SGfx_MaterialInstance::GetMaterialTemplate() const
 {
-    return mMaterialTemplate.get();
+    return mMaterialTemplate;
 }
 
 uint32 SGfx_MaterialInstance::GetMaterialIndex() const
@@ -69,7 +69,7 @@ uint32 SGfx_MaterialInstance::GetMaterialIndex() const
 
 void SGfx_MaterialInstance::OverrideTexture(const SC_Ref<SR_Texture>& aTexture, uint32 aIndex)
 {
-	assert(aIndex < mTextureOverrides.Count());
+	SC_ASSERT(aIndex < mTextureOverrides.Count());
 	mTextureOverrides[aIndex] = aTexture;
 	UpdateGPUData();
 }

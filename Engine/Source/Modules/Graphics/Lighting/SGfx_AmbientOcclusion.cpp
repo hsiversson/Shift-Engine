@@ -117,9 +117,9 @@ void SGfx_AmbientOcclusion::Render(SR_CommandList* aCmdList, const SC_Ref<SR_Tex
 SR_Texture* SGfx_AmbientOcclusion::GetTexture() const
 {
 	if (mRTAOSettings.mAOType == Type::None)
-		return SGfx_DefaultTextures::GetWhite1x1().get();
+		return SGfx_DefaultTextures::GetWhite1x1();
 
-	return mRTAOSettings.mUseDenoiser ? mDenoisedTexture[1].get() : mRawOutputTexture.get();
+	return mRTAOSettings.mUseDenoiser ? mDenoisedTexture[1] : mRawOutputTexture;
 }
 
 const SGfx_AmbientOcclusion::RTAOSettings& SGfx_AmbientOcclusion::GetRTAOSettings() const
@@ -152,8 +152,8 @@ void SGfx_AmbientOcclusion::RenderRTAO(SR_CommandList* aCmdList, const SC_Ref<SR
 
 	mConstantBuffer->UpdateData(0, &constants, sizeof(RTAOConstants));
 
-	aCmdList->SetRootConstantBuffer(mConstantBuffer.get(), 0);
-	aCmdList->SetShaderState(mRTAOShader.get());
+	aCmdList->SetRootConstantBuffer(mConstantBuffer, 0);
+	aCmdList->SetShaderState(mRTAOShader);
 	aCmdList->DispatchRays(SC_IntVector(constants.mTargetSizeAndInvSize.XY() * aRenderData.mSceneConstants.mViewConstants.mViewportSizeAndScale.ZW(), 1));
 
 	aCmdList->EndEvent();
@@ -172,15 +172,15 @@ void SGfx_AmbientOcclusion::RenderRTAO(SR_CommandList* aCmdList, const SC_Ref<SR
 		denoiseConstants.mBlurDirection = SC_Vector2(1.0f, 0.0f);
 		mDenoiserConstantBuffer[0]->UpdateData(0, &denoiseConstants, sizeof(DenoiserConstants));
 
-		aCmdList->SetRootConstantBuffer(mDenoiserConstantBuffer[0].get(), 0);
-		aCmdList->Dispatch(mDenoiseShader.get(), SC_IntVector(constants.mTargetSizeAndInvSize.XY() * aRenderData.mSceneConstants.mViewConstants.mViewportSizeAndScale.ZW(), 1));
+		aCmdList->SetRootConstantBuffer(mDenoiserConstantBuffer[0], 0);
+		aCmdList->Dispatch(mDenoiseShader, SC_IntVector(constants.mTargetSizeAndInvSize.XY() * aRenderData.mSceneConstants.mViewConstants.mViewportSizeAndScale.ZW(), 1));
 
 		denoiseConstants.mInputTexture = mDenoisedRWTexture[0]->GetDescriptorHeapIndex();
 		denoiseConstants.mOutputTexture = mDenoisedRWTexture[1]->GetDescriptorHeapIndex();
 		denoiseConstants.mBlurDirection = SC_Vector2(0.0f, 1.0f);
 		mDenoiserConstantBuffer[1]->UpdateData(0, &denoiseConstants, sizeof(DenoiserConstants));
-		aCmdList->SetRootConstantBuffer(mDenoiserConstantBuffer[1].get(), 0);
-		aCmdList->Dispatch(mDenoiseShader.get(), SC_IntVector(constants.mTargetSizeAndInvSize.XY() * aRenderData.mSceneConstants.mViewConstants.mViewportSizeAndScale.ZW(), 1));
+		aCmdList->SetRootConstantBuffer(mDenoiserConstantBuffer[1], 0);
+		aCmdList->Dispatch(mDenoiseShader, SC_IntVector(constants.mTargetSizeAndInvSize.XY() * aRenderData.mSceneConstants.mViewConstants.mViewportSizeAndScale.ZW(), 1));
 
 		aCmdList->EndEvent();
 	}

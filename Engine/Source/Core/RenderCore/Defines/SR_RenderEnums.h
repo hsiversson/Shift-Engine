@@ -52,6 +52,15 @@ enum class SR_RootSignatureType
 	COUNT
 };
 
+enum class SR_CommandListType
+{
+	Graphics,
+	Compute,
+	Copy,
+	COUNT = 3,
+	Unknown = COUNT,
+};
+
 enum class SR_DescriptorType
 {
 	SRV,
@@ -212,6 +221,13 @@ enum class SR_ShadingRate
 	VRS_1X2,
 	VRS_2X1,
 	VRS_2X2,
+};
+
+enum class SR_RaytracingType
+{
+	None,
+	Default,
+	Inline,
 };
 
 enum SR_TextureChannelOrder

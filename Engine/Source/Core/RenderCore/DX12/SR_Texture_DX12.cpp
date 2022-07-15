@@ -85,8 +85,8 @@ bool SR_Texture_DX12::InitAsSRV()
 		return false;
 	}
 
-	mDescriptor = SR_RenderDevice_DX12::gD3D12Instance->GetDefaultDescriptorHeap()->Alloc();
-	SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateShaderResourceView(mDX12Resource->GetD3D12Resource(), &desc, D3D12_CPU_DESCRIPTOR_HANDLE{ mDescriptor.mDescriptorHandleCPU });
+	mDescriptor = SR_RenderDevice_DX12::gInstance->GetDefaultDescriptorHeap()->Alloc();
+	SR_RenderDevice_DX12::gInstance->GetD3D12Device()->CreateShaderResourceView(mDX12Resource->GetD3D12Resource(), &desc, D3D12_CPU_DESCRIPTOR_HANDLE{ mDescriptor.mDescriptorHandleCPU });
 
 	return true;
 }
@@ -143,8 +143,8 @@ bool SR_Texture_DX12::InitAsUAV()
 		return false;
 	}
 
-	mDescriptor = SR_RenderDevice_DX12::gD3D12Instance->GetDefaultDescriptorHeap()->Alloc();
-	SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateUnorderedAccessView(mDX12Resource->GetD3D12Resource(), nullptr, &desc, D3D12_CPU_DESCRIPTOR_HANDLE{ mDescriptor.mDescriptorHandleCPU });
+	mDescriptor = SR_RenderDevice_DX12::gInstance->GetDefaultDescriptorHeap()->Alloc();
+	SR_RenderDevice_DX12::gInstance->GetD3D12Device()->CreateUnorderedAccessView(mDX12Resource->GetD3D12Resource(), nullptr, &desc, D3D12_CPU_DESCRIPTOR_HANDLE{ mDescriptor.mDescriptorHandleCPU });
 	return true;
 }
 

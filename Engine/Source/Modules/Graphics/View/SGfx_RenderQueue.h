@@ -2,6 +2,7 @@
 #include "Graphics/View/SGfx_RenderQueueItem.h"
 
 class SR_CommandList;
+struct SGfx_ViewData;
 
 class SGfx_RenderQueue
 {
@@ -17,8 +18,8 @@ public:
 	SGfx_RenderQueue(const SortType& aSortType);
 	virtual ~SGfx_RenderQueue();
 
-	void Prepare();
-	void Render(SR_CommandList* aCmdList);
+	void Prepare(SGfx_ViewData& aPrepareData);
+	void Render(SR_CommandList* aCmdList) const;
 	void Clear();
 
 	SGfx_RenderQueueItem& AddItem();
@@ -28,6 +29,20 @@ public:
 	bool IsEmpty() const;
 
 private:
+	struct InstanceData
+	{
+		SC_Matrix mTransform;
+		SC_Matrix mPrevTransform;
+		uint32 mNormalBufferDescriptorIndex;
+		uint32 mVertexStride;
+		uint32 mIndexBufferDescriptorIndex;
+		uint32 mIndexStride;
+		uint32 mNumVertices;
+		uint32 mVertexNormalOffset;
+		uint32 mMaterialIndex;
+		uint32 _pad;
+	};
+
 	void Sort();
 	void Sort_ByState();
 	void Sort_FarFirst();

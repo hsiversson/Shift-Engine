@@ -266,7 +266,7 @@ SC_Matrix SGfx_Camera::GetProjectionNoInvZ() const
 
 void SGfx_Camera::GetCornersOnPlane(float aZ, SC_Vector* aOutCorners) const
 {
-	assert(aOutCorners != NULL);
+	SC_ASSERT(aOutCorners != NULL);
 	if (mIsDirty)
 		Update();
 

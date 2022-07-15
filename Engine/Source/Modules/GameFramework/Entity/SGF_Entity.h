@@ -23,6 +23,8 @@ public:
 	SGF_Entity& operator=(SGF_Entity&& aOther);
 	bool operator==(const SGF_Entity& aOther) const;
 	bool operator!=(const SGF_Entity& aOther) const;
+	bool operator==(const SGF_EntityHandle& aOther) const;
+	bool operator!=(const SGF_EntityHandle& aOther) const;
 
 	bool HasComponent(const SGF_ComponentId& aId) const;
 	SGF_Component* GetComponent(const SGF_ComponentId& aId) const;
@@ -78,6 +80,8 @@ public:
 
 	SGF_Entity CreateEntity();
 	void DestroyEntity(const SGF_Entity& aEntity);
+
+	void GetEntities(SC_Array<SGF_Entity>& aOutEntities);
 
 private:
 	void GrowEntityAllocation();

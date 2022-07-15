@@ -5,7 +5,7 @@
 
 static bool ReadTextureData(std::ifstream& aFile, SR_TextureData& /*aOutData*/, uint8* aDstBuffer, uint32 aSize, uint32 /*aOffset*/)
 {
-	assert(aFile.is_open());
+	SC_ASSERT(aFile.is_open());
 
 	//aFile.seekg(aOffset, std::ios::beg);
 	aFile.read((char*)aDstBuffer, aSize);
@@ -231,7 +231,7 @@ bool DecodeHeader(std::ifstream& aFile, SR_TextureData& aOutData)
 
 		if (dxt10header.arraySize != 1)
 		{
-			assert(dxt10header.resourceDimension == DDS_DIMENSION_TEXTURE2D);
+			SC_ASSERT(dxt10header.resourceDimension == DDS_DIMENSION_TEXTURE2D);
 			aOutData.mProperties.mType = SR_ResourceType::Texture2D;
 			aOutData.mProperties.mSize.z = dxt10header.arraySize;
 		}
@@ -281,7 +281,7 @@ bool LoadPixelData(std::ifstream& aFile, SR_TextureData& aOutData, uint32 aStart
 			if (mip == aStartMip)
 				startReadPos = mipFilePos;
 			else
-				assert((mipFilePos == filePos) && "Invalid mip offset");
+				SC_ASSERT((mipFilePos == filePos), "Invalid mip offset");
 
 			filePos = mipFilePos + mipSizes.mMips[0].mBytesPerTexture;
 			totalReadSize += mipSizes.mMips[0].mBytesPerTexture;
@@ -316,7 +316,7 @@ bool LoadPixelData(std::ifstream& aFile, SR_TextureData& aOutData, uint32 aStart
 			data.mLevel.mMipLevel -= aMipOffset;
 
 			buffer += mipData.mBytesPerTexture;
-			assert(buffer <= bufferEnd);
+			SC_ASSERT(buffer <= bufferEnd);
 			(void)bufferEnd;
 		}
 	}

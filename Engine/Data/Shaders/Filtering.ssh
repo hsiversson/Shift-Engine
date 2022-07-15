@@ -1,7 +1,4 @@
-#ifndef FILTERING_HEADER
-#define FILTERING_HEADER
-//#pragma once
-
+#pragma once 
 float FilterCubic(in float x, in float B, in float C)
 {
     float y = 0.0f;
@@ -30,5 +27,3 @@ float FilterMitchell(float x)
 {
     return FilterCubic(x, 1 / 3.0f, 1 / 3.0f);
 }
-
-#endif //FILTERING_HEADER

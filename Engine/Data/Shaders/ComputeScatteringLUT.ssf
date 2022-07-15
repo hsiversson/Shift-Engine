@@ -13,12 +13,12 @@ ConstantBuffer<ConstantsStruct> Constants : register(b0);
 [numthreads(8,8,1)]
 void ComputeSkyViewLUT(uint3 aDispatchThreadId : SV_DispatchThreadId)
 {
-    RWTexture2D<float3> outTexture = GetRWTexture2D<float3>(Constants.mOutputTextureDescriptorIndex);
+    RWTexture2D<float3> outputLUT = GetRWTexture2D<float3>(Constants.mOutputTextureDescriptorIndex);
 
     float2 pixelPos = float2(aDispatchThreadId.xy) + 0.5f;
     float2 uv = pixelPos * Constants.mTargetSizeAndInvSize.zw;
 
-    float3 worldPosition = GetCameraPositionPlanetRelative();
+    float3 worldPosition = GetCameraPositionPlanetRelative(false);
     float viewHeight = length(worldPosition);
 
     float viewZenithCosAngle;
@@ -42,7 +42,7 @@ void ComputeSkyViewLUT(uint3 aDispatchThreadId : SV_DispatchThreadId)
 
     if (!MoveToTopAtmosphere(worldPosition, worldDirection))
     {
-        outTexture[aDispatchThreadId.xy] = (float3)0.0f;
+        outputLUT[aDispatchThreadId.xy] = (float3)0.0f;
         return;
     }
 
@@ -71,7 +71,7 @@ void ComputeSkyViewLUT(uint3 aDispatchThreadId : SV_DispatchThreadId)
         SR_ScatteringConstants.mTransmittanceLUTDescriptorIndex, 
         SR_ScatteringConstants.mMultiScatteringLUTDescriptorIndex);
 
-    outTexture[aDispatchThreadId.xy] = result.mScatteredLuminance;
+    outputLUT[aDispatchThreadId.xy] = result.mScatteredLuminance;
 }
 
 [numthreads(8,8,1)]
@@ -87,7 +87,7 @@ void ComputeMultiScatteringLUT(uint3 aDispatchThreadId : SV_DispatchThreadId)
 [numthreads(8,8,1)]
 void ComputeTransmittanceLUT(uint3 aDispatchThreadId : SV_DispatchThreadId)
 {
-    RWTexture2D<float3> outTexture = GetRWTexture2D<float3>(Constants.mOutputTextureDescriptorIndex);
+    RWTexture2D<float3> outputLUT = GetRWTexture2D<float3>(Constants.mOutputTextureDescriptorIndex);
 
     float2 pixelPos = float2(aDispatchThreadId.xy) + 0.5f;
     float2 uv = pixelPos * Constants.mTargetSizeAndInvSize.zw;
@@ -125,5 +125,39 @@ void ComputeTransmittanceLUT(uint3 aDispatchThreadId : SV_DispatchThreadId)
 
     float3 transmittance = exp(-result.mOpticalDepth);
 
-    outTexture[aDispatchThreadId.xy] = transmittance;
+    outputLUT[aDispatchThreadId.xy] = transmittance;
 }
+
+/*
+[numthreads(4,4,4)]
+void ComputeAerialPerspectiveLUT(uint3 aDispatchThreadId : SV_DispatchThreadId)
+{
+    RWTexture3D<float4> outputLUT = GetRWTexture3D<float4>(Constants.mOutputTextureDescriptorIndex);
+    
+    float2 pixelPos = float2(aDispatchThreadId.xy) + 0.5f;
+    float2 uv = pixelPos * Constants.mTargetSizeAndInvSize.zw;
+
+    ScatteringSamplingParams samplingParams;
+    samplingParams.mEnableVariableSampleCount = false;
+    samplingParams.mInitialSampleCount = max(1.0f, (float(aDispatchThreadId.z) + 1.0f) * SkyAtmosphere.CameraAerialPerspectiveSampleCountPerSlice);
+
+    const bool isGround = false;
+	const float DeviceZ = FarDepthValue;
+	const bool useMieRayPhase = true;
+    SingleScatteringResult result = IntegrateScatteredLuminance(
+        samplingParams, 
+        worldPosition, 
+        worldDirection, 
+        nullSunDirection, 
+        nullSunIlluminance, 
+        useMieRayPhase, 
+        multiScattering, 
+        isGround, 
+        Constants.mTransmittanceLUTDescriptorIndex, 
+        Constants.mMultiScatteringLUTDescriptorIndex);
+
+    const float third = 1.0f / 3.0f;
+	const float transmittance = dot(result.mTransmittance, (float3)third);
+    outputLUT[aDispatchThreadId] = float4(result.mScatteredLuminance, transmittance);
+}
+*/

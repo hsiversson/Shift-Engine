@@ -4,6 +4,7 @@
 #include "SAF_Window_Win64.h"
 #include "Common/MessageQueue/SC_MessageQueue.h"
 #include "RenderCore/Interface/SR_RenderDevice.h"
+#include "InputOutput/File/SC_FileWatcher.h"
 
 #include <fcntl.h>
 #include <io.h>
@@ -12,10 +13,13 @@
 SAF_Framework_Win64::SAF_Framework_Win64()
 	: mMessageQueue(SC_MessageQueue::Get())
 {
+	SC_FileWatcher::Create();
 }
 
 SAF_Framework_Win64::~SAF_Framework_Win64()
 {
+	SC_FileWatcher::Destroy();
+
 	mMessageQueue = nullptr;
 	SC_MessageQueue::Destroy();
 }
@@ -116,7 +120,7 @@ bool SAF_Framework_Win64::Init()
 	{
 		return false;
 	}
-	SR_RenderDevice::gInstance->SetSwapChain(window->mSwapChain.get());
+	SR_RenderDevice::gInstance->SetSwapChain(window->mSwapChain);
 
 	return SAF_Framework::Init();
 }

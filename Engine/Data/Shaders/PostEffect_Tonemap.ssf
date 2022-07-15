@@ -13,7 +13,7 @@ struct DispatchInfoStruct
 ConstantBuffer<DispatchInfoStruct> DispatchInfo : register(b0);
 
 [numthreads(8, 8, 1)]
-void Tonemap(uint3 aDispatchThreadId : SV_DispatchThreadID)
+void Main(uint3 aDispatchThreadId : SV_DispatchThreadID)
 {
     Texture2D<float3> sceneColorTexture = GetTexture2D<float3>(DispatchInfo.mSceneColorDescriptorIndex);
     Texture2D<float4> bloomTexture = GetTexture2D<float4>(DispatchInfo.mBloomTextureDescriptorIndex);
@@ -30,8 +30,9 @@ void Tonemap(uint3 aDispatchThreadId : SV_DispatchThreadID)
     // apply exposure
 
     // apply tonemapping
-    float3 screenColor = ACESFitted(sceneColor + bloomColor);
+    float3 screenColor = Tonemap(lerp(sceneColor, bloomColor, 0.25f));
 
     float3 debugTextureSample = debugTexture.Load(loadLocation);
     outTexture[pixelPosition] = float4(screenColor + debugTextureSample, 1.0f);
 }
+

@@ -33,7 +33,7 @@ uint32 SGfx_MaterialGPUDataBuffer::Add(const SGfx_MaterialGPUData& aMaterialData
 
 void SGfx_MaterialGPUDataBuffer::UpdateData(const SGfx_MaterialGPUData& aMaterialData, uint32 aMaterialIndex)
 {
-	assert(aMaterialIndex < mMaterialGPUDatas.Count());
+	SC_ASSERT(aMaterialIndex < mMaterialGPUDatas.Count());
 	mMaterialGPUDatas[aMaterialIndex] = aMaterialData;
 	mIsDirty = true;
 }
@@ -77,7 +77,7 @@ uint32 SGfx_MaterialGPUDataBuffer::GetIndex()
 	{
 		SC_MutexLock lock(mMutex);
 
-		assert((mFreeIndices.Count() > 0) && "Material info buffer is full.");
+		SC_ASSERT((mFreeIndices.Count() > 0) && "Material info buffer is full.");
 		index = mFreeIndices.Last();
 		mFreeIndices.RemoveLast();
 	}

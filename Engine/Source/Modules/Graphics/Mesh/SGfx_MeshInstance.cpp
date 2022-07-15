@@ -1,4 +1,5 @@
 #include "SGfx_MeshInstance.h"
+#include "SGfx_InstanceData.h"
 
 SC_Ref<SGfx_MeshInstance> SGfx_MeshInstance::Create(const SGfx_MeshCreateParams& aCreateParams)
 {
@@ -34,12 +35,12 @@ void SGfx_MeshInstance::SetMaterialInstance(const SC_Ref<SGfx_MaterialInstance>&
 
 SGfx_Mesh* SGfx_MeshInstance::GetMeshTemplate() const
 {
-	return mMeshTemplate.get();
+	return mMeshTemplate;
 }
 
 SGfx_MaterialInstance* SGfx_MeshInstance::GetMaterialInstance() const
 {
-	return mMaterialInstance.get();
+	return mMaterialInstance;
 }
 
 void SGfx_MeshInstance::SetTransform(const SC_Matrix& aTransform)
@@ -64,28 +65,34 @@ const SC_AABB& SGfx_MeshInstance::GetBoundingBox() const
 	return mBoundingBox;
 }
 
-void SGfx_MeshInstance::UpdateInstanceData() const
+void SGfx_MeshInstance::UpdateInstanceData(SGfx_InstanceData* aInstanceData)
 {
 	struct InstanceData
 	{
 		SC_Matrix mTransform;
 		SC_Matrix mPrevTransform;
-		uint32 mVertexBufferDescriptorIndex;
+		uint32 mNormalBufferDescriptorIndex;
 		uint32 mVertexStride;
+		uint32 mIndexBufferDescriptorIndex;
+		uint32 mIndexStride;
 		uint32 mNumVertices;
 		uint32 mVertexNormalOffset;
 		uint32 mMaterialIndex;
+		uint32 _pad;
 	};
 
 	InstanceData data;
 	data.mTransform = mTransform;
 	data.mPrevTransform = mPrevTransform;
-	data.mVertexBufferDescriptorIndex = mMeshTemplate->GetVertexBuffer()->GetDescriptorHeapIndex();
+	data.mNormalBufferDescriptorIndex = mMeshTemplate->GetNormalBuffer()->GetDescriptorHeapIndex();
 	data.mVertexStride = mMeshTemplate->GetVertexBufferResource()->GetProperties().mElementSize;
+	data.mIndexBufferDescriptorIndex = mMeshTemplate->GetIndexBuffer()->GetDescriptorHeapIndex();
+	data.mIndexStride = mMeshTemplate->GetIndexBufferResource()->GetProperties().mElementSize;
 	data.mNumVertices = mMeshTemplate->GetVertexBufferResource()->GetProperties().mElementCount;
 	data.mVertexNormalOffset = mMeshTemplate->GetVertexLayout().GetAttributeByteOffset(SR_VertexAttribute::Normal);
 	data.mMaterialIndex = mMaterialInstance->GetMaterialIndex();
 
+	aInstanceData->Add(mInstanceDataOffset, sizeof(data) / sizeof(SC_Vector4), reinterpret_cast<SC_Vector4*>(&data));
 }
 
 #if ENABLE_RAYTRACING
@@ -102,6 +109,11 @@ const SR_RaytracingInstanceData& SGfx_MeshInstance::GetRaytracingData()
 	return mRaytracingData;
 }
 #endif
+
+uint32 SGfx_MeshInstance::GetInstanceDataOffset() const
+{
+	return mInstanceDataOffset;
+}
 
 void SGfx_MeshInstance::CalculateBoundingBox()
 {
@@ -131,7 +143,7 @@ void SGfx_MeshInstance::UpdateRaytracingData()
 {
 	mRaytracingData.mAccelerationStructureGPUAddress = mMeshTemplate->GetAccelerationStructure()->GetGPUAddressStart();
 	mRaytracingData.mTransform = mTransform;
-	mRaytracingData.mInstanceId = 0;
+	mRaytracingData.mInstanceId = mInstanceDataOffset;
 	mRaytracingData.mInstanceMask = 0xff;
 	mRaytracingData.mHitGroup = 0;
 	mRaytracingData.mFaceCullingMode = SR_CullMode::Back;

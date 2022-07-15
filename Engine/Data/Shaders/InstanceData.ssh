@@ -1,12 +1,56 @@
-#ifndef INSTANCE_DATA_HEADER
-#define INSTANCE_DATA_HEADER
-
+#pragma once 
 #include "SceneConstants.ssh"
+#include "BindlessResources.ssh"
 
 template<typename T>
-T LoadInstanceData(uint aBufferOffset)
+T SR_LoadInstanceDataPart(ByteAddressBuffer aBuffer, in uint aInstanceOffset, in uint aOffset)
 {
-    return (T)0;
+    T data = aBuffer.Load<T>(aInstanceOffset + aOffset);
+    return data;
 }
 
-#endif //INSTANCE_DATA_HEADER
+struct SR_InstanceData
+{
+	float4x4 mTransform;
+	float4x4 mPrevTransform;
+	uint mNormalBufferDescriptorIndex;
+	uint mVertexStride;
+	uint mIndexBufferDescriptorIndex;
+	uint mIndexStride;
+	uint mNumVertices;
+	uint mVertexNormalOffset;
+	uint mMaterialIndex;
+	uint _pad;
+};
+
+SR_InstanceData SR_LoadInstanceData(in uint aInstanceOffset)
+{
+    ByteAddressBuffer instanceDataBuffer = GetByteBuffer(SR_SceneConstants.mInstanceDataBufferIndex);
+    SR_InstanceData instanceData = (SR_InstanceData)0;
+
+    instanceData.mTransform[0] = SR_LoadInstanceDataPart<float4>(instanceDataBuffer, aInstanceOffset, 0);
+    instanceData.mTransform[1] = SR_LoadInstanceDataPart<float4>(instanceDataBuffer, aInstanceOffset, 16);
+    instanceData.mTransform[2] = SR_LoadInstanceDataPart<float4>(instanceDataBuffer, aInstanceOffset, 32);
+    instanceData.mTransform[3] = SR_LoadInstanceDataPart<float4>(instanceDataBuffer, aInstanceOffset, 48);
+
+    instanceData.mPrevTransform[0] = SR_LoadInstanceDataPart<float4>(instanceDataBuffer, aInstanceOffset, 64);
+    instanceData.mPrevTransform[1] = SR_LoadInstanceDataPart<float4>(instanceDataBuffer, aInstanceOffset, 80);
+    instanceData.mPrevTransform[2] = SR_LoadInstanceDataPart<float4>(instanceDataBuffer, aInstanceOffset, 96);
+    instanceData.mPrevTransform[3] = SR_LoadInstanceDataPart<float4>(instanceDataBuffer, aInstanceOffset, 112);
+
+    uint4 parts[2];
+    parts[0] = SR_LoadInstanceDataPart<uint4>(instanceDataBuffer, aInstanceOffset, 128);
+    parts[1] = SR_LoadInstanceDataPart<uint4>(instanceDataBuffer, aInstanceOffset, 144);
+
+    instanceData.mNormalBufferDescriptorIndex = parts[0].x;
+    instanceData.mVertexStride = parts[0].y;
+    instanceData.mIndexBufferDescriptorIndex = parts[0].z;
+    instanceData.mIndexStride = parts[0].w;
+
+    instanceData.mNumVertices = parts[1].x;
+    instanceData.mVertexNormalOffset = parts[1].y;
+
+    instanceData.mMaterialIndex = parts[1].z;
+
+    return instanceData;
+}

@@ -72,6 +72,7 @@ namespace SC_Math
 	}
 	float Frac(float aValue)
 	{
-		return modf(aValue, nullptr);
+		float intPart = 0;
+		return modf(aValue, &intPart);
 	}
 }

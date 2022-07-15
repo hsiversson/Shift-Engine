@@ -5,9 +5,7 @@
 #include "SR_CommandQueue_DX12.h"
 
 #define ENABLE_NVIDIA_AFTERMATH (0)
-#define ENABLE_NVAPI			(1)
-#define ENABLE_AGS				(1)
-#define ENABLE_DRED				(0)
+#define ENABLE_DRED				(1)
 
 struct ID3D12Device;
 struct ID3D12Device5;
@@ -25,7 +23,7 @@ struct SR_TextureResourceProperties;
 class SR_Buffer_DX12;
 class SR_BufferResource_DX12;
 class SR_DescriptorHeap_DX12;
-class SR_DxcCompiler;
+class SR_DirectXShaderCompiler;
 
 class SR_RenderDevice_DX12 : public SR_RenderDevice
 {
@@ -72,13 +70,12 @@ public:
 	SC_SizeT GetAvailableVRAM() const override;
 	SC_SizeT GetUsedVRAM() const override;
 
-	static SR_RenderDevice_DX12* gD3D12Instance;
-
+	static SR_RenderDevice_DX12* gInstance;
+	static bool gUsingNvApi;
+	static bool gUsingAGS;
 private:
 	bool Init(void* aWindowHandle) override;
 	bool CreateDefaultRootSignatures();
-
-	bool InitTempStorage();
 
 	void GatherSupportCaps();
 
@@ -108,11 +105,7 @@ private:
 	SC_Ref<SR_DescriptorHeap_DX12> mRTVDescriptorHeap;
 	SC_Ref<SR_DescriptorHeap_DX12> mDSVDescriptorHeap;
 
-	SR_ComPtr<ID3D12Heap> mTempTexturesHeap;
-	SR_ComPtr<ID3D12Heap> mTempRenderTargetsHeap;
-	SR_ComPtr<ID3D12Heap> mTempUploadHeap;
-
-	SC_UniquePtr<SR_DxcCompiler> mDxcCompiler;
+	SC_UniquePtr<SR_DirectXShaderCompiler> mDxcCompiler;
 
 #if ENABLE_DRED
 	SC_Mutex mDREDMutex;
@@ -120,27 +113,64 @@ private:
 #endif
 };
 
-inline bool VerifyHRESULT(HRESULT aValue)
+inline const char* GetRemovedReasonString(HRESULT aValue)
 {
 	switch (aValue)
 	{
+	case DXGI_ERROR_DEVICE_HUNG: return "Device Hung";
+	case DXGI_ERROR_DEVICE_RESET: return "Device Reset";
+	case DXGI_ERROR_DEVICE_REMOVED: return "Device Removed";
+	case DXGI_ERROR_DRIVER_INTERNAL_ERROR: return "Internal Driver Error";
+	case DXGI_ERROR_INVALID_CALL: return "Invalid Call";
+	case S_OK: return "S_OK";
+	}
+
+	return "<unknown value>";
+}
+
+inline bool VerifyHRESULT(HRESULT aValue)
+{
+	bool outputDebugData = false;
+
+	switch (aValue)
+	{
 	case E_INVALIDARG:
-		assert(false && "Invalid args passed to D3D12 runtime");
+		SC_ERROR("[DX12 ERROR]: Invalid Args");
 		return false;
 	case E_OUTOFMEMORY:
-		assert(false && "Out of Memory");
+		SC_ERROR("[DX12 ERROR]: Out Of Memory");
 		return false;
+	case DXGI_ERROR_INVALID_CALL:
+		SC_ERROR("[DX12 ERROR]: Invalid Call");
+		return false;
+	case DXGI_ERROR_UNSUPPORTED:
+		SC_ERROR("[DX12 ERROR]: Unsupported Feature Used");
+		return false;
+	case DXGI_ERROR_DEVICE_HUNG:
+		SC_ERROR("[DXGI ERROR]: Device Hung");
+		outputDebugData = true;
+		break;
 	case DXGI_ERROR_DEVICE_REMOVED:
-#if ENABLE_DRED
-		SR_RenderDevice_DX12::gD3D12Instance->OutputDredDebugData();
-#endif
-		return false;
+		SC_ERROR("[DXGI ERROR]: Device Removed");
+		SC_ERROR("Removed Reason: {}", GetRemovedReasonString(SR_RenderDevice_DX12::gInstance->GetD3D12Device()->GetDeviceRemovedReason()));
+		outputDebugData = true;
+		break;
 	case S_OK:
 	case S_FALSE:
 		return true;
 	default:
+		SC_ERROR("[DX12 ERROR]: Unknown Reason ({:0x})", aValue);
 		return false;
 	}
+
+	if (outputDebugData)
+	{
+#if ENABLE_DRED
+		SR_RenderDevice_DX12::gInstance->OutputDredDebugData();
+#endif
+	}
+
+	return false;
 }
 
 #endif

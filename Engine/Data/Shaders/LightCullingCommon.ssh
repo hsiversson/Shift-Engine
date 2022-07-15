@@ -1,5 +1,4 @@
-#ifndef LIGHT_CULLING_COMMON
-#define LIGHT_CULLING_COMMON
+#pragma once 
 #include "Common.ssh"
 #include "SceneConstants.ssh"
 #include "BindlessResources.ssh"
@@ -90,5 +89,3 @@ SR_TileFrustum ConstructTileFrustum(uint2 aTileIndex)
 
     return tileFrustum;
 }
-
-#endif //LIGHT_CULLING_COMMON

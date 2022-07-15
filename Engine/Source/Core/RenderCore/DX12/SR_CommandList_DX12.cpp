@@ -38,17 +38,17 @@ bool SR_CommandList_DX12::Init(const char* aDebugName)
 		break;
 	}
 
-	HRESULT result = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateCommandAllocator(cmdListType, IID_PPV_ARGS(&mD3D12CommandAllocator));
+	HRESULT result = SR_RenderDevice_DX12::gInstance->GetD3D12Device()->CreateCommandAllocator(cmdListType, IID_PPV_ARGS(&mD3D12CommandAllocator));
 	if (!VerifyHRESULT(result))
 	{
-		assert(false);
+		SC_ASSERT(false);
 		return false;
 	}
 	
-	result = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->CreateCommandList(0, cmdListType, mD3D12CommandAllocator.Get(), nullptr, IID_PPV_ARGS(&mD3D12CommandList));
+	result = SR_RenderDevice_DX12::gInstance->GetD3D12Device()->CreateCommandList(0, cmdListType, mD3D12CommandAllocator.Get(), nullptr, IID_PPV_ARGS(&mD3D12CommandList));
 	if (!VerifyHRESULT(result))
 	{
-		assert(false);
+		SC_ASSERT(false);
 		return false;
 	}
 
@@ -227,7 +227,7 @@ SC_Ref<SR_BufferResource> SR_CommandList_DX12::CreateAccelerationStructure(const
 		inputs.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
 
 	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO prebuildInfo = {};
-	SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device5()->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &prebuildInfo);
+	SR_RenderDevice_DX12::gInstance->GetD3D12Device5()->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &prebuildInfo);
 
 	SR_BufferResourceProperties bufferResourceProps;
 	bufferResourceProps.mElementCount = (uint32)prebuildInfo.ResultDataMaxSizeInBytes;
@@ -328,8 +328,8 @@ void SR_CommandList_DX12::SetRootSignature(SR_RootSignature* aRootSignature)
 	if (mStateCache.mCurrentRootSignature != rootSignatureDX12)
 	{
 		ID3D12DescriptorHeap* descriptorHeaps[2];
-		descriptorHeaps[0] = static_cast<SR_DescriptorHeap_DX12*>(SR_RenderDevice_DX12::gD3D12Instance->GetDefaultDescriptorHeap())->GetD3D12DescriptorHeap();
-		descriptorHeaps[1] = static_cast<SR_DescriptorHeap_DX12*>(SR_RenderDevice_DX12::gD3D12Instance->GetSamplerDescriptorHeap())->GetD3D12DescriptorHeap();
+		descriptorHeaps[0] = static_cast<SR_DescriptorHeap_DX12*>(SR_RenderDevice_DX12::gInstance->GetDefaultDescriptorHeap())->GetD3D12DescriptorHeap();
+		descriptorHeaps[1] = static_cast<SR_DescriptorHeap_DX12*>(SR_RenderDevice_DX12::gInstance->GetSamplerDescriptorHeap())->GetD3D12DescriptorHeap();
 		mD3D12CommandList->SetDescriptorHeaps(2, descriptorHeaps);
 
 		if (isCompute)
@@ -400,7 +400,7 @@ void SR_CommandList_DX12::SetRootConstant()
 
 void SR_CommandList_DX12::SetRootConstantBuffer(SR_BufferResource* aConstantBuffer, uint32 aSlot)
 {
-	assert(aSlot < 4);
+	SC_ASSERT(aSlot < 4);
 	if (mResourceBindings.mConstantBuffers[aSlot] != aConstantBuffer)
 	{
 		mResourceBindings.mConstantBuffers[aSlot] = aConstantBuffer;
@@ -426,7 +426,7 @@ void SR_CommandList_DX12::SetRootUnorderedAccessResource()
 
 void SR_CommandList_DX12::SetTexture(SR_Texture* aTexture, uint32 aSlot)
 {
-	assert(aSlot < 1);
+	SC_ASSERT(aSlot < 1);
 	if (mResourceBindings.mTextures[aSlot] != aTexture)
 	{
 		mResourceBindings.mTextures[aSlot] = aTexture;
@@ -512,7 +512,7 @@ void SR_CommandList_DX12::AliasBarrier()
 
 void SR_CommandList_DX12::CopyResource(SR_Resource* aDstResource, SR_Resource* aSrcResource)
 {
-	assert((aDstResource != nullptr) && (aSrcResource != nullptr) && "Resources cannot be nullptr.");
+	SC_ASSERT((aDstResource != nullptr) && (aSrcResource != nullptr) && "Resources cannot be nullptr.");
 	if (aDstResource->mTrackedD3D12Resource != aSrcResource->mTrackedD3D12Resource)
 	{
 		mD3D12CommandList->CopyResource(aDstResource->mTrackedD3D12Resource, aSrcResource->mTrackedD3D12Resource);
@@ -521,7 +521,7 @@ void SR_CommandList_DX12::CopyResource(SR_Resource* aDstResource, SR_Resource* a
 
 void SR_CommandList_DX12::CopyBuffer(SR_BufferResource* aDstBuffer, uint32 aDstOffset, SR_BufferResource* aSrcBuffer, uint32 aSrcOffset, uint32 aSize)
 {
-	assert(aDstBuffer != aSrcBuffer);
+	SC_ASSERT(aDstBuffer != aSrcBuffer);
 	SR_BufferResource_DX12* dstBuffer = static_cast<SR_BufferResource_DX12*>(aDstBuffer);
 	SR_BufferResource_DX12* srcBuffer = static_cast<SR_BufferResource_DX12*>(aSrcBuffer);
 
@@ -530,7 +530,7 @@ void SR_CommandList_DX12::CopyBuffer(SR_BufferResource* aDstBuffer, uint32 aDstO
 
 void SR_CommandList_DX12::CopyTexture(SR_TextureResource* aDstTexture, SR_TextureResource* aSrcResource)
 {
-	assert(aDstTexture != aSrcResource);
+	SC_ASSERT(aDstTexture != aSrcResource);
 
 	SR_TextureResource_DX12* dstTexture = static_cast<SR_TextureResource_DX12*>(aDstTexture);
 	SR_TextureResource_DX12* srcTexture = static_cast<SR_TextureResource_DX12*>(aSrcResource);
@@ -555,12 +555,12 @@ void SR_CommandList_DX12::UpdateBuffer(SR_BufferResource* aDstBuffer, uint32 aDs
 	tempBufferProps.mElementCount = aSize;
 	tempBufferProps.mBindFlags = SR_BufferBindFlag_Staging;
 	tempBufferProps.mIsUploadBuffer = true;
-	SC_Ref<SR_BufferResource> tempBuffer = SR_RenderDevice_DX12::gD3D12Instance->CreateBufferResource(tempBufferProps); // Can be a temp resource?
+	SC_Ref<SR_BufferResource> tempBuffer = SR_RenderDevice_DX12::gInstance->CreateBufferResource(tempBufferProps); // Can be a temp resource?
 	mTempResources.Add(tempBuffer);
 
 	tempBuffer->UpdateData(aDstOffset, aData, aSize);
 
-	CopyBuffer(aDstBuffer, aDstOffset, tempBuffer.get(), 0, aSize);
+	CopyBuffer(aDstBuffer, aDstOffset, tempBuffer, 0, aSize);
 }
 
 void SR_CommandList_DX12::UpdateTexture(SR_TextureResource* aTextureResource, const SR_PixelData* aData, uint32 aDataCount, bool /*aKeepData*/)
@@ -588,7 +588,7 @@ void SR_CommandList_DX12::UpdateTexture(SR_TextureResource* aTextureResource, co
 			minSubresourceIndex = SC_Min(subresourceIndex, minSubresourceIndex);
 			maxSubresourceIndex = SC_Max(subresourceIndex, maxSubresourceIndex);
 		}
-		assert(maxSubresourceIndex >= minSubresourceIndex);
+		SC_ASSERT(maxSubresourceIndex >= minSubresourceIndex);
 
 		uint32 numSubresources = maxSubresourceIndex - minSubresourceIndex + 1;
 		if (numSubresources == aDataCount)
@@ -667,7 +667,7 @@ void SR_CommandList_DX12::UpdateTextureInternal(SR_TextureResource_DX12* aTextur
 
 	D3D12_RESOURCE_DESC tempDesc = SR_GetD3D12ResourceDesc(aCopyTextureProperties);
 	uint64 tempBufferSize = 0;
-	SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device()->GetCopyableFootprints(&tempDesc, aFirstSubresource, aDataCount, 0, footPrints.GetBuffer(), nullptr, nullptr, &tempBufferSize);
+	SR_RenderDevice_DX12::gInstance->GetD3D12Device()->GetCopyableFootprints(&tempDesc, aFirstSubresource, aDataCount, 0, footPrints.GetBuffer(), nullptr, nullptr, &tempBufferSize);
 
 	SR_BufferResourceProperties tempBufferProps;
 	tempBufferProps.mElementSize = 1;
@@ -675,9 +675,9 @@ void SR_CommandList_DX12::UpdateTextureInternal(SR_TextureResource_DX12* aTextur
 	tempBufferProps.mBindFlags = SR_BufferBindFlag_Staging;
 	tempBufferProps.mIsUploadBuffer = true;
 
-	SC_Ref<SR_BufferResource> tempBuf = SR_RenderDevice_DX12::gD3D12Instance->CreateBufferResource(tempBufferProps); // Can be a temp resource?
+	SC_Ref<SR_BufferResource> tempBuf = SR_RenderDevice_DX12::gInstance->CreateBufferResource(tempBufferProps); // Can be a temp resource?
 	mTempResources.Add(tempBuf);
-	SR_BufferResource_DX12* tempBuffer = static_cast<SR_BufferResource_DX12*>(tempBuf.get());
+	SR_BufferResource_DX12* tempBuffer = static_cast<SR_BufferResource_DX12*>(tempBuf.Get());
 	void* dataPtr = tempBuffer->GetDataPtr();
 
 	D3D12_TEXTURE_COPY_LOCATION dstLoc = { aTextureResource->GetD3D12Resource() };
@@ -697,7 +697,7 @@ void SR_CommandList_DX12::UpdateTextureInternal(SR_TextureResource_DX12* aTextur
 		const SR_PixelData& data = aData[i];
 		dstLoc.SubresourceIndex = SR_GetD3D12SubresourceIndex(aTextureResource->GetProperties(), data.mLevel);
 		srcLoc.PlacedFootprint = footPrints[isSingle ? 0 : dstLoc.SubresourceIndex - aFirstSubresource];
-		assert(srcLoc.PlacedFootprint.Offset != UINT64_MAX);
+		SC_ASSERT(srcLoc.PlacedFootprint.Offset != UINT64_MAX);
 
 		SR_MemcpyPixelData(dataPtr, srcLoc.PlacedFootprint, data, aTextureResource->GetProperties().mFormat);
 		mD3D12CommandList->CopyTextureRegion(&dstLoc, aDstOffset.x, aDstOffset.y, aDstOffset.z, &srcLoc, aSize.x ? &srcBox : nullptr);

@@ -12,7 +12,7 @@ public:
 	static bool Load(const SC_FilePath& aFilePath, SGfx_MeshCreateParams& aOutCreateParams);
 
 private:
-	static constexpr uint32 gCurrentSMFVersion = 1;
+	static constexpr uint32 gCurrentSMFVersion = 2;
 	struct FileTOC
 	{
 		uint32 mVersion;
@@ -29,7 +29,7 @@ private:
 		uint32 mPrimitiveIndicesStride;
 		uint32 mNumVertexIndices;
 		uint32 mVertexIndicesStride;
-		SR_VertexLayout mVertexLayout;
+		uint32 mNumVertexAttributes;
 	};
 };
 

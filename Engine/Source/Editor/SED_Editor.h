@@ -3,7 +3,6 @@
 #include "RenderCore/ImGui/SR_ImGui.h"
 #include "Graphics/View/SGfx_Camera.h"
 #include "SED_Window.h"
-#include "SED_TransformationGizmo.h"
 #include "GameFramework/Entity/SGF_Entity.h"
 
 class SGF_World;
@@ -41,8 +40,6 @@ private:
 
 	SGF_Entity mSelectedEntity;
 	SR_ImGui mImGui;
-
-	SED_TransformationGizmo mGizmo;
 
 	bool mIsDemoWindowOpen;
 };

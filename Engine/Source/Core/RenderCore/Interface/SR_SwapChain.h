@@ -1,6 +1,10 @@
 #pragma once
 #include "SR_Fence.h"
 
+class SR_TextureResource;
+class SR_RenderTarget;
+class SR_Texture;
+
 struct SR_SwapChainProperties
 {
 	SR_SwapChainProperties()

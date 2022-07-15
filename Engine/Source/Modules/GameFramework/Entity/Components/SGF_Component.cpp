@@ -66,7 +66,7 @@ SGF_ComponentListBase* SGF_ComponentManager::GetList(const SGF_ComponentId& aId)
 	if (!HasList(aId))
 		return nullptr;
 
-	return mComponentLists[aId].get();
+	return mComponentLists[aId];
 }
 
 SGF_ComponentListBase* SGF_ComponentManager::GetList(const char* aComponentName)
@@ -74,7 +74,7 @@ SGF_ComponentListBase* SGF_ComponentManager::GetList(const char* aComponentName)
 	if (!HasList(aComponentName))
 		return nullptr;
 
-	return mComponentLists[mComponentNameToId[aComponentName]].get();
+	return mComponentLists[mComponentNameToId[aComponentName]];
 }
 
 void SGF_ComponentManager::DestroyAllComponentsForEntity(const SGF_EntityHandle& aHandle)

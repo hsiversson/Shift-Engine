@@ -1,16 +1,14 @@
-#ifndef SKY_COMMON_HEADER
-#define SKY_COMMON_HEADER
-
+#pragma once 
 #include "ScatteringCommon.ssh"
 
-float3 GetCameraPosition()
+float3 GetCameraPosition(bool aStationaryCamera)
 {
-    return SR_ScatteringConstants.mVirtualSkyCameraPosition;
+    return aStationaryCamera ? float3(0.00001f, 100.00001f, 0.00001f) : SR_ScatteringConstants.mVirtualSkyCameraPosition;
 }
 
-float3 GetCameraPositionPlanetRelative()
+float3 GetCameraPositionPlanetRelative(bool aStationaryCamera)
 {
-	return (GetCameraPosition() - SR_ScatteringConstants.mPlanetCenterAndViewHeight.xyz) * M_TO_SKY_UNIT;
+	return (GetCameraPosition(aStationaryCamera) - SR_ScatteringConstants.mPlanetCenterAndViewHeight.xyz) * M_TO_SKY_UNIT;
 }
 
 bool MoveToTopAtmosphere(inout float3 aWorldPosition, in float3 aWorldDirection)
@@ -34,11 +32,11 @@ bool MoveToTopAtmosphere(inout float3 aWorldPosition, in float3 aWorldDirection)
 	return true; // ok to start tracing
 }
 
-float3 SampleAtmosphereColor(in float3 aViewDirection)
+float3 SampleAtmosphereColor(in float3 aViewDirection, bool aStationaryCamera = false)
 {
     float3 color = (float3)0;
 
-    float3 worldPosition = GetCameraPositionPlanetRelative();
+    float3 worldPosition = GetCameraPositionPlanetRelative(aStationaryCamera);
     float3 worldDirection = normalize(aViewDirection);
     float3 lightDirection = SR_EnvironmentConstants.mSunLightDirection;
     float3 sunIlluminance = SR_EnvironmentConstants.mSunLightIntensity * SR_EnvironmentConstants.mSunLightColor;
@@ -83,5 +81,3 @@ float3 SampleAtmosphereColor(in float3 aViewDirection)
 
     return color;
 }
-
-#endif //SKY_COMMON_HEADER

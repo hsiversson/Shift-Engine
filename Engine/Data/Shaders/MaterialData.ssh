@@ -1,7 +1,4 @@
-#ifndef MATERIAL_DATA_HEADER
-#define MATERIAL_DATA_HEADER
-//#pragma once
-
+#pragma once 
 #include "MaterialCommon.ssh"
 
 #define TANGENT_SPACE_NORMAL (1)
@@ -67,5 +64,3 @@ MaterialData BuildMaterialData(float4 aClipPosition, float4 aBaseColor, float3 a
 //{
 //
 //}
-
-#endif //MATERIAL_DATA_HEADER

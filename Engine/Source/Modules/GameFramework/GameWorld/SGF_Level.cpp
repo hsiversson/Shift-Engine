@@ -44,9 +44,10 @@ bool SGF_Level::Load(const SC_FilePath& aFilePath)
             SGF_Component* comp = entity.AddComponent(componentData["Name"].get<std::string>().c_str());
             comp->Load(componentData);
         }
+        mEntities.Add(entity);
     }
 
-    SC_LOG("Loading level [{}] took: %.3f ms", SC_FilePath::GetFileNameWithoutExtension(aFilePath).c_str(), timer.Stop<float>());
+    SC_LOG("Loading level [{}] took: {:.3f} ms", SC_FilePath::GetFileNameWithoutExtension(aFilePath).c_str(), timer.Stop<float>());
 
     return true;
 }
@@ -57,18 +58,18 @@ bool SGF_Level::Save(const SC_FilePath& aFilePath)
 
 	//for (const SC_Ref<SGF_Entity>& entity : mEntities)
 	//{
-	//	SC_Json entityData;
-	//    //entity->Save(entityData);
-	//    saveData["Entities"].push_back(entityData);
+	//  SC_Json entityData;
+	//  //entity->Save(entityData);
+	//  saveData["Entities"].push_back(entityData);
 	//}
 
     return SC_SaveJson(aFilePath, saveData);
 }
 
-void SGF_Level::AddEntity(SC_Ref<SGF_Entity> aEntity)
+void SGF_Level::AddEntity(const SGF_Entity& aEntity)
 {
-    SC_MutexLock lock(mEntitiesMutex);
-    mEntities.Add(aEntity);
+	//SC_MutexLock lock(mEntitiesMutex);
+	mEntities.Add(aEntity);
 }
 
 SGF_Entity* SGF_Level::FindEntityWithId(const SC_UUID& /*aId*/) const

@@ -28,16 +28,16 @@ SR_DescriptorHeap_DX12::SR_DescriptorHeap_DX12(uint32 aNumDescriptors, const SR_
 		desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
 		break;
 	default:
-		assert(false);
+		SC_ASSERT(false);
 		return;
 	}
 
-	ID3D12Device* device = SR_RenderDevice_DX12::gD3D12Instance->GetD3D12Device();
+	ID3D12Device* device = SR_RenderDevice_DX12::gInstance->GetD3D12Device();
 	HRESULT hr = device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&mD3D12DescriptorHeap));
 
 	if (!VerifyHRESULT(hr))
 	{
-		assert(false);
+		SC_ASSERT(false);
 		return;
 	}
 
@@ -103,7 +103,7 @@ uint32 SR_DescriptorHeap_DX12::GetIndex()
 	{
 		SC_MutexLock lock(mInternalMutex);
 
-		assert((mFreeIndices.Count() > 0) && "Descriptor heap is full.");
+		SC_ASSERT((mFreeIndices.Count() > 0), "Descriptor heap is full.");
 		descriptorIndex = mFreeIndices.Last();
 		mFreeIndices.RemoveLast();
 	}

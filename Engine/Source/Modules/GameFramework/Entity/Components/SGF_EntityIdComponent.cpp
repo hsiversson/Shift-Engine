@@ -39,3 +39,32 @@ bool SGF_EntityIdComponent::Load(const SC_Json& aSavedData)
 
 	return true;
 }
+
+SGF_EntityNameComponent::SGF_EntityNameComponent()
+	: mName("Unnamed")
+{
+
+}
+
+SGF_EntityNameComponent::~SGF_EntityNameComponent()
+{
+
+}
+
+bool SGF_EntityNameComponent::Save(SC_Json& aOutSaveData) const
+{
+	if (!SGF_Component::Save(aOutSaveData))
+		return false;
+
+	aOutSaveData["Name"] = mName;
+	return true;
+}
+
+bool SGF_EntityNameComponent::Load(const SC_Json& aSavedData)
+{
+	if (!SGF_Component::Load(aSavedData))
+		return false;
+
+	mName = aSavedData["Name"].get<std::string>();
+	return true;
+}

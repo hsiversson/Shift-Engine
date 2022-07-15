@@ -21,7 +21,7 @@ SED_MaterialEditor::~SED_MaterialEditor()
 bool SED_MaterialEditor::Init()
 {
     mGfxWorld = SC_MakeUnique<SGfx_World>();
-    mViewport = SC_MakeUnique<SED_ViewportWindow>(mGfxWorld.get(), nullptr, "Material Editor Viewport");
+    mViewport = SC_MakeUnique<SED_ViewportWindow>(mGfxWorld.get(), "Material Editor Viewport");
 
     return true;
 }
