@@ -2,7 +2,7 @@
 #include "RenderCore/Defines/SR_RenderEnums.h"
 #include "RenderCore/Defines/SR_Format.h"
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 
 class SR_BufferResource;
 struct SR_RaytracingGeometryData

@@ -160,7 +160,7 @@ void SGfx_SceneGraph::CullMeshes(SGfx_View* aView)
 
 		mesh->UpdateInstanceData(prepareData.mInstanceData.get());
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 		if (!depthOnly && mesh->IncludeInRaytracingScene() && distanceToCamera < 200.0f) // TODO: FIX THIS CULLING
 		{
 			SR_RaytracingInstanceData& rtInstanceData = prepareData.mRaytracingInstances.Add(mesh->GetRaytracingData());

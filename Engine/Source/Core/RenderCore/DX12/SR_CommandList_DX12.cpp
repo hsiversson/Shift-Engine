@@ -148,7 +148,7 @@ void SR_CommandList_DX12::DispatchMesh(uint32 aGroupCountX, uint32 aGroupCountY 
 }
 #endif
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 void SR_CommandList_DX12::DispatchRays(uint32 aThreadCountX, uint32 aThreadCountY /*= 1*/, uint32 aThreadCountZ /*= 1*/)
 {
 	if (mD3D12CommandList6 && mStateCache.mCurrentShaderState->IsRaytracingShader())
@@ -330,7 +330,7 @@ void SR_CommandList_DX12::SetShaderState(SR_ShaderState* aShaderState)
 {
 	SetRootSignature(aShaderState->GetRootSignature());
 	SR_ShaderState_DX12* shaderState = static_cast<SR_ShaderState_DX12*>(aShaderState);
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	if (shaderState->IsRaytracingShader())
 	{
 		mD3D12CommandList6->SetPipelineState1(shaderState->GetD3D12StateObject());

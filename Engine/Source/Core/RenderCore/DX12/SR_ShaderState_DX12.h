@@ -15,7 +15,7 @@ public:
 	bool Init(const SR_ShaderStateProperties& aProperties);
 
 	ID3D12PipelineState* GetD3D12PipelineState() const;
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	const D3D12_DISPATCH_RAYS_DESC& GetDispatchRaysDesc() const;
 	ID3D12StateObject* GetD3D12StateObject() const;
 #endif
@@ -26,13 +26,13 @@ private:
 	bool InitAsMeshShader(const SR_ShaderStateProperties& aProperties);
 #endif
 	bool InitAsComputeShader(const SR_ShaderStateProperties& aProperties);
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	bool InitAsRaytracingShader(const SR_ShaderStateProperties& aProperties);
 	void CreateRaytracingShaderTable(const SR_ShaderStateProperties& aProperties);
 #endif
 
 	SR_ComPtr<ID3D12PipelineState> mD3D12PipelineState;
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	D3D12_DISPATCH_RAYS_DESC mDispatchRaysDesc;
 	SR_ComPtr<ID3D12StateObject> mD3D12StateObject;
 	SC_Ref<SR_BufferResource> mRaytracingShaderTable;

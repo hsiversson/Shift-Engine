@@ -93,7 +93,7 @@ void SR_CommandList::DispatchMesh(uint32 /*aGroupCountX*/, uint32 /*aGroupCountY
 }
 #endif
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 void SR_CommandList::DispatchRays(const SC_IntVector& aThreadCounts)
 {
 	DispatchRays(aThreadCounts.x, aThreadCounts.y, aThreadCounts.z);

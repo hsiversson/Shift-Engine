@@ -119,7 +119,7 @@ static std::wstring GetTargetProfile(const SR_ShaderType& aShaderType)
 	case SR_ShaderType::Compute:
 		shaderTarget = L"cs_";
 		break;
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	case SR_ShaderType::Raytracing:
 		shaderTarget = L"lib_";
 		break;

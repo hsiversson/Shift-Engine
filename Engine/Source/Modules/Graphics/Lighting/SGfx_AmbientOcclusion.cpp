@@ -32,7 +32,7 @@ SGfx_AmbientOcclusion::~SGfx_AmbientOcclusion()
 
 bool SGfx_AmbientOcclusion::Init()
 {
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	SR_ShaderStateProperties shaderProps;
 	SR_ShaderCompileArgs compileArgs;
 	compileArgs.mEntryPoint = "Main";
@@ -56,7 +56,7 @@ bool SGfx_AmbientOcclusion::Init()
 		return false;
 
 	mDenoiseShader = SR_RenderDevice::gInstance->CreateShaderState(shaderProps2);
-#endif //ENABLE_RAYTRACING
+#endif //SR_ENABLE_RAYTRACING
 
 	SR_TextureResourceProperties textureResourceProps;
 	textureResourceProps.mSize = SC_IntVector(SC_Vector2(SR_RenderDevice::gInstance->GetSwapChain()->GetProperties().mSize) * 0.75f, 1);
@@ -97,7 +97,7 @@ bool SGfx_AmbientOcclusion::Init()
 
 void SGfx_AmbientOcclusion::Render(SR_CommandList* aCmdList, const SC_Ref<SR_Texture>& aDepthBuffer, const SGfx_ViewData& aRenderData)
 {
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	if (mRTAOSettings.mAOType == Type::RTAO)
 	{
 		RenderRTAO(aCmdList, aDepthBuffer, aRenderData);
@@ -136,7 +136,7 @@ void SGfx_AmbientOcclusion::RenderGTAO(SR_CommandList* /*aCmdList*/, const SC_Re
 {
 }
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 void SGfx_AmbientOcclusion::RenderRTAO(SR_CommandList* aCmdList, const SC_Ref<SR_Texture>& aDepthBuffer, const SGfx_ViewData& aRenderData)
 {
 	SC_IntVector targetSize = mRawOutputRWTexture->GetResource()->GetProperties().mSize;

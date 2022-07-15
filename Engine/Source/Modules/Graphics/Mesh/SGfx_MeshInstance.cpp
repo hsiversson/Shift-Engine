@@ -95,7 +95,7 @@ void SGfx_MeshInstance::UpdateInstanceData(SGfx_InstanceData* aInstanceData)
 	aInstanceData->Add(mInstanceDataOffset, sizeof(data) / sizeof(SC_Vector4), reinterpret_cast<SC_Vector4*>(&data));
 }
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 bool SGfx_MeshInstance::IncludeInRaytracingScene() const
 {
 	if (mMeshTemplate->GetAccelerationStructure())
@@ -138,7 +138,7 @@ void SGfx_MeshInstance::CalculateBoundingBox()
 	mBoundingBox.FromPoints(corners, 8);
 }
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 void SGfx_MeshInstance::UpdateRaytracingData()
 {
 	mRaytracingData.mAccelerationStructureGPUAddress = mMeshTemplate->GetAccelerationStructure()->GetGPUAddressStart();

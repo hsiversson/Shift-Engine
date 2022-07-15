@@ -41,7 +41,7 @@ public:
 
 private:
 	void RenderGTAO(SR_CommandList* aCmdList, const SC_Ref<SR_Texture>& aDepthBuffer, const SGfx_ViewData& aRenderData);
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	void RenderRTAO(SR_CommandList* aCmdList, const SC_Ref<SR_Texture>& aDepthBuffer, const SGfx_ViewData& aRenderData);
 #endif
 

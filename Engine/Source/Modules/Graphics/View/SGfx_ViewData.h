@@ -109,7 +109,7 @@ public:
 
 		mVisibleLights.RemoveAll();
 		mCSMViews.RemoveAll();
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 		mRaytracingInstances.RemoveAll();
 #endif
 
@@ -140,7 +140,7 @@ public:
 
 	SC_Array<SC_Ref<SGfx_View>> mCSMViews;
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	SC_Array<SR_RaytracingInstanceData> mRaytracingInstances;
 #endif
 

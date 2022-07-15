@@ -63,7 +63,7 @@ public:
 	bool IsUsingMeshlets() const;
 #endif
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	SR_BufferResource* GetAccelerationStructure() const;
 #endif
 
@@ -75,7 +75,7 @@ private:
 	bool InitForMeshShaders(const SGfx_MeshCreateParams& aCreateParams);
 #endif
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	bool InitAccelerationStructure(const SGfx_MeshCreateParams& aCreateParams);
 #endif
 
@@ -95,7 +95,7 @@ private:
 #if SR_ENABLE_MESH_SHADERS
 	SGfx_MeshletBuffers mMeshletBuffers;
 #endif
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	SC_Ref<SR_BufferResource> mAccelerationStructure;
 #endif
 

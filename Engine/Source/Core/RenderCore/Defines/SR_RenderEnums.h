@@ -35,7 +35,7 @@ enum class SR_ShaderType
 #endif
 	Pixel,
 	Compute,
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	Raytracing,
 #endif
 	COUNT
@@ -46,7 +46,7 @@ enum class SR_RootSignatureType
 	Graphics, 
 	GraphicsMS, 
 	Compute,
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	Raytracing,
 #endif
 	COUNT

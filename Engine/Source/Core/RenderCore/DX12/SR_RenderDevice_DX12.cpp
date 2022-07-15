@@ -742,7 +742,7 @@ bool SR_RenderDevice_DX12::CreateDefaultRootSignatures()
 
 		mRootSignatures[static_cast<uint32>(SR_RootSignatureType::Compute)] = rootSig;
 	}
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	{
 		properties.mFlags = SR_RootSignatureFlag_ComputeSetup;
 		properties.mFlags |= SR_RootSignatureFlag_DescriptorHeapDirectAccess;

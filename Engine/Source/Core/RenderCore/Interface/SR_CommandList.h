@@ -52,7 +52,7 @@ public:
 	virtual void DispatchMesh(uint32 aGroupCountX, uint32 aGroupCountY = 1, uint32 aGroupCountZ = 1);
 #endif
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	void DispatchRays(const SC_IntVector& aThreadCounts);
 	virtual void DispatchRays(uint32 aThreadCountX, uint32 aThreadCountY = 1, uint32 aThreadCountZ = 1);
 	virtual SC_Ref<SR_BufferResource> CreateAccelerationStructure(const SR_AccelerationStructureInputs& aInputs, SR_BufferResource* aExistingBufferResource);

@@ -79,7 +79,7 @@ private:
 	// Render Tasks
 	void PreRenderUpdates();
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	void ComputeRaytracingScene();
 #endif
 

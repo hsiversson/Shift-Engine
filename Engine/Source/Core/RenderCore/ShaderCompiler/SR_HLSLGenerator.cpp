@@ -127,7 +127,7 @@ bool SR_HLSLGenerator::GenerateHLSL(const SR_ShaderGenerationProperties& aShader
 
 	// Shader specific params
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	if (aShaderProperties.mShaderType == SR_ShaderType::Raytracing)
 		aOutShaderCode += "[shader(\"raygeneration\")]\n";
 #endif

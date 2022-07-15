@@ -23,7 +23,7 @@ bool SR_ShaderState_DX12::Init(const SR_ShaderStateProperties& aProperties)
 	for (uint32 i = 0; i < static_cast<uint32>(SR_ShaderType::COUNT); ++i)
 		mShaderMetaDatas[i] = aProperties.mShaderMetaDatas[i];
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 	if (aProperties.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Raytracing)].mSize)
 		return InitAsRaytracingShader(aProperties);
 	else 
@@ -43,7 +43,7 @@ ID3D12PipelineState* SR_ShaderState_DX12::GetD3D12PipelineState() const
 	return mD3D12PipelineState.Get();
 }
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 const D3D12_DISPATCH_RAYS_DESC& SR_ShaderState_DX12::GetDispatchRaysDesc() const
 {
 	return mDispatchRaysDesc;
@@ -219,7 +219,7 @@ bool SR_ShaderState_DX12::InitAsComputeShader(const SR_ShaderStateProperties& aP
 	return VerifyHRESULT(result);
 }
 
-#if ENABLE_RAYTRACING
+#if SR_ENABLE_RAYTRACING
 bool SR_ShaderState_DX12::InitAsRaytracingShader(const SR_ShaderStateProperties& aProperties)
 {
 	SC_Array<D3D12_STATE_SUBOBJECT> subObjects;
@@ -350,5 +350,5 @@ void SR_ShaderState_DX12::CreateRaytracingShaderTable(const SR_ShaderStateProper
 	mDispatchRaysDesc.HitGroupTable.SizeInBytes = hitGroupsSize;
 	mDispatchRaysDesc.HitGroupTable.StrideInBytes = numHitGroups > 1 ? recordSize : 0; // 0 stride when possible as a hint to the driver, recommended by Intel
 }
-#endif //ENABLE_RAYTRACING
+#endif //SR_ENABLE_RAYTRACING
 #endif //SR_ENABLE_DX12
