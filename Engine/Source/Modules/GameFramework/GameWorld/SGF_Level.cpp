@@ -24,8 +24,6 @@ void SGF_Level::Update()
 
 bool SGF_Level::Load(const SC_FilePath& aFilePath)
 {
-    SC_Timer timer;
-
     SC_Json loadData;
     if (!SC_LoadJson(aFilePath, loadData))
         return false;
@@ -46,8 +44,6 @@ bool SGF_Level::Load(const SC_FilePath& aFilePath)
         }
         mEntities.Add(entity);
     }
-
-    SC_LOG("Loading level [{}] took: {:.3f} ms", SC_FilePath::GetFileNameWithoutExtension(aFilePath).c_str(), timer.Stop<float>());
 
     return true;
 }

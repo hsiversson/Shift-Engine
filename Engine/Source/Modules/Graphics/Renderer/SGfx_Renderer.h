@@ -1,7 +1,7 @@
 #pragma once
 #include "Graphics/Misc/SGfx_Surface.h"
 #include "RenderCore/Defines/SR_Format.h"
-#include "RenderCore/RenderTasks/SR_QueueManager.h"
+#include "RenderCore/RenderTasks/SR_CommandQueueManager.h"
 
 #include "InputOutput/File/SC_FileWatcher.h"
 
@@ -28,6 +28,7 @@ class SGfx_Environment;
  *		Renders views with a tiled forward path.
  * 
  */
+using SGfx_ViewTaskFunctionSignature = std::function<void(SGfx_View* aView)>;
 class SGfx_Renderer : public SC_FileWatcherListener
 {
 public:
@@ -68,39 +69,39 @@ protected:
 	void OnChanged(const SC_FilePath& aPath, const ChangeReason& aReason) override;
 
 private:
-	void SubmitGraphicsTask(SR_RenderTaskFunctionSignature aTask, SR_TaskEvent* aEvent);
-	void SubmitGraphicsTask(SR_RenderTaskFunctionSignature aTask, const SC_UniquePtr<SR_TaskEvent>& aEvent);
-	void SubmitComputeTask(SR_RenderTaskFunctionSignature aTask, SR_TaskEvent* aEvent);
-	void SubmitComputeTask(SR_RenderTaskFunctionSignature aTask, const SC_UniquePtr<SR_TaskEvent>& aEvent);
-	void SubmitCopyTask(SR_RenderTaskFunctionSignature aTask, SR_TaskEvent* aEvent);
-	void SubmitCopyTask(SR_RenderTaskFunctionSignature aTask, const SC_UniquePtr<SR_TaskEvent>& aEvent);
+	void SubmitGraphicsTask(SGfx_ViewTaskFunctionSignature aTask, SR_TaskEvent* aEvent, SGfx_View* aView);
+	void SubmitGraphicsTask(SGfx_ViewTaskFunctionSignature aTask, const SC_UniquePtr<SR_TaskEvent>& aEvent, SGfx_View* aView);
+	void SubmitComputeTask(SGfx_ViewTaskFunctionSignature aTask, SR_TaskEvent* aEvent, SGfx_View* aView);
+	void SubmitComputeTask(SGfx_ViewTaskFunctionSignature aTask, const SC_UniquePtr<SR_TaskEvent>& aEvent, SGfx_View* aView);
+	void SubmitCopyTask(SGfx_ViewTaskFunctionSignature aTask, SR_TaskEvent* aEvent, SGfx_View* aView);
+	void SubmitCopyTask(SGfx_ViewTaskFunctionSignature aTask, const SC_UniquePtr<SR_TaskEvent>& aEvent, SGfx_View* aView);
 
 	/////////////////////////
 	// Render Tasks
-	void PreRenderUpdates();
+	void PreRenderUpdates(SGfx_View* aView);
 
 #if SR_ENABLE_RAYTRACING
-	void ComputeRaytracingScene();
+	void ComputeRaytracingScene(SGfx_View* aView);
 #endif
 
-	void RenderShadows();
-	void RenderPrePass(); // Depth, Visibility Buffer
+	void RenderShadows(SGfx_View* aView);
+	void RenderPrePass(SGfx_View* aView); // Depth, Visibility Buffer
 
-	void ComputeHierarchicalZ(); // Generate HZB Chain
-	void ComputeLightCulling();
-	void ComputeAmbientOcclusion();
+	void ComputeHierarchicalZ(SGfx_View* aView); // Generate HZB Chain
+	void ComputeLightCulling(SGfx_View* aView);
+	void ComputeAmbientOcclusion(SGfx_View* aView);
 
-	void RenderOpaque();
+	void RenderOpaque(SGfx_View* aView);
 
-	void ComputeParticles();
+	void ComputeParticles(SGfx_View* aView);
 
-	void RenderVolumetrics();
-	void RenderTranslucency();
+	void RenderVolumetrics(SGfx_View* aView);
+	void RenderTranslucency(SGfx_View* aView);
 
-	void RenderDebugObjects();
-	void RenderUI();
+	void RenderDebugObjects(SGfx_View* aView);
+	void RenderUI(SGfx_View* aView);
 
-	void ComputePostEffects();
+	void ComputePostEffects(SGfx_View* aView);
 	/////////////////////////
 
 	SC_UniquePtr<SGfx_LightCulling> mLightCulling;
@@ -130,8 +131,6 @@ private:
 	SGfx_Surface mMotionVectors;
 	SC_Ref<SR_Buffer> mRaytracingScene;
 	//
-
-	SGfx_View* mCurrentView;
 
 	SC_Ref<SGfx_ReflectionProbe> mReflectionProbe;
 

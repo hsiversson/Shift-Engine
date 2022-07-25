@@ -44,3 +44,81 @@ public:
 private:
 	const Mutex* mInternalMutex;
 };
+
+template<typename Mutex>
+class SC_ReadLock : public SC_CopyDisabled
+{
+public:
+	SC_ReadLock() : mInternalMutex(nullptr) {}
+	SC_ReadLock(Mutex& aRwMutex) : mInternalMutex(&aRwMutex) { aRwMutex.BeginRead(); }
+	SC_ReadLock(SC_ReadLock<Mutex>&& aRwLock) : mInternalMutex(aRwLock.mMutex) { aRwLock.mInternalMutex = nullptr; }
+	~SC_ReadLock() { Unlock(); }
+
+	inline void Lock(Mutex& aRwMutex) 
+	{ 
+		assert(!mInternalMutex); 
+		mInternalMutex = &aRwMutex; 
+		aRwMutex.BeginRead(); 
+	}
+
+	inline bool TryLock(Mutex& aRwMutex)
+	{
+		assert(!mInternalMutex);
+		if (!aRwMutex.TryBeginRead())
+			return false;
+
+		mInternalMutex = &aRwMutex;
+		return true;
+	}
+
+	inline void Unlock() 
+	{ 
+		if (mInternalMutex) 
+		{ 
+			mInternalMutex->EndRead();
+			mInternalMutex = nullptr; 
+		} 
+	}
+
+private:
+	Mutex* mInternalMutex;
+};
+
+template<typename Mutex>
+class SC_WriteLock : public SC_CopyDisabled
+{
+public:
+	SC_WriteLock() : mInternalMutex(nullptr) {}
+	SC_WriteLock(Mutex& aRwMutex) : mInternalMutex(&aRwMutex) { aRwMutex.BeginWrite(); }
+	SC_WriteLock(SC_ReadLock<Mutex>&& aRwLock) : mInternalMutex(aRwLock.mMutex) { aRwLock.mInternalMutex = nullptr; }
+	~SC_WriteLock() { Unlock(); }
+
+	inline void Lock(Mutex& aRwMutex)
+	{
+		assert(!mInternalMutex);
+		mInternalMutex = &aRwMutex;
+		aRwMutex.BeginWrite();
+	}
+
+	inline bool TryLock(Mutex& aRwMutex)
+	{
+		assert(!mInternalMutex);
+		if (!aRwMutex.TryBeginWrite())
+			return false;
+
+		mInternalMutex = &aRwMutex;
+		return true;
+	}
+
+	inline void Unlock()
+	{
+		if (mInternalMutex)
+		{
+			mInternalMutex->EndWrite();
+			mInternalMutex = nullptr;
+		}
+	}
+
+private:
+	Mutex* mInternalMutex;
+};

@@ -14,6 +14,7 @@ SED_ContentBrowserWindow::~SED_ContentBrowserWindow()
 
 void SED_ContentBrowserWindow::OnDraw()
 {
+	SC_PROFILER_FUNCTION();
 	static float padding = 16.0f;
 	static float thumbnailSize = 192.0f;
 	float cellSize = thumbnailSize + padding;

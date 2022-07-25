@@ -23,7 +23,7 @@ bool SR_FenceResource_DX12::IsPending(uint64 aValue)
 	{
 		if (completedValue == UINT64_MAX) // Device Was Removed
 		{
-			SC_ASSERT(false);
+			VerifyHRESULT(DXGI_ERROR_DEVICE_REMOVED);
 			return true;
 		}
 
@@ -58,12 +58,9 @@ bool SR_FenceResource_DX12::Wait(uint64 aValue, bool aBlock)
 	return true;
 }
 
-SR_Fence SR_FenceResource_DX12::GetNextFence()
+uint64 SR_FenceResource_DX12::GetNextValue()
 {
-	SR_Fence fence;
-	fence.mResource = this;
-	fence.mValue = SC_Atomic::Increment_GetNew(mFenceValue);
-	return fence;
+	return SC_Atomic::Increment_GetNew(mFenceValue);
 }
 
 ID3D12Fence* SR_FenceResource_DX12::GetD3D12Fence() const

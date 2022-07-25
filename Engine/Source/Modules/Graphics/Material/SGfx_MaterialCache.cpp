@@ -95,6 +95,7 @@ void SGfx_MaterialGPUDataBuffer::UpdateBuffer()
 	if (!mIsDirty)
 		return;
 
+	SC_PROFILER_FUNCTION();
 	mBufferResource->UpdateData(0, mMaterialGPUDatas.GetBuffer(), mMaterialGPUDatas.GetByteSize());
 
 	SR_BufferProperties bufferProperties;

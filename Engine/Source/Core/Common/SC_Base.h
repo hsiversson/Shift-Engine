@@ -22,3 +22,4 @@
 #include "Common/ThreadPool/SC_ThreadPool.h"
 #include "Common/Configuration/SC_CommandLine.h"
 #include "Common/Console/SC_Console.h"
+#include "Common/Profiling/SC_Profiler.h"

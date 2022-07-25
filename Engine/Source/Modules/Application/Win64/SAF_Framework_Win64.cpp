@@ -127,6 +127,7 @@ bool SAF_Framework_Win64::Init()
 
 bool SAF_Framework_Win64::Update()
 {
+	SC_PROFILER_FUNCTION();
 	{
 		MSG msg;
 		msg.message = 0;

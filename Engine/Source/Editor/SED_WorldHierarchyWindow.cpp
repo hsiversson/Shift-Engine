@@ -23,6 +23,7 @@ const SGF_Entity& SED_WorldHierarchyWindow::GetSelected() const
 
 void SED_WorldHierarchyWindow::OnDraw()
 {
+	SC_PROFILER_FUNCTION();
 	if (ImGui::BeginPopupContextWindow())
 	{
 		ImGui::Button("New Entity");

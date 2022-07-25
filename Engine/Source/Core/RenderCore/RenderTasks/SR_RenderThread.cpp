@@ -1,5 +1,6 @@
 #include "SR_RenderThread.h"
 
+#if 0
 SR_RenderThread* SR_RenderThread::gInstance = nullptr;
 
 SR_RenderThread::SR_RenderThread()
@@ -46,7 +47,7 @@ void SR_RenderThread::EndFrame(uint32 aUpdateThreadFrameIdx)
 	SC_ASSERT(gIsRenderThread);
 	mCurrentFrameIndex = aUpdateThreadFrameIdx;
 	mEndOfFrameEvent.Signal();
-	SR_RenderDevice::gInstance->mLatestFinishedFrame = mCurrentFrameIndex;
+	SR_RenderDevice::gInstance->gLatestFinishedFrame = mCurrentFrameIndex;
 }
 
 SR_RenderThread* SR_RenderThread::Get()
@@ -61,6 +62,7 @@ void SR_RenderThread::ThreadMain()
 	std::queue<std::function<void()>> tasks;
 	while (mIsRunning)
 	{
+		SC_PROFILER_FUNCTION();
 		mHasWorkEvent.Wait();
 		mHasWorkEvent.Reset();
 
@@ -76,3 +78,4 @@ void SR_RenderThread::ThreadMain()
 		}
 	}
 }
+#endif

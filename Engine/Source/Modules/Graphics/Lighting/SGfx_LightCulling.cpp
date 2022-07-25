@@ -28,8 +28,10 @@ bool SGfx_LightCulling::Init()
 
 void SGfx_LightCulling::Prepare(SGfx_ViewData& aPrepareData)
 {
-	mDelayedDeleteResources.RemoveAll();
+	aPrepareData.mPrepareCullLightsEvent.Wait();
 
+	SC_PROFILER_FUNCTION();
+	mDelayedDeleteResources.RemoveAll();
 	//const uint32 totalLightCount = aPrepareData.mVisibleLights.Count();
 
 	const SC_IntVector2 resolution = aPrepareData.mSceneConstants.mViewConstants.mViewportSizeAndScale.XY();

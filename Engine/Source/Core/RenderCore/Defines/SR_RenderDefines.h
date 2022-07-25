@@ -14,12 +14,10 @@
 	#define SR_ENABLE_MESH_SHADERS			(1)
 	#define SR_ENABLE_VRS					(1)
 
-	#if IS_DEBUG_BUILD
-		#define SR_ENABLE_PIX				(1)
-		#define SR_ENABLE_DRED				(1)
-		#define SR_ENABLE_RENDERDOC_API		(0)		// Deprecated
-		#define SR_ENABLE_NVIDIA_AFTERMATH	(0)		// Experimental
-	#endif
+	#define SR_ENABLE_PIX					(1)
+	#define SR_ENABLE_DRED					(1)
+	#define SR_ENABLE_RENDERDOC_API			(0)		// Deprecated
+	#define SR_ENABLE_NVIDIA_AFTERMATH		(0)		// Experimental
 
 #endif
 

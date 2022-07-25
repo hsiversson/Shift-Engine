@@ -1,5 +1,5 @@
 #include "SGfx_View.h"
-#include "RenderCore/RenderTasks/SR_RenderThread.h"
+#include "Graphics/PostEffects/SGfx_PostEffects.h"
 
 SGfx_ViewDataBufferer::SGfx_ViewDataBufferer(uint32 aNumBuffers)
 	: mNumBuffers(aNumBuffers)
@@ -8,18 +8,25 @@ SGfx_ViewDataBufferer::SGfx_ViewDataBufferer(uint32 aNumBuffers)
 	, mCurrentStartedPrepareFrame(0)
 	, mCurrentStartedRenderFrame(0)
 	, mPrepareIndexCounter(0)
+	, mFinishedPrepareIndexCounter(0)
 	, mRenderIndexCounter(0)
 	, mPendingRenderIndexCounter(0)
 	, mNumBuffersInFlight(0)
 	, mIsPreparing(false)
 	, mIsRendering(false)
+	, mIsRenderingMainThread(false)
+	, mPendingEndPrepare(false)
+	, mIsReset(true)
+	, mStartedRenderingFrame(false)
 {
-    mStartRenderEvent.Signal();
-    mEndRenderEvent.Signal();
+    mFramesInFlightSemaphore.Release(mNumBuffers);
 }
 
 SGfx_ViewDataBufferer::~SGfx_ViewDataBufferer() 
 {
+    WaitForStartRenderEvent();
+    WaitForEndRenderEvent();
+	FinishEndPrepare();
 }
 
 uint32 SGfx_ViewDataBufferer::GetNumBuffers() const
@@ -38,9 +45,23 @@ uint32 SGfx_ViewDataBufferer::GetRenderIndex() const
 
 void SGfx_ViewDataBufferer::StartPrepare()
 {
+    SC_PROFILER_FUNCTION();
+
+    SC_ASSERT(SC_Thread::gIsMainThread);
     SC_ASSERT(!mIsPreparing);
+    SC_ASSERT(mIsReset);
+
+    FinishEndPrepare();
+
+    if (!mStartedRenderingFrame)
+        mFramesInFlightSemaphore.Release();
+
+    if (!mFramesInFlightSemaphore.TimedAcquire(0))
+        mFramesInFlightSemaphore.Acquire();
 
     mIsPreparing = true;
+    mIsReset = false;
+    mStartedRenderingFrame = false;
     ++mPrepareIndexCounter;
     mPrepareIndex = mPrepareIndexCounter % mNumBuffers; 
 	mPendingRenderIndexCounter = mPrepareIndexCounter - mNumBuffersInFlight;
@@ -50,43 +71,134 @@ void SGfx_ViewDataBufferer::StartPrepare()
 void SGfx_ViewDataBufferer::EndPrepare()
 {
     if (!mIsPreparing)
-        return;
+		return;
 
-	//SC_MutexLock lock(mRenderMutex);
-	//if (mRenderIndexCounter < mPrepareIndexCounter)
-	//{
-	//    mfinisedPrepatre = mPrepareIndexCounter;
-	//}
-	//else
-	//    asd = true;
+	SC_PROFILER_FUNCTION();
+
+	SC_ASSERT(SC_Thread::gIsMainThread);
+	SC_ASSERT(!mPendingEndPrepare);
+
+	SC_MutexLock lock(mRenderMutex);
+	if (mRenderIndexCounter < mPendingRenderIndexCounter)
+	    mFinishedPrepareIndexCounter = mPrepareIndexCounter;
+	else
+		mPendingEndPrepare = true;
 
     mIsPreparing = false;
 }
 
+void SGfx_ViewDataBufferer::ResetPrepare()
+{
+	SC_PROFILER_FUNCTION();
+	SC_ASSERT(SC_Thread::gIsMainThread);
+	SC_ASSERT(!mIsPreparing);
+	FinishEndPrepare();
+	mIsReset = true;
+}
+
 void SGfx_ViewDataBufferer::StartRender()
 {
-	mStartRenderEvent.Wait();
-    mStartRenderEvent.Reset();
+	SC_PROFILER_FUNCTION();
+	SC_ASSERT(SC_Thread::gIsMainThread);
+    SC_ASSERT(!mIsRenderingMainThread);
+    SC_ASSERT(!mStartedRenderingFrame);
 
-    uint32 renderIndexCounter = mPrepareIndexCounter;
-    SR_RenderThread::Get()->PostTask([this, renderIndexCounter]() {
+    mIsRenderingMainThread = true;
+    mStartedRenderingFrame = true;
+    WaitForStartRenderEvent();
+
+    uint32 renderIndexCounter = mPendingRenderIndexCounter;
+
+	mStartRenderEvent = SR_RenderDevice::gInstance->GetQueueManager()->SubmitLightTask([this, renderIndexCounter]() {
+		SC_PROFILER_FUNCTION();
         SC_MutexLock lock(mRenderMutex);
         mRenderIndexCounter = renderIndexCounter;
-        mRenderIndex = mRenderIndexCounter % mNumBuffers;
+        mRenderIndex = renderIndexCounter % mNumBuffers;
         mIsRendering = true;
-        mStartRenderEvent.Signal();
-    });
+    }, SR_CommandListType::Graphics);
 }
 
 void SGfx_ViewDataBufferer::EndRender()
 {
-	mEndRenderEvent.Wait();
-	mEndRenderEvent.Reset();
+	SC_ASSERT(SC_Thread::gIsMainThread);
+	if (!mIsRenderingMainThread)
+		return;
 
-    SR_RenderThread::Get()->PostTask([this]() {
+	SC_PROFILER_FUNCTION();
+    WaitForEndRenderEvent();
+
+	mEndRenderEvent = SR_RenderDevice::gInstance->GetQueueManager()->SubmitLightTask([this]() {
+		SC_PROFILER_FUNCTION();
+        SC_ASSERT(mIsRendering);
 		mIsRendering = false;
-		mEndRenderEvent.Signal();
-    });
+        mFramesInFlightSemaphore.Release();
+		}, SR_CommandListType::Graphics);
+
+    mIsRenderingMainThread = false;
+}
+
+void SGfx_ViewDataBufferer::WaitForPrepareTask(const SC_Future<bool>& aTaskEvent)
+{
+    SyncWithRenderThread();
+    if (mRenderIndexCounter > mFinishedPrepareIndexCounter)
+    {
+		SC_ReadLock<SC_ReadWriteMutex> lock(mWaitingForPrepareMutex);
+        if (mRenderIndexCounter > mFinishedPrepareIndexCounter)
+        {
+            aTaskEvent.Wait();
+            lock.Unlock();
+            SyncWithRenderThread();
+        }
+    }
+}
+
+void SGfx_ViewDataBufferer::FinishEndPrepare()
+{
+    SC_ASSERT(SC_Thread::gIsMainThread);
+    {
+        SC_WriteLock<SC_ReadWriteMutex> lock(mWaitingForPrepareMutex);
+        if (mPendingEndPrepare)
+        {
+            mFinishedPrepareIndexCounter = mPrepareIndexCounter;
+            mPendingEndPrepare = false;
+        }
+    }
+    SC_ASSERT(!mPendingEndPrepare);
+}
+
+void SGfx_ViewDataBufferer::SyncWithRenderThread()
+{
+    if (mPendingEndPrepare)
+	{
+		SC_WriteLock<SC_ReadWriteMutex> lock(mWaitingForPrepareMutex);
+        if (mPendingEndPrepare)
+        {
+            mFinishedPrepareIndexCounter = mPrepareIndexCounter;
+            mPendingEndPrepare = false;
+        }
+    }
+}
+
+void SGfx_ViewDataBufferer::WaitForStartRenderEvent()
+{
+    if (mStartRenderEvent)
+    {
+        if (!mStartRenderEvent->IsSignalled())
+            mStartRenderEvent->Wait();
+
+        mStartRenderEvent.Reset();
+    }
+}
+
+void SGfx_ViewDataBufferer::WaitForEndRenderEvent()
+{
+	if (mEndRenderEvent)
+	{
+		if (!mEndRenderEvent->IsSignalled())
+            mEndRenderEvent->Wait();
+
+        mEndRenderEvent.Reset();
+	}
 }
 
 SGfx_View::SGfx_View()
@@ -153,4 +265,48 @@ void SGfx_View::SetOutputTexture(const SC_Ref<SR_Texture>& aTexture)
 SR_Texture* SGfx_View::GetOutputTexture() const
 {
     return mOutputTexture;
+}
+
+void SGfx_View::UpdateRenderSettings()
+{
+    bool temporalAllowed = true;
+
+	mRenderSettings.mRenderPrepass = true;
+	mRenderSettings.mRenderOpaque = true;
+	mRenderSettings.mRenderTranslucent = true;
+	mRenderSettings.mRenderUI = true;
+	mRenderSettings.mRenderPostEffects = true;
+	mRenderSettings.mRenderMotionVectors = true;
+	mRenderSettings.mRenderDecals = true;
+	mRenderSettings.mRenderParticles = true;
+	mRenderSettings.mRenderTerrain = true;
+	mRenderSettings.mRenderWater = true;
+	mRenderSettings.mRenderSky = true;
+	mRenderSettings.mRenderSun = true;
+	mRenderSettings.mRenderClouds = true;
+	mRenderSettings.mRenderFog = true;
+	mRenderSettings.mComputeScattering = true;
+	mRenderSettings.mRenderDebugPrimitives = true;
+	mRenderSettings.mEnableShadowMaps = false;
+	mRenderSettings.mEnableCascadedShadowMaps = false;
+	mRenderSettings.mEnableDynamicShadowCascades = false;
+	mRenderSettings.mEnableFarShadows = false;
+	mRenderSettings.mEnableTAA &= temporalAllowed && mRenderSettings.mRenderPostEffects && SGfx_PostEffects::gEnableTAA;
+	mRenderSettings.mEnableRoughnessAA = true;
+	mRenderSettings.mEnableRTAO = true;
+	mRenderSettings.mEnableRTGI = true;
+	mRenderSettings.mEnableRaytracedLocalShadows = true;
+	mRenderSettings.mEnableRaytracedSunShadows = true;
+	mRenderSettings.mEnableRaytracedReflections = true;
+	mRenderSettings.mEnableRaytracedRefractions = true;
+}
+
+SGfx_ViewRenderSettings& SGfx_View::GetRenderSettings()
+{
+    return mRenderSettings;
+}
+
+const SGfx_ViewRenderSettings& SGfx_View::GetRenderSettings() const
+{
+	return mRenderSettings;
 }

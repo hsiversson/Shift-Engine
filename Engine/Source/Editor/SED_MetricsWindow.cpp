@@ -13,6 +13,7 @@ SED_MetricsWindow::~SED_MetricsWindow()
 
 void SED_MetricsWindow::OnUpdate()
 {
+	SC_PROFILER_FUNCTION();
 	mFPS = SC_Time::gFramerate;
 	mDeltaTimeCPU = SC_Time::gDeltaTime * 1000.f;
 
@@ -25,6 +26,7 @@ void SED_MetricsWindow::OnUpdate()
 
 void SED_MetricsWindow::OnDraw()
 {
+	SC_PROFILER_FUNCTION();
 	SED_Text("Application: %.3f ms/frame (%i FPS)", mDeltaTimeCPU, mFPS);
 	SED_Text("Memory: %i MB (%i MB Total)", mUsedSystemMemoryMB, mAvailableSystemMemoryMB);
 	SED_Text("VRAM: %i MB (%i MB Total)", mUsedVideoMemoryMB, mAvailableVideoMemoryMB);

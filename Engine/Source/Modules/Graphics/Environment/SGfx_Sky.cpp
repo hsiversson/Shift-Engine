@@ -29,6 +29,7 @@ bool SGfx_Sky::Init()
 
 void SGfx_Sky::UpdateConstants(const SGfx_Camera& aWorldCamera)
 {
+	SC_PROFILER_FUNCTION();
 	const SC_Vector cameraPos = aWorldCamera.GetPosition();
 
 	constexpr float M_TO_SKY_UNIT = 0.001f; // Engine units are in meters

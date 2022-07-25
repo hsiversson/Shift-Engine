@@ -56,6 +56,7 @@ public:
 
 	void SetRootConstant() override;
 	void SetRootConstantBuffer(SR_BufferResource* aConstantBuffer, uint32 aSlot) override;
+	void SetRootConstantBuffer(SR_BufferResource* aConstantBuffer, uint64 aBufferOffset, uint32 aSlot) override;
 	void SetResourceInfo(uint8* aData, uint32 aSize) override;
 	void SetRootShaderResource() override;
 	void SetRootUnorderedAccessResource() override;

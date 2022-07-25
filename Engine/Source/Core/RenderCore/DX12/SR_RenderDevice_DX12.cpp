@@ -4,11 +4,11 @@
 #if SR_ENABLE_DX12
 
 // D3D12 Agility SDK
-extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 700; }
+extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 606; }
 extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = "./"; }
 ////////////////////
 
-#include "SR_SwapChain_DX12.h"
+#include "SR_SwapChain_DXGI.h"
 #include "SR_CommandQueue_DX12.h"
 #include "SR_Texture_DX12.h"
 #include "SR_RenderTarget_DX12.h"
@@ -171,17 +171,6 @@ SC_Ref<SR_Heap> SR_RenderDevice_DX12::CreateHeap(const SR_HeapProperties& aHeapP
 	return newHeap;
 }
 
-SC_Ref<SR_FenceResource> SR_RenderDevice_DX12::CreateFenceResource()
-{
-	SC_Ref<SR_FenceResource_DX12> dx12Fence = SC_MakeRef<SR_FenceResource_DX12>();
-	if (!dx12Fence->Init())
-	{
-		return nullptr;
-	}
-
-	return dx12Fence;
-}
-
 bool SR_RenderDevice_DX12::CompileShader(const SR_ShaderCompileArgs& aArgs, SR_ShaderByteCode& aOutByteCode, SR_ShaderMetaData* aOutMetaData)
 {
 	return mDxcCompiler->CompileFromFile(aArgs, aOutByteCode, aOutMetaData);
@@ -206,7 +195,7 @@ SC_Ref<SR_ShaderState> SR_RenderDevice_DX12::CreateShaderState(const SR_ShaderSt
 
 SC_Ref<SR_SwapChain> SR_RenderDevice_DX12::CreateSwapChain(const SR_SwapChainProperties& aProperties, void* aNativeWindowHandle)
 {
-	SC_Ref<SR_SwapChain_DX12> newSwapChain = SC_MakeRef<SR_SwapChain_DX12>(this);
+	SC_Ref<SR_SwapChain_DXGI> newSwapChain = SC_MakeRef<SR_SwapChain_DXGI>(this);
 
 	if (!newSwapChain->Init(aProperties, aNativeWindowHandle))
 		return nullptr;
@@ -356,6 +345,8 @@ void SR_RenderDevice_DX12::OutputDredDebugData()
 
 	SC_MutexLock lock(mDREDMutex);
 
+	std::ofstream outDredData("gpu_crash.dmpfile");
+
 	static constexpr uint32 AutoBreadcrumbsBufferSizeInBytes = 65536;
 	static constexpr uint32 AutoBreadcrumbsCommandHistoryOffset = 4096;
 	static constexpr uint32 AutoBreadcrumbsCommandHistoryMax = (AutoBreadcrumbsBufferSizeInBytes - AutoBreadcrumbsCommandHistoryOffset) / 4;
@@ -374,20 +365,25 @@ void SR_RenderDevice_DX12::OutputDredDebugData()
 
 	SC_ERROR("<----- DRED DEBUG OUTPUT BEGIN ----->\n");
 	SC_ERROR("GPU Page Fault: VA: {:0x}", dredPageFaultOutput.PageFaultVA);
-	SC_ERROR("<----- RECENTLY FREED RESOURCES BEGIN ----->");
+
 	const D3D12_DRED_ALLOCATION_NODE* resourcePage = dredPageFaultOutput.pHeadRecentFreedAllocationNode;
-	while (resourcePage)
+	if (resourcePage)
 	{
-		SC_ERROR("\t>>[Type: {}] - {}", DREDGetAllocationType(resourcePage->AllocationType), SC_UTF16ToUTF8(resourcePage->ObjectNameW).c_str());
-		resourcePage = resourcePage->pNext;
+		SC_ERROR("<----- RECENTLY FREED RESOURCES BEGIN ----->");
+		while (resourcePage)
+		{
+			SC_ERROR("\t>>[Type: {}] - {}", DREDGetAllocationType(resourcePage->AllocationType), SC_UTF16ToUTF8(resourcePage->ObjectNameW).c_str());
+			resourcePage = resourcePage->pNext;
+		}
+		SC_ERROR("<----- RECENTLY FREED RESOURCES END ----->");
 	}
-	SC_ERROR("<----- RECENTLY FREED RESOURCES BEGIN ----->");
 
 	SC_ERROR("<----- BREADCRUMBS BEGIN ----->");
 	uint32 nodeIdx = 0;
 	const D3D12_AUTO_BREADCRUMB_NODE1* node = dredAutoBreadcrumbsOutput.pHeadAutoBreadcrumbNode;
 	while (node)
 	{
+		SC_ERROR("\t----------------------------------", nodeIdx);
 		SC_ERROR("\t---- BREADCRUMB NODE {} BEGIN ----", nodeIdx);
 
 		const uint32 completedOp = *node->pLastBreadcrumbValue;
@@ -412,7 +408,8 @@ void SR_RenderDevice_DX12::OutputDredDebugData()
 			SC_ERROR("\t\t>>[Context: {}] - Command: {}", contextString.c_str(), DREDGetBreadcrumbOp(node->pCommandHistory[index]));
 		}
 
-		SC_ERROR("---- BREADCRUMB NODE {} END ----", nodeIdx);
+		SC_ERROR("\t---- BREADCRUMB NODE {} END ----", nodeIdx);
+		SC_ERROR("\t----------------------------------", nodeIdx);
 		++nodeIdx;
 		node = node->pNext;
 	}
@@ -485,6 +482,15 @@ bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 		SR_ComPtr<ID3D12Debug> debugger;
 		D3D12GetDebugInterface(IID_PPV_ARGS(&debugger));
 		debugger->EnableDebugLayer();
+	}
+
+	if (mEnableGpuValidation)
+	{
+		SC_LOG("D3D12 GPU-based Validation: Enabled");
+		SR_ComPtr<ID3D12Debug1> debugger;
+		D3D12GetDebugInterface(IID_PPV_ARGS(&debugger));
+		debugger->SetEnableGPUBasedValidation(true);
+
 	}
 
 #if SR_ENABLE_DRED

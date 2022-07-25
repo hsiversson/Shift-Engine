@@ -26,6 +26,7 @@ private:
 	SR_ComPtr<ID3D12DescriptorHeap> mD3D12DescriptorHeap;
 	SC_Mutex mInternalMutex;
 	uint32 mDescriptorTypeSize;
+	uint32 mMaxNumDescriptors;
 	bool mIsShaderVisible;
 };
 #endif

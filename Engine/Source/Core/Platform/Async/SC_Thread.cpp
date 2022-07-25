@@ -1,16 +1,31 @@
-
 #include "SC_Thread.h"
 
 #include <thread>
+#include <codecvt>
 
 #if IS_WINDOWS_PLATFORM
 
 static void SetThreadName(SC_ThreadHandle aThreadHandle, const wchar_t* aName)
 {
-	typedef HRESULT(WINAPI* SetThreadDescriptionType)(HANDLE aThreadHandle, PCWSTR ThreadDescription);
-	static SetThreadDescriptionType SetThreadDescriptionFunc = (SetThreadDescriptionType)GetProcAddress(GetModuleHandleA("Kernel32.dll"), "SetThreadDescription");
-	if (SetThreadDescriptionFunc)
-		SetThreadDescriptionFunc(aThreadHandle, aName);
+	SetThreadDescription(aThreadHandle, aName);
+}
+
+static std::string GetThreadName(SC_ThreadHandle aThreadHandle)
+{
+	wchar_t* name;
+	HRESULT hr = GetThreadDescription(aThreadHandle, &name);
+	if (SUCCEEDED(hr))
+	{
+		std::wstring wstring(name); 
+
+		using convert_typeX = std::codecvt_utf8<wchar_t>;
+		std::wstring_convert<convert_typeX, wchar_t> converterX;
+		std::string result = converterX.to_bytes(wstring);
+		LocalFree(name);
+		return result;
+	}
+
+	return "Unnamed Thread";
 }
 
 #else
@@ -18,6 +33,7 @@ static void SetThreadName(SC_ThreadHandle aThreadHandle, const wchar_t* aName)
 #endif
 
 
+thread_local bool SC_Thread::gIsMainThread = false;
 thread_local bool SC_Thread::gIsTaskThread = false;
 thread_local bool SC_Thread::gIsRenderThread = false;
 thread_local SC_Thread* SC_Thread::gCurrentThread = nullptr;
@@ -116,6 +132,14 @@ void SC_Thread::SetName(const char* aName)
 	}
 }
 
+std::string SC_Thread::GetName() const
+{
+	if (gIsMainThread)
+		return "Main Thread";
+	else
+		return GetThreadName(mThreadHandle);
+}
+
 void SC_Thread::Yield()
 {
 	std::this_thread::yield();
@@ -153,10 +177,26 @@ struct MainThreadId
 };
 SC_ThreadId MainThreadId::gId = SC_UINT32_MAX;
 
+void SC_Thread::RegisterMainThread()
+{
+	GetMainThreadId();
+	gIsMainThread = true;
+}
+
 SC_ThreadId SC_Thread::GetMainThreadId()
 {
 	static MainThreadId gMainThreadId;
 	return MainThreadId::gId;
+}
+
+std::string SC_Thread::GetCurrentThreadName()
+{
+	if (gIsMainThread)
+		return "Main Thread";
+	else if (SC_Thread* thread = GetCurrentThread())
+		return thread->GetName();
+	else
+		return "Unnamed Thread";
 }
 
 void SC_Thread::ThreadMain()

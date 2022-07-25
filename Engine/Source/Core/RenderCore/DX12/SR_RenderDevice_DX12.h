@@ -9,7 +9,7 @@ struct ID3D12Device5;
 struct ID3D12Device6;
 struct ID3D12RootSignature;
 
-class SR_SwapChain_DX12;
+class SR_SwapChain_DXGI;
 class SR_CommandList;
 class SR_Texture_DX12;
 struct SR_TextureProperties;
@@ -39,8 +39,6 @@ public:
 	SC_Ref<SR_BufferResource> CreateBufferResource(const SR_BufferResourceProperties& aBufferResourceProperties, const void* aInitialData = nullptr) override;
 
 	SC_Ref<SR_Heap> CreateHeap(const SR_HeapProperties& aHeapProperties);
-
-	SC_Ref<SR_FenceResource> CreateFenceResource() override;
 
 	bool CompileShader(const SR_ShaderCompileArgs& aArgs, SR_ShaderByteCode& aOutByteCode, SR_ShaderMetaData* aOutMetaData = nullptr) override;
 	bool CompileShader(const std::string& aShadercode, const SR_ShaderCompileArgs& aArgs, SR_ShaderByteCode& aOutByteCode, SR_ShaderMetaData* aOutMetaData = nullptr) override;

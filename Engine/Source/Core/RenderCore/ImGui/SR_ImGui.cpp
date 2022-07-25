@@ -199,6 +199,10 @@ bool SR_ImGui::Init(void* aNativeWindowHandle, float aDPIScale)
 
 void SR_ImGui::BeginFrame()
 {
+	if (mLastTaskEvent && !mLastTaskEvent->mCPUEvent.IsSignalled())
+		mLastTaskEvent->mCPUEvent.Wait();
+
+	mLastTaskEvent.Reset();
 
 #if IS_WINDOWS_PLATFORM
 	NewFrameWin64();
@@ -210,13 +214,16 @@ void SR_ImGui::BeginFrame()
 
 void SR_ImGui::Render(SR_RenderTarget* aRenderTarget)
 {
+	SC_PROFILER_FUNCTION();
 	ImGui::Render();
 	ImDrawData* drawData = ImGui::GetDrawData();
 	if (drawData->DisplaySize.x <= 0.0f || drawData->DisplaySize.y <= 0.0f)
 		return;
 
-	auto Task = [&]()
+	auto Task = [this, drawData, aRenderTarget]()
 	{
+		SC_PROFILER_FUNCTION();
+		SR_RenderTarget* rt = aRenderTarget;
 		SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
 		ImGuiIO& io = ImGui::GetIO();
 		drawData->ScaleClipRects(io.DisplayFramebufferScale);
@@ -276,8 +283,8 @@ void SR_ImGui::Render(SR_RenderTarget* aRenderTarget)
 			vertexConstants.mDPIScale = mDPIScale;
 		}
 
-		cmdList->TransitionBarrier(SR_ResourceState_RenderTarget, aRenderTarget->GetResource());
-		cmdList->SetRenderTargets(1, &aRenderTarget, nullptr);
+		cmdList->TransitionBarrier(SR_ResourceState_RenderTarget, rt->GetResource());
+		cmdList->SetRenderTargets(1, &rt, nullptr);
 
 		SR_Rect r = { 0, 0, (uint32)drawData->DisplaySize.x, (uint32)drawData->DisplaySize.y };
 
@@ -340,12 +347,11 @@ void SR_ImGui::Render(SR_RenderTarget* aRenderTarget)
 			globalVtxOffset += imguiCmdList->VtxBuffer.Size;
 			globalIdxOffset += imguiCmdList->IdxBuffer.Size;
 		}
-		cmdList->TransitionBarrier(SR_ResourceState_Present, aRenderTarget->GetResource());
+		cmdList->TransitionBarrier(SR_ResourceState_Present, rt->GetResource());
 	};
 
+	mLastTaskEvent = SC_MakeRef<SR_TaskEvent>();
 	SR_RenderDevice::gInstance->GetQueueManager()->SubmitTask(Task, SR_CommandListType::Graphics, mLastTaskEvent);
-	mLastTaskEvent->mCPUEvent.Wait();
-	mLastTaskEvent->Reset();
 }
 
 void SR_ImGui::SetDPIScale(float aScale)
@@ -353,6 +359,16 @@ void SR_ImGui::SetDPIScale(float aScale)
 	ImGuiIO& io = ImGui::GetIO();
 	io.FontGlobalScale = aScale;
 	mDPIScale = aScale;
+}
+
+SR_TaskEvent* SR_ImGui::GetLatestFence() const
+{
+	return mLastTaskEvent;
+}
+
+const SC_Ref<SR_TaskEvent>& SR_ImGui::GetLatestFenceRef() const
+{
+	return mLastTaskEvent;
 }
 
 bool SR_ImGui::InitRenderObjects()
@@ -363,7 +379,6 @@ bool SR_ImGui::InitRenderObjects()
 	if (!CreateFontTexture())
 		return false;
 
-	mLastTaskEvent = SC_MakeRef<SR_TaskEvent>();
 	return true;
 }
 

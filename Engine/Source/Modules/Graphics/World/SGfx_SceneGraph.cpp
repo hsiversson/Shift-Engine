@@ -23,7 +23,8 @@ SGfx_SceneGraph::~SGfx_SceneGraph()
 
 void SGfx_SceneGraph::PrepareView(SGfx_View* aView)
 {
-	//SGfx_ViewData& prepareData = aView->GetPrepareData();
+	SC_PROFILER_FUNCTION();
+	SGfx_ViewData& prepareData = aView->GetPrepareData();
 
 	//SC_Array<SC_Future<bool>> shadowCullingTasks;
 	//if (aView->IsMainView())
@@ -54,13 +55,13 @@ void SGfx_SceneGraph::PrepareView(SGfx_View* aView)
 	//	}
 	//}
 
-	SC_Array<SC_Future<bool>> futures;
-	futures.Add(SC_ThreadPool::Get().SubmitTask([&]() { CullLights(aView); }));
-	futures.Add(SC_ThreadPool::Get().SubmitTask([&]() { CullMeshes(aView); }));
-	for (SC_Future<bool>& future : futures)
-		future.Wait();
-	;
+	if (mMeshes.Count() > 0)
+		prepareData.mPrepareCullMeshesEvent = SC_ThreadPool::Get().SubmitTask([this, aView]() { CullMeshes(aView); });
 
+	if (mLights.Count() > 0)
+		prepareData.mPrepareCullLightsEvent = SC_ThreadPool::Get().SubmitTask([this, aView]() { CullLights(aView); });
+	//CullMeshes(aView);
+	//CullLights(aView);
 	//AddRaytracingGeometry(aView);
 
 	//for (SC_Future<bool>& task : shadowCullingTasks)
@@ -134,6 +135,7 @@ void SGfx_SceneGraph::RemoveDecal(SC_Ref<SGfx_Decal> aDecal)
 
 void SGfx_SceneGraph::CullMeshes(SGfx_View* aView)
 {
+	SC_PROFILER_FUNCTION();
 	SC_Array<SC_Ref<SGfx_MeshInstance>> tempMeshList; // Hybrid array?
 	{
 		SC_MutexLock lock(mMeshesMutex);
@@ -157,8 +159,6 @@ void SGfx_SceneGraph::CullMeshes(SGfx_View* aView)
 		const SC_AABB& boundingBox = mesh->GetBoundingBox();
 		const SC_Sphere boundingSphere(boundingBox);
 		const float distanceToCamera = (camera.GetPosition() - boundingBox.GetCenter()).Length();
-
-		mesh->UpdateInstanceData(prepareData.mInstanceData.get());
 
 #if SR_ENABLE_RAYTRACING
 		if (!depthOnly && mesh->IncludeInRaytracingScene() && distanceToCamera < 200.0f) // TODO: FIX THIS CULLING
@@ -208,12 +208,11 @@ void SGfx_SceneGraph::CullMeshes(SGfx_View* aView)
 
 			renderQueueItem.mMaterialIndex = mesh->GetMaterialInstance()->GetMaterialIndex();
 
-
 			renderQueueItem.mSortDistance = distanceToCamera;
 
 			SR_ShaderState* depthShader = mesh->GetMaterialInstance()->GetMaterialTemplate()->GetShaderState(meshTemplate->GetVertexLayout(), (depthOnly) ? SGfx_MaterialShaderType::ShadowDepth : SGfx_MaterialShaderType::Depth);
-			SR_ShaderState* defaultShader = mesh->GetMaterialInstance()->GetMaterialTemplate()->GetShaderState(meshTemplate->GetVertexLayout(), SGfx_MaterialShaderType::Default);
-			if (!depthShader || (!depthOnly && !defaultShader))
+			SR_ShaderState* defaultShader = (depthOnly) ? depthShader : mesh->GetMaterialInstance()->GetMaterialTemplate()->GetShaderState(meshTemplate->GetVertexLayout(), SGfx_MaterialShaderType::Default);
+			if (!depthShader || !defaultShader)
 				continue;
 
 			renderQueueItem.mShader = depthShader;
@@ -231,17 +230,14 @@ void SGfx_SceneGraph::CullMeshes(SGfx_View* aView)
 			}
 		}
 	}
-
-	SC_Array<SC_Future<bool>> futures;
-	futures.Add(SC_ThreadPool::Get().SubmitTask([&]() { prepareData.mDepthQueue.Prepare(prepareData); }));
-	futures.Add(SC_ThreadPool::Get().SubmitTask([&]() { prepareData.mDepthQueue_MotionVectors.Prepare(prepareData); }));
-	futures.Add(SC_ThreadPool::Get().SubmitTask([&]() { prepareData.mOpaqueQueue.Prepare(prepareData); }));
-	for (SC_Future<bool>& future : futures)
-		future.Wait();
+	prepareData.mDepthQueue.Prepare(prepareData);
+	prepareData.mDepthQueue_MotionVectors.Prepare(prepareData); 
+	prepareData.mOpaqueQueue.Prepare(prepareData);
 }
 
 void SGfx_SceneGraph::CullLights(SGfx_View* aView)
 {
+	SC_PROFILER_FUNCTION();
 	SC_Array<SC_Ref<SGfx_Light>> tempLightsList; // Hybrid array?
 	{
 		SC_MutexLock lock(mLightsMutex);

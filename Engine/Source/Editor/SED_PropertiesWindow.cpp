@@ -39,6 +39,7 @@ const SGF_Entity& SED_PropertiesWindow::GetSelectedEntity() const
 
 void SED_PropertiesWindow::OnDraw()
 {
+	SC_PROFILER_FUNCTION();
 	if (mSelectedEntity != SGF_InvalidEntityHandle)
 	{
 		ImGui::BeginTable("##entityNameTable", 2);
@@ -78,7 +79,9 @@ void SED_PropertiesWindow::OnDraw()
 
 		ImGui::Separator();
 
+#if IS_EDITOR_BUILD
 		DrawComponent(SGF_TransformComponent::Id(), mSelectedEntity);
+#endif
 
 		//for (const SC_Ref<SGF_Component>& comp : mSelectedEntity->GetComponents())
 		//{
@@ -89,6 +92,7 @@ void SED_PropertiesWindow::OnDraw()
 	}
 }
 
+#if IS_EDITOR_BUILD
 void SED_PropertiesWindow::DrawComponent(const SGF_ComponentId& aComponentId, const SGF_Entity& aEntity)
 {
 	if (aComponentId == SGF_EntityIdComponent::Id())
@@ -405,3 +409,4 @@ void SED_PropertiesWindow::DrawPropertyInternal(SGF_PropertyHelper<SGF_EntityHan
 	else
 		ImGui::Text("<None>");
 }
+#endif

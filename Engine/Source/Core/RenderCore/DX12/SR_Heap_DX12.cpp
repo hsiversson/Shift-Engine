@@ -79,10 +79,10 @@ const uint64 SR_Heap_DX12::GetOffset(uint64 aSize, uint64 aAlignment)
 {
 	SC_ASSERT(aSize > 0);
 
-	SR_Fence fence = SR_RenderDevice::gInstance->GetQueueManager()->InsertFence(SR_CommandListType::Graphics);
+	//SR_Fence fence = SR_RenderDevice::gInstance->GetQueueManager()->InsertFence(SR_CommandListType::Graphics);
 
 	uint64 offset = 0;
-	if (!mRingBuffer.GetOffset(offset, aSize, aAlignment, fence))
+	if (!mRingBuffer.GetOffset(offset, aSize, aAlignment, SR_Fence()))
 	{
 		SC_ASSERT(false);
 		return SC_UINT32_MAX;

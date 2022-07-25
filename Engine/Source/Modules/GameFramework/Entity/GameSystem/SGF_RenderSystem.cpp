@@ -26,6 +26,7 @@ bool SGF_RenderSystem::Init()
 
 void SGF_RenderSystem::Update()
 {
+	SC_PROFILER_FUNCTION();
 	UpdateStaticMeshes();
 }
 

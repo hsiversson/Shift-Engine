@@ -1,9 +1,10 @@
 #include "SR_CommandList.h"
+#include "RenderCore/Resources/SR_RingBuffer.h"
 
 SR_CommandList::SR_CommandList(const SR_CommandListType& aType)
 	: mType(aType)
 {
-
+	InitRingBuffers();
 }
 
 SR_CommandList::~SR_CommandList()
@@ -176,6 +177,10 @@ void SR_CommandList::SetRootConstantBuffer(SR_BufferResource* /*aConstantBuffer*
 
 }
 
+void SR_CommandList::SetRootConstantBuffer(SR_BufferResource* /*aConstantBuffer*/, uint64 /*aBufferOffset*/, uint32 /*aSlot*/)
+{
+}
+
 void SR_CommandList::SetResourceInfo(uint8* /*aData*/, uint32 /*aSize*/)
 {
 }
@@ -259,6 +264,53 @@ void SR_CommandList::UpdateTexture(SR_TextureResource* /*aTextureResource*/, con
 {
 }
 
+SR_BufferResource* SR_CommandList::GetBufferResource(uint64& aOutOffset, SR_BufferBindFlag aBufferType, uint32 aByteSize, void* aInitialData, uint32 aAlignment, const SR_Fence& aCompletionFence)
+{
+	static constexpr uint32 smallSizeKB = KB(64);
+	if (aByteSize > smallSizeKB)
+		return SR_RenderDevice::gInstance->GetTempBuffer(aOutOffset, aBufferType, aByteSize, aInitialData, aAlignment, aCompletionFence);
+
+	SR_RingBuffer* ringBuffer = nullptr;
+	uint32 size = 0;
+
+	switch (aBufferType)
+	{
+	case SR_BufferBindFlag_ConstantBuffer:
+		ringBuffer = &mConstantsRingBuffer;
+		size = SC_Align(aByteSize, 256);
+		break;
+	case SR_BufferBindFlag_Buffer:
+		ringBuffer = &mBuffersRingBuffer;
+		size = SC_Align(aByteSize, 256);
+		break;
+	case SR_BufferBindFlag_VertexBuffer:
+	case SR_BufferBindFlag_IndexBuffer:
+		ringBuffer = &mVertexIndexRingBuffer;
+		size = SC_Align(aByteSize, 256);
+		break;
+	case SR_BufferBindFlag_Staging:
+		ringBuffer = &mStagingRingBuffer;
+		size = SC_Align(aByteSize, 256);
+		break;
+	}
+
+	SR_BufferResource* buffer = ringBuffer ? ringBuffer->GetBufferResource() : nullptr;
+	if (!ringBuffer || !ringBuffer->GetOffset(aOutOffset, size, aAlignment, aCompletionFence))
+	{
+		return SR_RenderDevice::gInstance->GetTempBuffer(aOutOffset, aBufferType, aByteSize, aInitialData, aAlignment, aCompletionFence);
+	}
+
+	if (aByteSize && aInitialData)
+		UpdateBuffer(buffer, (uint32)aOutOffset, aInitialData, aByteSize);
+
+	return nullptr;
+}
+
+SR_Buffer* SR_CommandList::GetBuffer()
+{
+	return nullptr;
+}
+
 void SR_CommandList::SetViewport(const SR_Rect& /*aRect*/, float /*aMinDepth = 0.0f*/, float /*aMaxDepth = 1.0f*/)
 {
 
@@ -295,4 +347,17 @@ const SC_Array<SR_Fence>& SR_CommandList::GetFenceWaits() const
 const SR_CommandListType& SR_CommandList::GetType() const
 {
 	return mType;
+}
+
+bool SR_CommandList::InitRingBuffers()
+{
+	SR_BufferResourceProperties cprops;
+	cprops.mElementCount = MB(2);
+	cprops.mElementSize = 1;
+	cprops.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
+	cprops.mDebugName = "Constant Ring Buffer";
+	cprops.mIsUploadBuffer = true;
+	mConstantsRingBuffer = SR_RingBuffer(SR_RenderDevice::gInstance->CreateBufferResource(cprops, nullptr), 256);
+
+	return true;
 }

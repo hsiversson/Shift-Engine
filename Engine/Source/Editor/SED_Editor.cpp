@@ -21,7 +21,6 @@
 
 #include "Platform/Time/SC_Time.h"
 #include "RenderCore/Interface/SR_RenderDevice.h"
-#include "RenderCore/RenderTasks/SR_RenderThread.h"
 #include "SED_MetricsWindow.h"
 #include "SED_Widgets.h"
 
@@ -62,8 +61,8 @@ bool SED_Editor::Init()
 	//auto WorldLoadingTask = [&]()
 	//{
 		mActiveWorld->LoadLevel("");
-		//};
-		//SC_ThreadPool::Get().SubmitTask(WorldLoadingTask);
+	//};
+	//SC_ThreadPool::Get().SubmitTask(WorldLoadingTask);
 
 	//mMaterialEditor = SC_MakeUnique<SED_MaterialEditor>();
 	//if (!mMaterialEditor->Init())
@@ -74,6 +73,7 @@ bool SED_Editor::Init()
 
 bool SED_Editor::Update()
 {
+	SC_PROFILER_FUNCTION();
 	mActiveWorld->Update();
 
 	//SC_Array<SC_Future<bool>> taskEvents;
@@ -97,6 +97,7 @@ bool SED_Editor::Update()
 
 bool SED_Editor::Render()
 {
+	SC_PROFILER_FUNCTION();
 	mImGui.BeginFrame();
 
 	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
@@ -191,15 +192,7 @@ bool SED_Editor::Render()
 
 	//mMaterialEditor->OnRender();
 	ImGui::End();
-
-	SC_Event taskEvent;
-	auto renderTask = [&]() 
-	{
-		mImGui.Render(SR_RenderDevice::gInstance->GetSwapChain()->GetRenderTarget());
-		taskEvent.Signal();
-	};
-	SR_RenderThread::Get()->PostTask(renderTask);
-	taskEvent.Wait();
+	mImGui.Render(SR_RenderDevice::gInstance->GetSwapChain()->GetRenderTarget());
 
 	return true;
 }

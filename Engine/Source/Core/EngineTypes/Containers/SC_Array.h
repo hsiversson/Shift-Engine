@@ -114,7 +114,7 @@ SC_Array<T>::SC_Array(uint32 aReservedCount)
 	, mCurrentItemCount(0)
 	, mItemCapacity(0)
 {
-	Respace(aReservedCount);
+	Reserve(aReservedCount);
 }
 
 template <class T>

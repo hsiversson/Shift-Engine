@@ -35,8 +35,6 @@ public:
 	
 	virtual void Update(const SR_SwapChainProperties& aProps);
 
-	SR_Fence& GetLastFrameFence();
-
 	SR_RenderTarget* GetRenderTarget() const;
 	SR_Texture* GetTexture() const;
 
@@ -54,7 +52,6 @@ protected:
 protected:
 	SR_SwapChainProperties mProperties;
 	BackbufferResource mBackbufferResources[3];
-	SR_Fence mFrameFence[3];
 	BackbufferResource* mCurrentResource;
 	uint8 mNumBackbuffers;
 	uint8 mCurrentIndex;

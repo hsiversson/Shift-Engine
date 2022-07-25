@@ -96,4 +96,8 @@ private:
 	Tonemap mTonemapData;
 
 	SC_Ref<SR_ShaderState> mDownsampleShader;
+
+public:
+	static bool gEnableTAA;
+	static bool gEnableBloom;
 };

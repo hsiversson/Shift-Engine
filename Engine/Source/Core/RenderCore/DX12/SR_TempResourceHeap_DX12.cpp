@@ -19,7 +19,7 @@ SR_TempResourceHeap_DX12::~SR_TempResourceHeap_DX12()
 bool SR_TempResourceHeap_DX12::Init()
 {
 	SR_HeapProperties heapProps;
-	heapProps.mByteSize = GB(1);
+	heapProps.mByteSize = MB(256);
 	heapProps.mResourceType = SR_HeapResourceType::RenderTarget;
 	heapProps.mType = SR_HeapType::Default;
 	heapProps.mDebugName = "SR_TempResourceHeap_DX12::RenderTarget_Heap";
@@ -30,7 +30,7 @@ bool SR_TempResourceHeap_DX12::Init()
 		return false;
 	}
 
-	heapProps.mByteSize = MB(256);
+	heapProps.mByteSize = MB(128);
 	heapProps.mResourceType = SR_HeapResourceType::Texture;
 	heapProps.mDebugName = "SR_TempResourceHeap_DX12::RWTexture_Heap";
 	mResourceHeap_RW_Textures = SC_MakeUnique<SR_Heap_DX12>(heapProps);
@@ -47,7 +47,7 @@ bool SR_TempResourceHeap_DX12::Init()
 		return false;
 	}
 
-	heapProps.mByteSize = MB(128);
+	heapProps.mByteSize = MB(256);
 	heapProps.mResourceType = SR_HeapResourceType::Buffer;
 	heapProps.mType = SR_HeapType::Upload;
 	heapProps.mDebugName = "SR_TempResourceHeap_DX12::ConstantBuffer_Heap";
@@ -58,6 +58,7 @@ bool SR_TempResourceHeap_DX12::Init()
 		return false;
 	}
 
+	heapProps.mByteSize = MB(128);
 	heapProps.mType = SR_HeapType::Default;
 	heapProps.mDebugName = "SR_TempResourceHeap_DX12::Buffer_Heap";
 	mResourceHeap_GenericBuffers = SC_MakeUnique<SR_Heap_DX12>(heapProps);

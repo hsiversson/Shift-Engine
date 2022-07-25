@@ -3,49 +3,68 @@
 
 #if IS_WINDOWS_PLATFORM
 #include <synchapi.h>
-#endif
 
-SC_MutexImpl::SC_MutexImpl(uint32 aSpinLockCount)
+SC_MutexImpl_Win64::SC_MutexImpl_Win64()
 {
-#if IS_WINDOWS_PLATFORM
-	InitializeCriticalSectionEx(&mCriticalSection, (DWORD)aSpinLockCount, 0);
-#else
-#error Platform not supported!
-#endif
+	const uint32 spinLockCount = 0;
+	InitializeCriticalSectionEx(&mCriticalSection, spinLockCount, 0);
 }
 
-SC_MutexImpl::~SC_MutexImpl()
+SC_MutexImpl_Win64::~SC_MutexImpl_Win64()
 {
-#if IS_WINDOWS_PLATFORM
 	DeleteCriticalSection(&mCriticalSection);
-#else
-#error Platform not supported!
-#endif
 }
 
-void SC_MutexImpl::Lock()
+void SC_MutexImpl_Win64::Lock()
 {
-#if IS_WINDOWS_PLATFORM
 	EnterCriticalSection(&mCriticalSection);
-#else
-#error Platform not supported!
-#endif
 }
 
-bool SC_MutexImpl::TryLock()
+bool SC_MutexImpl_Win64::TryLock()
 {
-#if IS_WINDOWS_PLATFORM
 	return (TryEnterCriticalSection(&mCriticalSection) != 0);
-#else
-#error Platform not supported!
-#endif
 }
 
-void SC_MutexImpl::Unlock()
+void SC_MutexImpl_Win64::Unlock()
 {
-#if IS_WINDOWS_PLATFORM
 	LeaveCriticalSection(&mCriticalSection);
+}
+
+SC_ReadWriteMutexImpl_Win64::SC_ReadWriteMutexImpl_Win64()
+{
+	InitializeSRWLock(&mSRWLock);
+}
+
+bool SC_ReadWriteMutexImpl_Win64::TryBeginRead()
+{
+	return TryAcquireSRWLockShared(&mSRWLock) != 0;
+}
+
+void SC_ReadWriteMutexImpl_Win64::BeginRead()
+{
+	AcquireSRWLockShared(&mSRWLock);
+}
+
+void SC_ReadWriteMutexImpl_Win64::EndRead()
+{
+	ReleaseSRWLockShared(&mSRWLock);
+}
+
+bool SC_ReadWriteMutexImpl_Win64::TryBeginWrite()
+{
+	return TryAcquireSRWLockExclusive(&mSRWLock) != 0;
+}
+
+void SC_ReadWriteMutexImpl_Win64::BeginWrite()
+{
+	AcquireSRWLockExclusive(&mSRWLock);
+}
+
+void SC_ReadWriteMutexImpl_Win64::EndWrite()
+{
+	ReleaseSRWLockExclusive(&mSRWLock);
+}
+
 #else
 #error Platform not supported!
 #endif
-}

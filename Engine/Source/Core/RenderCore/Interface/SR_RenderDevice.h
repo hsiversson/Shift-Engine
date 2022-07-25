@@ -15,7 +15,8 @@
 #include "SR_RootSignature.h"
 #include "SR_TempResourceHeap.h"
 #include "RenderCore/Resources/SR_InstanceBuffer.h"
-#include "RenderCore/RenderTasks/SR_QueueManager.h"
+#include "RenderCore/RenderTasks/SR_CommandQueueManager.h"
+#include "RenderCore/Resources/SR_RingBuffer.h"
 
 #define ENABLE_NVAPI			(1)
 #define ENABLE_AGS				(1)
@@ -109,13 +110,16 @@ enum class SR_TempHeapTypes
 	COUNT
 };
 
-class SR_RenderThread;
 class SR_RenderDevice
 {
 public:
 	virtual ~SR_RenderDevice();
 
+	void BeginFrame(uint32 aFrameIndex);
 	void Present();
+	void EndFrame();
+
+	virtual void GarbageCollect();
 
 	virtual SC_Ref<SR_CommandList> CreateCommandList(const SR_CommandListType& aType);
 
@@ -132,10 +136,9 @@ public:
 	virtual SC_Ref<SR_BufferResource> CreateBufferResource(const SR_BufferResourceProperties& aBufferResourceProperties, const void* aInitialData = nullptr);
 
 	SR_TempBuffer CreateTempBuffer(const SR_BufferResourceProperties& aBufferResourceProperties, bool aIsWritable = true);
+	SR_BufferResource* GetTempBuffer(uint64& aOutOffset, SR_BufferBindFlag aBufferType, uint32 aByteSize, const void* aInitialData, uint32 aAlignment = 0, const SR_Fence& aCompletionFence = SR_Fence());
 
 	virtual SC_Ref<SR_Heap> CreateHeap(const SR_HeapProperties& aHeapProperties);
-
-	virtual SC_Ref<SR_FenceResource> CreateFenceResource();
 
 	virtual bool CompileShader(const SR_ShaderCompileArgs& aArgs, SR_ShaderByteCode& aOutByteCode, SR_ShaderMetaData* aOutMetaData = nullptr);
 	virtual bool CompileShader(const std::string& aShadercode, const SR_ShaderCompileArgs& aArgs, SR_ShaderByteCode& aOutByteCode, SR_ShaderMetaData* aOutMetaData = nullptr);
@@ -143,8 +146,8 @@ public:
 	
 	virtual SC_Ref<SR_SwapChain> CreateSwapChain(const SR_SwapChainProperties& aProperties, void* aNativeWindowHandle);
 
-	virtual bool IsFencePending(SR_Fence& aFence) const;
-	void WaitForFence(SR_Fence& aFence);
+	bool IsFencePending(const SR_Fence& aFence) const;
+	bool WaitForFence(const SR_Fence& aFence, bool aBlock = true);
 	virtual SR_CommandQueue* GetGraphicsCommandQueue() const;
 	virtual SR_CommandQueue* GetCommandQueue(const SR_CommandListType& aType) const;
 
@@ -160,7 +163,7 @@ public:
 
 	SR_InstanceBuffer* GetPersistentResourceInfo() const;
 
-	SR_QueueManager* GetQueueManager() const;
+	SR_CommandQueueManager* GetQueueManager() const;
 	SC_Ref<SR_CommandList> GetTaskCommandList(); // Returns the command list assigned to the current render task. Should only be called inside render tasks.
 
 	const SR_RenderSupportCaps& GetSupportCaps() const;
@@ -178,28 +181,51 @@ public:
 	static bool Create(const SR_API& aAPIType);
 	static void Destroy();
 	static SR_RenderDevice* gInstance;
-	uint64 mLatestFinishedFrame;
+	static uint32 gFrameCounter;
+	static uint32 gLatestFinishedFrame;
 protected:
 	SR_RenderDevice(const SR_API& aAPI);
 	virtual bool Init(void* aWindowHandle);
 	virtual SC_Ref<SR_Texture> LoadTextureInternal(const SC_FilePath& aTextureFilePath);
 	bool PostInit();
 
-	SC_UniquePtr<SR_RenderThread> mRenderThread;
+	enum class TempRingBufferType
+	{
+		VertexIndex,
+		Constant,
+		Shader,
+		Staging,
+		LowPrioStaging,
+		COUNT,
+	};
+	struct TempRingBuffers
+	{
+		TempRingBuffers() : mNumFailedMutexLocks(0) {}
+
+		SC_Mutex mMutex;
+		uint32 mNumFailedMutexLocks;
+		SC_Array<SR_RingBuffer> mRingBuffers;
+	};
+	TempRingBuffers mTempRingBuffers[static_cast<uint32>(TempRingBufferType::COUNT)];
 
 	SC_Ref<SR_RootSignature> mRootSignatures[static_cast<uint32>(SR_RootSignatureType::COUNT)];
 
 	SC_Ref<SR_SwapChain> mDefaultSwapChain;
+	SC_Ref<SC_Event> mBeginFrameEvent;
+	SC_Ref<SC_Event> mPresentEvent;
+	SC_Ref<SC_Event> mPresentEvents[2];
+	SC_Ref<SC_Event> mEndFrameEvent;
 
 	SC_UniquePtr<SR_InstanceBuffer> mPersistentResourceInfo;
 
-	SC_UniquePtr<SR_QueueManager> mQueueManager;
+	SC_UniquePtr<SR_CommandQueueManager> mQueueManager;
 
 	SC_UniquePtr<SR_TempResourceHeap> mTempResourceHeap;
 
 	SR_RenderSupportCaps mSupportCaps;
 	bool mEnableDebugMode : 1;
 	bool mBreakOnError : 1;
+	bool mEnableGpuValidation : 1;
 
 #if SR_ENABLE_RENDERDOC_API
 	RENDERDOC_API_1_4_1* mRenderDocAPI;

@@ -46,6 +46,7 @@ bool SGF_World::Init()
 
 bool SGF_World::LoadLevel(const char* /*aLevel*/)
 {
+	SC_Timer timer;
 	SC_Ref<SGF_Level> level = SC_MakeRef<SGF_Level>();
 	level->SetWorld(this);
 	//if (level->Load(SC_EnginePaths::Get().GetGameDataDirectory() + "/Levels/Sponza.slvl"))
@@ -61,11 +62,13 @@ bool SGF_World::LoadLevel(const char* /*aLevel*/)
 	level->Save(SC_EnginePaths::Get().GetGameDataDirectory() + "/Levels/Sponza.slvl");
 	mLevels.Add(level);
 
+	SC_LOG("Loading level [Sponza] took: {:.3f} ms", timer.Stop<float>());
 	return true;
 }
 
 void SGF_World::Update()
 {
+	SC_PROFILER_FUNCTION();
 	mGameSystemManager->Update();
 }
 

@@ -15,7 +15,7 @@ public:
 	bool IsPending(uint64 aValue) override;
 	bool Wait(uint64 aValue, bool aBlock = true) override;
 
-	SR_Fence GetNextFence() override;
+	uint64 GetNextValue() override;
 
 	ID3D12Fence* GetD3D12Fence() const;
 

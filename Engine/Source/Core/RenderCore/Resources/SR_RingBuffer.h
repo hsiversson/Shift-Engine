@@ -14,6 +14,7 @@ public:
 	};
 
 public:
+	SR_RingBuffer(const SC_Ref<SR_BufferResource>& aBufferResource = nullptr, uint64 aAlignment = 1);
 	SR_RingBuffer(uint64 aSize, uint64 aAlignment = 1);
 	SR_RingBuffer(const SR_RingBuffer&) = delete;
 	SR_RingBuffer(SR_RingBuffer&& aOther);
@@ -26,7 +27,8 @@ public:
 	void Update();
 	void UpdateFrame(bool aAllocationFlag, const SR_Fence& aFence);
 
-private:
+	SR_BufferResource* GetBufferResource() const;
+
 	void RecenterBase();
 
 	SC_Mutex mMutex;

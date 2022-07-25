@@ -19,8 +19,14 @@ public:
 	bool Init(const SR_CommandListType& aType, const char* aDebugName = nullptr);
 
 	void SubmitCommandLists(SR_CommandList** aCommandLists, uint32 aNumCommandLists, const char* aEventName = nullptr) override;
-	void InsertFence(const SR_Fence& aFence) override;
+
+	SR_Fence GetNextFence() override;
+
+	void SignalFence(const SR_Fence& aFence) override;
 	void InsertWait(const SR_Fence& aFence) override;
+
+	bool IsFencePending(const SR_Fence& aFence) override; 
+	bool WaitForFence(const SR_Fence& aFence, bool aBlock = true) override;
 
 	void BeginEvent(const char* aName) override;
 	void EndEvent() override;

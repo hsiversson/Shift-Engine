@@ -2,6 +2,7 @@
 #include "SR_RenderTypes.h"
 #include "SR_RaytracingStructs.h"
 #include "RenderCore/Profiling/SR_GPUProfiler.h"
+#include "RenderCore/Resources/SR_RingBuffer.h"
 #include <bitset>
 
 class SR_ShaderState;
@@ -76,6 +77,7 @@ public:
 
 	virtual void SetRootConstant();
 	virtual void SetRootConstantBuffer(SR_BufferResource* aConstantBuffer, uint32 aSlot);
+	virtual void SetRootConstantBuffer(SR_BufferResource* aConstantBuffer, uint64 aBufferOffset, uint32 aSlot);
 	virtual void SetResourceInfo(uint8* aData, uint32 aSize);
 	virtual void SetRootShaderResource();
 	virtual void SetRootUnorderedAccessResource();
@@ -104,6 +106,11 @@ public:
 	virtual void UpdateTexture(SR_TextureResource* aTextureResource, const SR_PixelData* aData, uint32 aDataCount, bool aKeepData);
 	virtual void UpdateTexture(SR_TextureResource* aTextureResource, const SC_IntVector& aDstOffset, const SC_IntVector& aSize, const SR_PixelData& aData, bool aKeepData);
 
+	// Temp Resources
+
+	virtual SR_BufferResource* GetBufferResource(uint64& aOutOffset, SR_BufferBindFlag aBufferType, uint32 aByteSize, void* aInitialData, uint32 aAlignment = 0, const SR_Fence& aCompletionFence = SR_Fence());
+	virtual SR_Buffer* GetBuffer();
+
 	// Misc
 	virtual void SetViewport(const SR_Rect& aRect, float aMinDepth = 0.0f, float aMaxDepth = 1.0f);
 	virtual void SetScissorRect(const SR_Rect& aRect);
@@ -114,12 +121,16 @@ public:
 
 	const SR_CommandListType& GetType() const;
 protected:
+
+	bool InitRingBuffers();
+
 	struct ResourceBindings
 	{
 		ResourceBindings() { Clear(); }
 		void Clear()
 		{
 			SC_Fill(mConstantBuffers, 2, nullptr);
+			SC_Fill(mConstantBufferOffsets, 2, 0);
 			mConstantsDirty.reset();
 
 			SC_Fill(mTextures, 1, nullptr);
@@ -127,6 +138,7 @@ protected:
 		}
 
 		SR_BufferResource* mConstantBuffers[2];
+		uint64 mConstantBufferOffsets[2];
 		std::bitset<4> mConstantsDirty;
 
 		SR_Texture* mTextures[1];
@@ -135,6 +147,11 @@ protected:
 	} mResourceBindings;
 	SC_Array<SC_Ref<SR_Resource>> mTempResources;
 	SC_Array<SR_Fence> mFenceWaits;
+
+	SR_RingBuffer mVertexIndexRingBuffer;
+	SR_RingBuffer mConstantsRingBuffer;
+	SR_RingBuffer mBuffersRingBuffer;
+	SR_RingBuffer mStagingRingBuffer;
 
 	SR_CommandListType mType;
 };

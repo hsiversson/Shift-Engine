@@ -21,6 +21,7 @@ protected:
 	void OnDraw() override;
 
 private:
+#if IS_EDITOR_BUILD
 	void DrawComponent(const SGF_ComponentId& aComponentId, const SGF_Entity& aEntity);
 
 	void DrawProperty(SGF_PropertyHelperBase& aProperty) const;
@@ -35,6 +36,7 @@ private:
 	void DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SGfx_MaterialInstance>>& aProperty) const;
 	void DrawPropertyInternal(SGF_PropertyHelper<SC_Ref<SGfx_MeshInstance>>& aProperty) const;
 	void DrawPropertyInternal(SGF_PropertyHelper<SGF_EntityHandle>& aProperty) const;
+#endif
 
 	SGF_Entity mSelectedEntity;
 

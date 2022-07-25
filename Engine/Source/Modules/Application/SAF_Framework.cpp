@@ -2,7 +2,6 @@
 #include "Platform/Time/SC_Time.h"
 #include "RenderCore/Interface/SR_RenderDevice.h"
 #include "RenderCore/Interface/SR_SwapChain.h"
-#include "RenderCore/RenderTasks/SR_RenderThread.h"
 
 #if IS_WINDOWS_PLATFORM
 #include "Application/Win64/SAF_Framework_Win64.h"
@@ -25,7 +24,7 @@ SAF_Framework::~SAF_Framework()
 int SAF_Framework::AppMain()
 {
 	// Register MainThread
-	SC_Thread::GetMainThreadId();
+	SC_Thread::RegisterMainThread();
 #if ENABLE_LOGGING
 	SC_Logger::Create();
 #endif
@@ -99,11 +98,14 @@ bool SAF_Framework::Init()
 
 bool SAF_Framework::Update()
 {
+	SC_PROFILER_FUNCTION();
 	// BeginFrame Swapchain
 	// BeginFrame Input
 	// BeginFrame ThreadPool
 
 	SC_Time::Get()->Update();
+
+	SR_RenderDevice::gInstance->BeginFrame(SC_Time::gFrameCounter);
 
 	if (mCallbacks)
 		mCallbacks->Update();
@@ -117,9 +119,10 @@ bool SAF_Framework::Update()
 
 		// Render Modules
 
+		SR_RenderDevice::gInstance->EndFrame();
+
 		SR_RenderDevice::gInstance->Present();
 	}
-
 
 	// EndFrame ThreadPool
 	// EndFrame Input
@@ -142,5 +145,10 @@ void SAF_Framework::RequestExit()
 void SAF_Framework::MainLoop()
 {
 	SC_Time timer;
+
+	SC_PROFILER_BEGIN_SECTION("Session");
+
 	while (Update());
+
+	SC_PROFILER_END_SECTION();
 }

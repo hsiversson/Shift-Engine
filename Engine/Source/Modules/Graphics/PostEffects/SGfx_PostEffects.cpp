@@ -2,6 +2,9 @@
 #include "Graphics/View/SGfx_View.h"
 #include "Graphics/Misc/SGfx_DefaultTextures.h"
 
+bool SGfx_PostEffects::gEnableTAA = true;
+bool SGfx_PostEffects::gEnableBloom = true;
+
 SGfx_PostEffects::SGfx_PostEffects()
 {
 
@@ -99,10 +102,11 @@ void SGfx_PostEffects::RenderBloom(SGfx_View* aView, SR_Texture* aScreenColor)
 	cbProps.mElementCount = sizeof(FilterConstants);
 	cbProps.mElementSize = 1;
 	cbProps.mDebugName = "BloomFilterConstants";
-	SR_TempBuffer cb = SR_RenderDevice::gInstance->CreateTempBuffer(cbProps);
 
-	cb.mResource->UpdateData(0, &constants, sizeof(constants));
-	cmdList->SetRootConstantBuffer(cb.mResource, 0);
+	uint64 cbOffset = 0;
+	SR_BufferResource* cb = cmdList->GetBufferResource(cbOffset, SR_BufferBindFlag_ConstantBuffer, sizeof(FilterConstants), &constants, 1);
+
+	cmdList->SetRootConstantBuffer(cb, cbOffset, 0);
 	cmdList->Dispatch(mBloomData.mBrightnessFilterShader, targetSize.x, targetSize.y);
 	cmdList->UnorderedAccessBarrier(tempTex.mResource);
 

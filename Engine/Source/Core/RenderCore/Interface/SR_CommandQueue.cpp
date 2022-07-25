@@ -9,13 +9,27 @@ void SR_CommandQueue::SubmitCommandLists(SR_CommandList** /*aCommandLists*/, uin
 {
 }
 
-void SR_CommandQueue::InsertFence(const SR_Fence& /*aFence*/)
+SR_Fence SR_CommandQueue::GetNextFence()
+{
+	return SR_Fence();
+}
+
+void SR_CommandQueue::SignalFence(const SR_Fence& /*aFence*/)
 {
 }
 
 void SR_CommandQueue::InsertWait(const SR_Fence& /*aFence*/)
 {
+}
 
+bool SR_CommandQueue::IsFencePending(const SR_Fence& /*aFence*/)
+{
+	return false;
+}
+
+bool SR_CommandQueue::WaitForFence(const SR_Fence& /*aFence*/, bool /*aBlock*/)
+{
+	return false;
 }
 
 void SR_CommandQueue::BeginEvent(const char* /*aName*/)

@@ -33,7 +33,7 @@ void SC_Event::Signal()
 	}
 
 	for (SC_Semaphore* sem : mWaitingSemaphores)
-		sem->Signal();
+		sem->Release();
 	mWaitingSemaphores.clear();
 
 	uint32 prevState = SC_Atomic::Exchange_GetOld(mState, State_Signalled);
@@ -77,5 +77,5 @@ void SC_Event::Wait()
 	assert(prevState == (State_Locked));
 	(void)prevState;
 
-	semaphore.Wait();
+	semaphore.Acquire();
 }

@@ -141,6 +141,7 @@ const char* SED_ViewportWindow::GetWindowName() const
 
 void SED_ViewportWindow::OnUpdate()
 {
+	SC_PROFILER_FUNCTION();
 	if (mIsFocused && mActiveCamera == &mEditorCamera)
 	{
 		mEditorCamera.Update();
@@ -163,6 +164,7 @@ void SED_ViewportWindow::OnUpdate()
 
 void SED_ViewportWindow::OnDraw()
 {
+	SC_PROFILER_FUNCTION();
 	SC_Vector2 viewportMinRegion = GetContentRegionMin();
 	SC_Vector2 viewportMaxRegion = GetContentRegionMax();
 	SC_Vector2 viewportOffset = GetPosition();

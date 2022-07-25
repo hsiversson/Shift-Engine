@@ -1,4 +1,3 @@
-
 #include "SR_BufferResource_DX12.h"
 
 #if SR_ENABLE_DX12
@@ -72,6 +71,7 @@ bool SR_BufferResource_DX12::Init(const void* aInitialData)
 		hr = SR_RenderDevice_DX12::gInstance->GetD3D12Device()->CreatePlacedResource(
 			heap->GetD3D12Heap(),
 			heap->GetOffset(allocInfo.SizeInBytes, allocInfo.Alignment),
+
 			&resourceDesc,
 			initialState,
 			nullptr,
@@ -79,7 +79,7 @@ bool SR_BufferResource_DX12::Init(const void* aInitialData)
 		);
 	}
 	else
-		hr = SR_RenderDevice_DX12::gInstance->GetD3D12Device()->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, initialState, nullptr, IID_PPV_ARGS(&mD3D12Resource));
+		hr = SR_RenderDevice_DX12::gInstance->GetD3D12Device()->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, initialState, nullptr, IID_PPV_ARGS(&mD3D12Resource)); // CRASH nvwgf2umx.dll - temp resources
 
 	if (!VerifyHRESULT(hr))
 	{

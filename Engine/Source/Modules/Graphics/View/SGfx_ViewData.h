@@ -5,9 +5,10 @@
 #include "Graphics/Lighting/SGfx_LightCulling.h"
 #include "Graphics/Environment/SGfx_Environment.h"
 #include "Graphics/View/SGfx_RenderQueue.h"
-#include "RenderCore/RenderTasks/SR_TaskEvent.h"
-#include "Platform/Async/SC_Future.h"
 #include "Graphics/Mesh/SGfx_InstanceData.h"
+#include "RenderCore/RenderTasks/SR_TaskEvent.h"
+#include "RenderCore/Interface/SR_RaytracingStructs.h"
+#include "Platform/Async/SC_Future.h"
 
 class SGfx_MaterialInstance;
 class SR_Buffer;
@@ -71,9 +72,41 @@ struct SGfx_ViewRenderSettings
 		SC_ZeroMemory(this, sizeof(SGfx_ViewRenderSettings));
 	}
 
-	bool mRenderDepth;
+	bool mRenderPrepass;
 	bool mRenderOpaque;
-	bool mRenderTransparent;
+	bool mRenderTranslucent;
+	bool mRenderUI;
+	bool mRenderPostEffects;
+
+	bool mRenderMotionVectors;
+
+	bool mRenderDecals;
+	bool mRenderParticles;
+	bool mRenderTerrain;
+	bool mRenderWater;
+
+	bool mRenderSky;
+	bool mRenderSun;
+	bool mRenderClouds;
+	bool mRenderFog;
+	bool mComputeScattering;
+
+	bool mRenderDebugPrimitives;
+
+	bool mEnableShadowMaps;
+	bool mEnableCascadedShadowMaps;
+	bool mEnableDynamicShadowCascades;
+	bool mEnableFarShadows;
+
+	bool mEnableTAA;
+	bool mEnableRoughnessAA;
+
+	bool mEnableRTAO;
+	bool mEnableRTGI;
+	bool mEnableRaytracedLocalShadows;
+	bool mEnableRaytracedSunShadows;
+	bool mEnableRaytracedReflections;
+	bool mEnableRaytracedRefractions;
 };
 
 struct SGfx_ViewData
@@ -97,9 +130,10 @@ public:
 
 	void Clear()
 	{
+		SC_PROFILER_FUNCTION();
 		mSky = nullptr;
 
-		mRenderSettings.Clear();
+		mViewRenderSettings.Clear();
 		mSceneConstants.Clear();
 
 		mDepthQueue.Clear();
@@ -124,11 +158,15 @@ public:
 		mPostEffectsEvent->Reset();
 
 		mInstanceData->Clear();
+
+		mFrameIndex = 0;
+		mDeltaTime = 0.0f;
+		mElapsedTime = 0.0f;
 	}
 
 	SGfx_Sky* mSky;
 
-	SGfx_ViewRenderSettings mRenderSettings;
+	SGfx_ViewRenderSettings mViewRenderSettings;
 	SGfx_SceneConstants mSceneConstants;
 
 	SGfx_RenderQueue_ByState mDepthQueue;
@@ -144,6 +182,12 @@ public:
 	SC_Array<SR_RaytracingInstanceData> mRaytracingInstances;
 #endif
 
+	// PrepareEvents
+	SC_Future<bool> mPrepareCullMeshesEvent;
+	SC_Future<bool> mPrepareCullLightsEvent;
+	SC_Future<bool> mPrepareLightCullingEvent;
+
+	// RenderEvents
 	SC_UniquePtr<SR_TaskEvent> mBuildRaytracingSceneEvent;
 	SC_UniquePtr<SR_TaskEvent> mPreRenderUpdatesEvent;
 	SC_UniquePtr<SR_TaskEvent> mPrePassEvent;
@@ -155,4 +199,8 @@ public:
 	SC_UniquePtr<SR_TaskEvent> mPostEffectsEvent;
 
 	SC_UniquePtr<SGfx_InstanceData> mInstanceData;
+
+	uint32 mFrameIndex;
+	float mDeltaTime;
+	float mElapsedTime;
 };

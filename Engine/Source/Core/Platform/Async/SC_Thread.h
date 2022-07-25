@@ -1,5 +1,6 @@
 #pragma once
 #include "SC_Semaphore.h"
+#include <string>
 
 #ifdef Yield
 #undef Yield
@@ -32,14 +33,18 @@ public:
 	SC_ThreadId GetId() const;
 
 	void SetName(const char* aName);
+	std::string GetName() const;
 
 	static void Yield();
 	static void Sleep(uint32 aMilliseconds);
 
+	static void RegisterMainThread();
+	static SC_ThreadId GetMainThreadId();
 	static SC_Thread* GetCurrentThread();
 	static SC_ThreadId GetCurrentThreadId();
-	static SC_ThreadId GetMainThreadId();
+	static std::string GetCurrentThreadName();
 
+	static thread_local bool gIsMainThread;
 	static thread_local bool gIsTaskThread;
 	static thread_local bool gIsRenderThread;
 

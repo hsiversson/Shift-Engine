@@ -1,7 +1,5 @@
 #include "SR_RenderDevice.h"
 
-#include "RenderCore/RenderTasks/SR_RenderThread.h"
-
 #if SR_ENABLE_DX12
 #include "RenderCore/DX12/SR_RenderDevice_DX12.h"
 #endif
@@ -9,6 +7,9 @@
 #if SR_ENABLE_RENDERDOC_API
 #include "renderdoc_app.h"
 #endif
+
+#include "RenderCore/Resources/SR_RingBuffer.h"
+#include "RenderCore/ImGui/SR_ImGui.h"
 
 class SR_TextureCache
 {
@@ -59,23 +60,168 @@ SR_TextureCache* SR_TextureCache::gInstance = nullptr;
 
 
 SR_RenderDevice* SR_RenderDevice::gInstance = nullptr;
+uint32 SR_RenderDevice::gFrameCounter;
+uint32 SR_RenderDevice::gLatestFinishedFrame;
 
 SR_RenderDevice::~SR_RenderDevice()
 {
+	for (TempRingBuffers& ringBuffers : mTempRingBuffers)
+		ringBuffers.mRingBuffers.RemoveAll();
+}
 
+struct FrameFence
+{
+	SC_Ref<SR_TaskEvent> mFence;
+	uint32 mFrameIndex;
+};
+static SC_RingArray<FrameFence> locFrameSyncEvents;
+uint32 locLastEndFrameIndex;
+
+void SR_RenderDevice::BeginFrame(uint32 aFrameIndex)
+{
+	//SC_Event event;
+	auto beginFrame = [this, aFrameIndex]()
+	{
+		gFrameCounter = aFrameIndex;
+		std::string tag = SC_FormatStr("Render Frame {}", gFrameCounter);
+		SC_PROFILER_BEGIN_SESSION(tag);
+		SC_PROFILER_FUNCTION();
+
+		static constexpr uint32 maxFrameDelay = 1;
+
+		if (locFrameSyncEvents.Count() <= maxFrameDelay)
+		{
+			while (locFrameSyncEvents.Count() <= maxFrameDelay)
+			{
+				SC_Ref<SR_TaskEvent> fence = SC_MakeRef<SR_TaskEvent>();
+				fence->mFence = mQueueManager->InsertFence(SR_CommandListType::Graphics);
+				fence->mCPUEvent.Signal();
+
+				FrameFence frameFence = { fence, locLastEndFrameIndex };
+				locFrameSyncEvents.Add(frameFence);
+			}
+		}
+		else
+		{
+			if (locFrameSyncEvents.Count())
+			{
+				FrameFence& fence = locFrameSyncEvents.Peek();
+				if (fence.mFence)
+				{
+					mQueueManager->WaitForFence(fence.mFence->mFence);
+					gLatestFinishedFrame = SC_Max(gLatestFinishedFrame, fence.mFrameIndex);
+				}
+				locFrameSyncEvents.Remove();
+			}
+
+			for (uint32 i = 0, e = locFrameSyncEvents.Count(); i != e; ++i)
+			{
+				FrameFence& fence = locFrameSyncEvents[i];
+				if (fence.mFence && fence.mFence->mFence.IsPending())
+				{
+					fence.mFence.Reset();
+					gLatestFinishedFrame = SC_Max(gLatestFinishedFrame, fence.mFrameIndex);
+				}
+			}
+		}
+	};
+	mBeginFrameEvent = mQueueManager->SubmitLightTask(beginFrame, SR_CommandListType::Graphics);
 }
 
 void SR_RenderDevice::Present()
 {
-	uint32 frameIdx = SC_Time::gFrameCounter;
-	auto presentTask = [&, frameIdx]()
+	SC_Ref<SR_TaskEvent> fence = SR_ImGui::Get() ? SR_ImGui::Get()->GetLatestFenceRef() : nullptr;
+	
+	auto presentTask = [this, fence]()
 	{
+		if (fence)
+			fence->mCPUEvent.Wait();
+		
+		std::string tag = SC_FormatStr("SR_RenderDevice::Present (frame: {})", gFrameCounter);
+		SC_PROFILER_EVENT_START(tag.c_str());
 		SR_SwapChain* sc = GetSwapChain();
 		sc->Present();
-		mTempResourceHeap->EndFrame();
-		SR_RenderThread::Get()->EndFrame(frameIdx);
+		SC_PROFILER_EVENT_END();
 	};
-	SR_RenderThread::Get()->PostTask(presentTask);
+
+	//uint32 frameIndex = SC_Time::gFrameCounter % 2;
+	//if (mPresentEvents[frameIndex])
+	//	mPresentEvents[frameIndex]->Wait();
+
+	mPresentEvents[0] = mQueueManager->SubmitLightTask(presentTask, SR_CommandListType::Graphics);
+	mPresentEvents[0]->Wait();
+}
+
+void SR_RenderDevice::EndFrame()
+{
+	auto endFrame = [this]()
+	{
+		{
+			SC_PROFILER_FUNCTION();
+			mTempResourceHeap->EndFrame();
+			locLastEndFrameIndex = gFrameCounter;
+			GarbageCollect();
+		}
+		std::string tag = SC_FormatStr("Render Frame {}", gFrameCounter);
+		SC_PROFILER_END_SESSION(tag);
+	};
+	mEndFrameEvent = mQueueManager->SubmitLightTask(endFrame, SR_CommandListType::Graphics);
+}
+
+void SR_RenderDevice::GarbageCollect()
+{
+	uint32 currentFrameIndex = SC_Time::gFrameCounter;
+	const uint32 maxFailedLocks = 3;
+	//const uint32 maxAgeInSeconds = 15;
+	uint32 maxAge = 10;
+
+	uint32 releaseFrame = currentFrameIndex > maxAge ? currentFrameIndex - maxAge : 0;
+
+	for (uint32 i = 0, e = static_cast<uint32>(TempRingBufferType::COUNT); i < e; ++i)
+	{
+		TempRingBuffers& ringBuffers = mTempRingBuffers[i];
+
+		if (ringBuffers.mRingBuffers.IsEmpty())
+			continue;
+
+		bool isOverBudget = false;
+
+		SC_MutexLock lock;
+		if (!lock.TryLock(ringBuffers.mMutex))
+		{
+			++ringBuffers.mNumFailedMutexLocks;
+			if (ringBuffers.mNumFailedMutexLocks > maxFailedLocks)
+				lock.Lock(ringBuffers.mMutex);
+			else 
+				continue;
+		}
+		ringBuffers.mNumFailedMutexLocks = 0;
+
+		bool wasPreviousAlive = true;
+		for (uint32 idx = 0; idx < ringBuffers.mRingBuffers.Count(); )
+		{
+			SR_RingBuffer& ringBuffer = ringBuffers.mRingBuffers[idx];
+			bool isAlive = ringBuffer.mLatestAllocFrame >= releaseFrame || (ringBuffer.mLatestAllocFence.mType != SR_CommandListType::Unknown && IsFencePending(ringBuffer.mLatestAllocFence));
+			bool wasRemoved = false;
+
+			if (!isAlive)
+			{
+				if (!wasPreviousAlive || isOverBudget)
+				{
+					ringBuffers.mRingBuffers.RemoveAt(idx);
+					wasRemoved = true;
+
+					if (!isOverBudget)
+						return;
+				}
+			}
+
+			wasPreviousAlive = isAlive;
+
+			if (!wasRemoved)
+				++idx;
+		}
+	}
 }
 
 SC_Ref<SR_CommandList> SR_RenderDevice::CreateCommandList(const SR_CommandListType& /*aType*/)
@@ -144,13 +290,124 @@ SR_TempBuffer SR_RenderDevice::CreateTempBuffer(const SR_BufferResourcePropertie
 	return mTempResourceHeap->GetBuffer(aBufferResourceProperties, aIsWritable);
 }
 
-SC_Ref<SR_Heap> SR_RenderDevice::CreateHeap(const SR_HeapProperties& /*aHeapProperties*/)
+SR_BufferResource* SR_RenderDevice::GetTempBuffer(uint64& aOutOffset, SR_BufferBindFlag aBufferType, uint32 aByteSize, const void* aInitialData, uint32 aAlignment, const SR_Fence& aCompletionFence)
 {
-	SC_ASSERT(false, "Not implemented yet!");
-	return nullptr;
+	SC_MutexLock lock;
+	//bool isTaskThread = SC_Thread::gIsTaskThread;
+
+	TempRingBuffers* tempRingBuffers = nullptr;
+	uint32 size = 0;
+	uint32 bindFlags = 0;
+	uint32 defaultRingBufferSize = MB(1);
+	uint32 alignment = 256;
+	size_t maxNormalRingSize = 0;
+	const char* name = nullptr;
+
+	if (aBufferType == SR_BufferBindFlag_ConstantBuffer)
+	{
+		tempRingBuffers = &mTempRingBuffers[static_cast<uint32>(TempRingBufferType::Constant)];
+		size = SC_Align(aByteSize, 256);
+		bindFlags = SR_BufferBindFlag_ConstantBuffer;
+		name = "Constant Ring Buffer";
+	}
+	//else if (aBufferType == SR_BufferBindFlag_Staging)
+
+	uint32 maxMisalignment = 0;
+	if (aAlignment > 1)
+	{
+		if (!SC_IsPow2(aAlignment))
+			maxMisalignment = aAlignment - 1;
+		else if (aAlignment > alignment)
+			maxMisalignment = aAlignment - alignment;
+
+		size = SC_Align(aByteSize + maxMisalignment, alignment);
+	}
+
+	SR_BufferResource* bufferResource = nullptr;
+	uint64 currentRingSize = 0;
+
+	lock.Lock(tempRingBuffers->mMutex);
+
+	bool isCurrentRingSizeSufficient = false;
+
+	for (SR_RingBuffer& ringBuffer : tempRingBuffers->mRingBuffers)
+	{
+		if (ringBuffer.GetOffset(aOutOffset, size, 0, aCompletionFence))
+		{
+			bufferResource = ringBuffer.GetBufferResource();
+			break;
+		}
+
+		if (size <= ringBuffer.mAllocBlockMaxSize)
+			isCurrentRingSizeSufficient = true;
+
+		currentRingSize += ringBuffer.mSize;
+	}
+
+	if (!bufferResource)
+	{
+		SC_ASSERT(tempRingBuffers->mRingBuffers.Count() < 200);
+
+		uint32 ringBufferSize = defaultRingBufferSize;
+		SC_ASSERT(size <= 0x10000000); // logic below will overflow 32-bit uint if size is larger than this (256 MB)
+		uint32 sizeWithSafety = SC_GetNextPow2(size * 4);
+
+		if (maxNormalRingSize && sizeWithSafety > maxNormalRingSize)
+			sizeWithSafety = SC_GetNextPow2(size);
+
+		if (sizeWithSafety > ringBufferSize)
+			ringBufferSize = sizeWithSafety;
+
+		SR_BufferResourceProperties props;
+		props.mBindFlags = bindFlags;
+		props.mElementCount = ringBufferSize;
+		props.mElementSize = 1;
+		props.mDebugName = name;
+		props.mIsUploadBuffer = true;
+		
+		//if (aBufferType == MR_STAGING_BUFFER)
+		//{
+		//	props.myCPUAccess = MR_CPU_ACCESS_MAP_WRITE;
+		//	props.myGPUAccess = MR_GPU_ACCESS_STAGING;
+		//}
+		/*else if (myCaps.mySupportPermanentMapBufferData)*/
+		//{
+		//	// always use permanent map when supported for rendercore temp buffers (unlike context buffers), to avoid contention when updating them
+		//	props.myMemoryAccess = MR_MEMORY_ACCESS_WRITE;
+		//}
+
+		SC_Ref<SR_BufferResource> newBufferResource = CreateBufferResource(props, nullptr);
+		bufferResource = newBufferResource;
+
+		SR_RingBuffer& ring = tempRingBuffers->mRingBuffers.Add(SR_RingBuffer(newBufferResource, alignment));
+		if (ring.mAllocBlockMaxSize < size)
+			ring.mAllocBlockMaxSize = ringBufferSize;
+
+		bool ok = ring.GetOffset(aOutOffset, size, 0, aCompletionFence);
+		SC_ASSERT(ok, "Failed to allocate from new ring buffer");
+	}
+
+	if (maxMisalignment)
+	{
+		uint32 misalignment = aOutOffset & aAlignment;
+		SC_ASSERT(misalignment <= maxMisalignment);
+
+		if (misalignment)
+			aOutOffset += aAlignment - misalignment;
+
+		SC_ASSERT((aOutOffset % aAlignment) == 0);
+	}
+
+	if (aByteSize && aInitialData)
+	{
+		lock.Unlock();
+		bufferResource->UpdateData((uint32)aOutOffset, aInitialData, aByteSize);
+	}
+
+	return bufferResource;
 }
 
-SC_Ref<SR_FenceResource> SR_RenderDevice::CreateFenceResource()
+SC_Ref<SR_Heap> SR_RenderDevice::CreateHeap(const SR_HeapProperties& /*aHeapProperties*/)
 {
 	SC_ASSERT(false, "Not implemented yet!");
 	return nullptr;
@@ -180,20 +437,20 @@ SC_Ref<SR_SwapChain> SR_RenderDevice::CreateSwapChain(const SR_SwapChainProperti
 	return nullptr;
 }
 
-bool SR_RenderDevice::IsFencePending(SR_Fence& aFence) const
+bool SR_RenderDevice::IsFencePending(const SR_Fence& aFence) const
 {
 	if (aFence.mType == SR_CommandListType::Unknown)
 		return false;
 
-	return aFence.IsPending();
+	return mQueueManager->IsFencePending(aFence);
 }
 
-void SR_RenderDevice::WaitForFence(SR_Fence& aFence)
+bool SR_RenderDevice::WaitForFence(const SR_Fence& aFence, bool aBlock)
 {
 	if (aFence.mType == SR_CommandListType::Unknown)
-		return;
+		return false;
 
-	aFence.Wait(true);
+	return mQueueManager->WaitForFence(aFence, aBlock);
 }
 
 SR_CommandQueue* SR_RenderDevice::GetGraphicsCommandQueue() const
@@ -251,7 +508,7 @@ SR_InstanceBuffer* SR_RenderDevice::GetPersistentResourceInfo() const
 	return mPersistentResourceInfo.get();
 }
 
-SR_QueueManager* SR_RenderDevice::GetQueueManager() const
+SR_CommandQueueManager* SR_RenderDevice::GetQueueManager() const
 {
 	return mQueueManager.get();
 }
@@ -261,7 +518,7 @@ SC_Ref<SR_CommandList> SR_RenderDevice::GetTaskCommandList()
 	if (!mQueueManager)
 		return nullptr;
 
-	return mQueueManager->GetCommandList(mQueueManager->gCurrentTaskType);
+	return mQueueManager->GetCommandList(SR_CommandQueueManager::gCurrentTaskType);
 }
 
 const SR_RenderSupportCaps& SR_RenderDevice::GetSupportCaps() const
@@ -348,10 +605,10 @@ void SR_RenderDevice::Destroy()
 }
 
 SR_RenderDevice::SR_RenderDevice(const SR_API& aAPI)
-	: mLatestFinishedFrame(0)
-	, mDefaultSwapChain(nullptr)
+	: mDefaultSwapChain(nullptr)
 	, mEnableDebugMode(false)
 	, mBreakOnError(false)
+	, mEnableGpuValidation(false)
 #if SR_ENABLE_RENDERDOC_API
 	, mEnableRenderDocCaptures(false)
 #endif
@@ -369,6 +626,11 @@ SR_RenderDevice::SR_RenderDevice(const SR_API& aAPI)
 		mEnableDebugMode = true;
 		mBreakOnError = true;
 	}
+	if (SC_CommandLine::HasCommand("gpuvalidation"))
+	{
+		mEnableDebugMode = true;
+		mEnableGpuValidation = true;
+	}
 
 #if SR_ENABLE_RENDERDOC_API
 	if (mEnableRenderDocCaptures)
@@ -383,8 +645,6 @@ SR_RenderDevice::SR_RenderDevice(const SR_API& aAPI)
 	else
 		mRenderDocAPI = nullptr;
 #endif
-
-	mRenderThread = SC_MakeUnique<SR_RenderThread>();
 }
 
 bool SR_RenderDevice::Init(void* /*aWindowHandle*/)
@@ -405,7 +665,7 @@ bool SR_RenderDevice::PostInit()
 		return false;
 	}
 
-	mQueueManager = SC_MakeUnique<SR_QueueManager>();
+	mQueueManager = SC_MakeUnique<SR_CommandQueueManager>();
 	if (!mQueueManager->Init())
 		return false;
 

@@ -58,6 +58,7 @@ const float& SGfx_Environment::GetSunIntensity() const
 
 void SGfx_Environment::UpdateConstants(const SGfx_Camera& aWorldCamera)
 {
+	SC_PROFILER_FUNCTION();
 	mSky->UpdateConstants(aWorldCamera);
 
 	mConstants.mSkyAtmosphereConstants = mSky->GetSkyAtmosphereConstants();

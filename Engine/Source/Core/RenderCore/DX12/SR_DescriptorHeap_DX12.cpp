@@ -5,6 +5,7 @@
 #include "SR_RenderDevice_DX12.h"
 
 SR_DescriptorHeap_DX12::SR_DescriptorHeap_DX12(uint32 aNumDescriptors, const SR_DescriptorHeapType& aType, bool aShaderVisible, const char* aDebugName)
+	: mMaxNumDescriptors(aNumDescriptors)
 {
 	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
 	desc.Flags = (aShaderVisible) ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE;

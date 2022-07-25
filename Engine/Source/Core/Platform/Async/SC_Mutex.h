@@ -5,7 +5,7 @@
 class SC_Mutex
 {
 public:
-	SC_Mutex(int aSpinLockCount = 0);
+	SC_Mutex();
 	SC_Mutex(const SC_Mutex&) = delete;
 	SC_Mutex& operator=(const SC_Mutex&) = delete;
 
@@ -22,3 +22,20 @@ private:
 
 using SC_MutexLock = SC_AutoLock<SC_Mutex>;
 
+
+class SC_ReadWriteMutex
+{
+public:
+	SC_ReadWriteMutex();
+
+	bool TryBeginRead() const;
+	void BeginRead() const;
+	void EndRead() const;
+
+	bool TryBeginWrite() const;
+	void BeginWrite() const;
+	void EndWrite() const;
+
+private:
+	mutable SC_ReadWriteMutexImpl mInternalRWMutex;
+};

@@ -342,7 +342,7 @@ bool SGfx_Mesh::InitAccelerationStructure(const SGfx_MeshCreateParams& aCreatePa
 	SR_RenderDevice::gInstance->GetQueueManager()->SubmitTask(UploadData, SR_CommandListType::Graphics, taskEvent);
 
 	taskEvent->mCPUEvent.Wait();
-	taskEvent->mFence.Wait();
+	SR_RenderDevice::gInstance->WaitForFence(taskEvent->mFence);
 
 	return (mAccelerationStructure != nullptr);
 }

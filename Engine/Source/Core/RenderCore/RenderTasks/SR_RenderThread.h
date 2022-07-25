@@ -2,6 +2,7 @@
 #include "Platform/Async/SC_Thread.h"
 #include "RenderCore/Interface/SR_RenderContext.h"
 
+#if 0
 class SR_RenderThread final : public SC_Thread
 {
 public:
@@ -30,3 +31,4 @@ protected:
 	static SR_RenderThread* gInstance;
 };
 
+#endif

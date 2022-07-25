@@ -1,5 +1,10 @@
 #pragma once
-#include <mutex>
+
+#if IS_WINDOWS_PLATFORM
+#include "SC_Semaphore_Win64.h"
+#else
+#error Platform Not supported yet!
+#endif
 
 class SC_Semaphore
 {
@@ -7,14 +12,12 @@ public:
 	SC_Semaphore(uint32 aCount = 0);
 	~SC_Semaphore();
 
-	void Signal(uint32 aCount = 1);
+	void Release(uint32 aCount = 1);
 
-	bool WaitFor(uint32 aMilliseconds);
-	void Wait();
+	bool TimedAcquire(uint32 aMilliseconds);
+	void Acquire();
 
 private:
-	uint32 mCount;
-	std::mutex mMutex;
-	std::condition_variable mCondition;
+	SC_SemaphoreImpl mSemaphoreImpl;
 };
 

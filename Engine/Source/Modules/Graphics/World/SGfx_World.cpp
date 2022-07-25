@@ -5,7 +5,6 @@
 #include "Graphics/Material/SGfx_MaterialCache.h"
 #include "Graphics/Renderer/SGfx_Renderer.h"
 #include "Graphics/Lighting/Shadows/SGfx_ShadowSystem.h"
-#include "RenderCore/RenderTasks/SR_RenderThread.h"
 
 SGfx_World::SGfx_World()
 {
@@ -44,10 +43,11 @@ void SGfx_World::DestroyView(const SC_Ref<SGfx_View>& aView)
 
 void SGfx_World::PrepareView(SGfx_View* aView)
 {
+	std::string tag = SC_FormatStr("SGfx_World::PrepareView (frame: {})", SC_Time::gFrameCounter);
+	SC_PROFILER_EVENT_START(tag.c_str());
+	aView->EndPrepare();
+	aView->ResetPrepare();
 	aView->StartPrepare();
-
-	SGfx_MaterialGPUDataBuffer& materialGpuBuffer = SGfx_MaterialGPUDataBuffer::Get();
-	materialGpuBuffer.UpdateBuffer();
 
 	// Begin Prepare
 	SGfx_ViewData& prepareData = aView->GetPrepareData();
@@ -55,6 +55,10 @@ void SGfx_World::PrepareView(SGfx_View* aView)
 
 	// Set Generic data such as view constants etc
 	prepareData.Clear();
+
+	prepareData.mFrameIndex = SC_Time::gFrameCounter;
+	prepareData.mDeltaTime = SC_Time::gDeltaTime;
+	prepareData.mElapsedTime = SC_Time::gElapsedTime;
 
 	SC_Vector2 jitter(0.0f);
 	if (mRenderer->GetSettings().mEnableTemporalAA)
@@ -81,26 +85,24 @@ void SGfx_World::PrepareView(SGfx_View* aView)
 	mEnvironment->UpdateConstants(aView->GetCamera());
 	prepareData.mSceneConstants.mEnvironmentConstants = mEnvironment->GetConstants();
 
-	mRenderer->GetShadowMapSystem()->GetCSM()->UpdateViews(aView);
-	prepareData.mSceneConstants.mShadowConstants = mRenderer->GetShadowMapSystem()->GetShadowConstants();
+	//mRenderer->GetShadowMapSystem()->GetCSM()->UpdateViews(aView);
+	//prepareData.mSceneConstants.mShadowConstants = mRenderer->GetShadowMapSystem()->GetShadowConstants();
+
+	SGfx_MaterialGPUDataBuffer& materialGpuBuffer = SGfx_MaterialGPUDataBuffer::Get();
+	materialGpuBuffer.UpdateBuffer();
 
 	mSceneGraph->PrepareView(aView);
 
-	mRenderer->GetLightCulling()->Prepare(prepareData);
-
+	prepareData.mPrepareLightCullingEvent = SC_ThreadPool::Get().SubmitTask([this, aView]() { mRenderer->GetLightCulling()->Prepare(aView->GetPrepareData()); });
+	//mRenderer->GetLightCulling()->Prepare(aView->GetPrepareData());
 	prepareData.mSky = mEnvironment->GetSky();
+	SC_PROFILER_EVENT_END();
 }
 
 void SGfx_World::RenderView(SGfx_View* aView)
 {
-	aView->StartRender();
-	// Choose renderer?
-	auto renderTask = [&, aView]()
-	{
-		mRenderer->RenderView(aView);
-	};
-	SR_RenderThread::Get()->PostTask(renderTask);
-	aView->EndRender();
+	SC_PROFILER_FUNCTION();
+	mRenderer->RenderView(aView);
 }
 
 void SGfx_World::AddModel(SC_Ref<SGfx_Model> aModel)

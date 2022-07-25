@@ -430,6 +430,18 @@ void SR_CommandList_DX12::SetRootConstantBuffer(SR_BufferResource* aConstantBuff
 	if (mResourceBindings.mConstantBuffers[aSlot] != aConstantBuffer)
 	{
 		mResourceBindings.mConstantBuffers[aSlot] = aConstantBuffer;
+		mResourceBindings.mConstantBufferOffsets[aSlot] = 0;
+		mResourceBindings.mConstantsDirty[aSlot] = true;
+	}
+}
+
+void SR_CommandList_DX12::SetRootConstantBuffer(SR_BufferResource* aConstantBuffer, uint64 aBufferOffset, uint32 aSlot)
+{
+	SC_ASSERT(aSlot < 4);
+	if (mResourceBindings.mConstantBuffers[aSlot] != aConstantBuffer)
+	{
+		mResourceBindings.mConstantBuffers[aSlot] = aConstantBuffer;
+		mResourceBindings.mConstantBufferOffsets[aSlot] = aBufferOffset;
 		mResourceBindings.mConstantsDirty[aSlot] = true;
 	}
 }
@@ -750,6 +762,7 @@ void SR_CommandList_DX12::SetResources()
 			if (param.mType == SR_RootParamType::CBV && isConstantsDirty)
 			{
 				SR_BufferResource_DX12* cb = static_cast<SR_BufferResource_DX12*>(mResourceBindings.mConstantBuffers[param.mDescriptor.mRegisterIndex]);
+				uint64 bufferOffset = mResourceBindings.mConstantBufferOffsets[param.mDescriptor.mRegisterIndex];
 
 				if (!cb || !mResourceBindings.mConstantsDirty[param.mDescriptor.mRegisterIndex])
 				{
@@ -758,9 +771,9 @@ void SR_CommandList_DX12::SetResources()
 				}
 
 				if (rootSignatureProperties.mIsCompute)
-					mD3D12CommandList->SetComputeRootConstantBufferView(paramIndex, cb->GetD3D12Resource()->GetGPUVirtualAddress());
+					mD3D12CommandList->SetComputeRootConstantBufferView(paramIndex, cb->GetD3D12Resource()->GetGPUVirtualAddress() + bufferOffset);
 				else
-					mD3D12CommandList->SetGraphicsRootConstantBufferView(paramIndex, cb->GetD3D12Resource()->GetGPUVirtualAddress());
+					mD3D12CommandList->SetGraphicsRootConstantBufferView(paramIndex, cb->GetD3D12Resource()->GetGPUVirtualAddress() + bufferOffset);
 			}
 			else if (param.mType == SR_RootParamType::SRV)
 			{

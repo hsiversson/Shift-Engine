@@ -13,6 +13,7 @@ class SR_Texture;
 class SR_RenderTarget;
 
 struct SC_InputMessage;
+struct SR_TaskEvent;
 
 class SR_ImGui
 {
@@ -25,6 +26,9 @@ public:
 	void Render(SR_RenderTarget* aRenderTarget);
 
 	void SetDPIScale(float aScale);
+
+	SR_TaskEvent* GetLatestFence() const;
+	const SC_Ref<SR_TaskEvent>& GetLatestFenceRef() const;
 
 	struct Input : public SC_MessageListener
 	{
