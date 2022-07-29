@@ -26,6 +26,8 @@ public:
 	SC_Ref<SGfx_View> CreateView();
 	void DestroyView(const SC_Ref<SGfx_View>& aView);
 
+	void UpdateSceneGraph();
+
 	/* Prepare stage, this is the point where we synchronize the game-state and copy over any interesting render data to the view so that we can render it at a later stage. */
 	void PrepareView(SGfx_View* aView);
 

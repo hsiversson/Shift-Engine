@@ -41,6 +41,11 @@ void SGfx_World::DestroyView(const SC_Ref<SGfx_View>& aView)
 	}
 }
 
+void SGfx_World::UpdateSceneGraph()
+{
+	mSceneGraph->Update();
+}
+
 void SGfx_World::PrepareView(SGfx_View* aView)
 {
 	std::string tag = SC_FormatStr("SGfx_World::PrepareView (frame: {})", SC_Time::gFrameCounter);

@@ -21,6 +21,11 @@ SGfx_SceneGraph::~SGfx_SceneGraph()
 
 }
 
+void SGfx_SceneGraph::Update()
+{
+	FlushPendingActions();
+}
+
 void SGfx_SceneGraph::PrepareView(SGfx_View* aView)
 {
 	SC_PROFILER_FUNCTION();
@@ -87,60 +92,282 @@ void SGfx_SceneGraph::RemoveModel(SC_Ref<SGfx_Model> /*aModel*/)
 
 void SGfx_SceneGraph::AddMesh(SC_Ref<SGfx_MeshInstance> aMeshInstance)
 {
-	SC_MutexLock lock(mMeshesMutex);
-	mMeshes.Add(aMeshInstance);
+	SGfx_SceneGraphAction action;
+	action.mActionType = SGfx_SceneGraphActionType::Add;
+	action.mObjectType = SGfx_SceneGraphObjectType::Mesh;
+	action.mMeshInstance = aMeshInstance;
+
+	SC_MutexLock lock(mPendingActionsMutex);
+	mPendingActions.Add(action);
 }
 
 void SGfx_SceneGraph::RemoveMesh(SC_Ref<SGfx_MeshInstance> aMeshInstance)
 {
-	SC_MutexLock lock(mMeshesMutex);
-	mMeshes.RemoveCyclic(aMeshInstance);
+	SGfx_SceneGraphAction action;
+	action.mActionType = SGfx_SceneGraphActionType::Remove;
+	action.mObjectType = SGfx_SceneGraphObjectType::Mesh;
+	action.mMeshInstance = aMeshInstance;
+
+	SC_MutexLock lock(mPendingActionsMutex);
+	mPendingActions.Add(action);
+}
+
+void SGfx_SceneGraph::SetActive(SC_Ref<SGfx_MeshInstance> aMeshInstance, bool aValue)
+{
+	SGfx_SceneGraphAction action;
+	action.mActionType = (aValue) ? SGfx_SceneGraphActionType::Activate : SGfx_SceneGraphActionType::Inactivate;
+	action.mObjectType = SGfx_SceneGraphObjectType::Mesh;
+	action.mMeshInstance = aMeshInstance;
+
+	SC_MutexLock lock(mPendingActionsMutex);
+	mPendingActions.Add(action);
 }
 
 void SGfx_SceneGraph::AddLight(SC_Ref<SGfx_Light> aLight)
 {
-	SC_MutexLock lock(mLightsMutex);
-	mLights.Add(aLight);
+	SGfx_SceneGraphAction action;
+	action.mActionType = SGfx_SceneGraphActionType::Add;
+	action.mObjectType = SGfx_SceneGraphObjectType::Light;
+	action.mLight = aLight;
+
+	SC_MutexLock lock(mPendingActionsMutex);
+	mPendingActions.Add(action);
 }
 
 void SGfx_SceneGraph::RemoveLight(SC_Ref<SGfx_Light> aLight)
 {
-	SC_MutexLock lock(mLightsMutex);
-	mLights.RemoveCyclic(aLight);
+	SGfx_SceneGraphAction action;
+	action.mActionType = SGfx_SceneGraphActionType::Remove;
+	action.mObjectType = SGfx_SceneGraphObjectType::Light;
+	action.mLight = aLight;
+
+	SC_MutexLock lock(mPendingActionsMutex);
+	mPendingActions.Add(action);
+}
+
+void SGfx_SceneGraph::SetActive(SC_Ref<SGfx_Light> aLight, bool aValue)
+{
+	SGfx_SceneGraphAction action;
+	action.mActionType = (aValue) ? SGfx_SceneGraphActionType::Activate : SGfx_SceneGraphActionType::Inactivate;
+	action.mObjectType = SGfx_SceneGraphObjectType::Light;
+	action.mLight = aLight;
+
+	SC_MutexLock lock(mPendingActionsMutex);
+	mPendingActions.Add(action);
 }
 
 void SGfx_SceneGraph::AddParticleEffect(SC_Ref<SGfx_ParticleEffect> aParticleEffect)
 {
-	SC_MutexLock lock(mParticlesMutex);
-	mParticleEffects.Add(aParticleEffect);
+	SGfx_SceneGraphAction action;
+	action.mActionType = SGfx_SceneGraphActionType::Add;
+	action.mObjectType = SGfx_SceneGraphObjectType::ParticleEffect;
+	action.mParticleEffect = aParticleEffect;
+
+	SC_MutexLock lock(mPendingActionsMutex);
+	mPendingActions.Add(action);
 }
 
 void SGfx_SceneGraph::RemoveParticleEffect(SC_Ref<SGfx_ParticleEffect> aParticleEffect)
 {
-	SC_MutexLock lock(mParticlesMutex);
-	mParticleEffects.RemoveCyclic(aParticleEffect);
+	SGfx_SceneGraphAction action;
+	action.mActionType = SGfx_SceneGraphActionType::Remove;
+	action.mObjectType = SGfx_SceneGraphObjectType::ParticleEffect;
+	action.mParticleEffect = aParticleEffect;
+
+	SC_MutexLock lock(mPendingActionsMutex);
+	mPendingActions.Add(action);
+}
+
+void SGfx_SceneGraph::SetActive(SC_Ref<SGfx_ParticleEffect> aParticleEffect, bool aValue)
+{
+	SGfx_SceneGraphAction action;
+	action.mActionType = (aValue) ? SGfx_SceneGraphActionType::Activate : SGfx_SceneGraphActionType::Inactivate;
+	action.mObjectType = SGfx_SceneGraphObjectType::ParticleEffect;
+	action.mParticleEffect = aParticleEffect;
+
+	SC_MutexLock lock(mPendingActionsMutex);
+	mPendingActions.Add(action);
 }
 
 void SGfx_SceneGraph::AddDecal(SC_Ref<SGfx_Decal> aDecal)
 {
-	SC_MutexLock lock(mDecalsMutex);
-	mDecals.Add(aDecal);
+	SGfx_SceneGraphAction action;
+	action.mActionType = SGfx_SceneGraphActionType::Add;
+	action.mObjectType = SGfx_SceneGraphObjectType::Decal;
+	action.mDecal = aDecal;
+
+	SC_MutexLock lock(mPendingActionsMutex);
+	mPendingActions.Add(action);
 }
 
 void SGfx_SceneGraph::RemoveDecal(SC_Ref<SGfx_Decal> aDecal)
 {
-	SC_MutexLock lock(mDecalsMutex);
+	SGfx_SceneGraphAction action;
+	action.mActionType = SGfx_SceneGraphActionType::Remove;
+	action.mObjectType = SGfx_SceneGraphObjectType::Decal;
+	action.mDecal = aDecal;
+
+	SC_MutexLock lock(mPendingActionsMutex);
+	mPendingActions.Add(action);
+}
+
+void SGfx_SceneGraph::SetActive(SC_Ref<SGfx_Decal> aDecal, bool aValue)
+{
+	SGfx_SceneGraphAction action;
+	action.mActionType = (aValue) ? SGfx_SceneGraphActionType::Activate : SGfx_SceneGraphActionType::Inactivate;
+	action.mObjectType = SGfx_SceneGraphObjectType::Decal;
+	action.mDecal = aDecal;
+
+	SC_MutexLock lock(mPendingActionsMutex);
+	mPendingActions.Add(action);
+}
+
+void SGfx_SceneGraph::FlushPendingActions()
+{
+	SC_MutexLock lock(mPendingActionsMutex);
+	for (SGfx_SceneGraphAction& action : mPendingActions)
+	{
+		switch (action.mActionType)
+		{
+		case SGfx_SceneGraphActionType::Add:
+			if (action.mObjectType == SGfx_SceneGraphObjectType::Mesh)
+				Add_Internal(action.mMeshInstance);
+			else if (action.mObjectType == SGfx_SceneGraphObjectType::Light)
+				Add_Internal(action.mLight);
+			else if (action.mObjectType == SGfx_SceneGraphObjectType::ParticleEffect)
+				Add_Internal(action.mParticleEffect);
+			else if (action.mObjectType == SGfx_SceneGraphObjectType::Decal)
+				Add_Internal(action.mDecal);
+			break;
+		case SGfx_SceneGraphActionType::Remove:
+			if (action.mObjectType == SGfx_SceneGraphObjectType::Mesh)
+				Remove_Internal(action.mMeshInstance);
+			else if (action.mObjectType == SGfx_SceneGraphObjectType::Light)
+				Remove_Internal(action.mLight);
+			else if (action.mObjectType == SGfx_SceneGraphObjectType::ParticleEffect)
+				Remove_Internal(action.mParticleEffect);
+			else if (action.mObjectType == SGfx_SceneGraphObjectType::Decal)
+				Remove_Internal(action.mDecal);
+			break;
+		case SGfx_SceneGraphActionType::Move:
+			if (action.mObjectType == SGfx_SceneGraphObjectType::Mesh)
+				Move_Internal(action.mMeshInstance);
+			else if (action.mObjectType == SGfx_SceneGraphObjectType::Light)
+				Move_Internal(action.mLight);
+			else if (action.mObjectType == SGfx_SceneGraphObjectType::ParticleEffect)
+				Move_Internal(action.mParticleEffect);
+			else if (action.mObjectType == SGfx_SceneGraphObjectType::Decal)
+				Move_Internal(action.mDecal);
+			break;
+		case SGfx_SceneGraphActionType::Activate:
+			if (action.mObjectType == SGfx_SceneGraphObjectType::Mesh)
+				SetActive_Internal(action.mMeshInstance, true);
+			else if (action.mObjectType == SGfx_SceneGraphObjectType::Light)
+				SetActive_Internal(action.mLight, true);
+			else if (action.mObjectType == SGfx_SceneGraphObjectType::ParticleEffect)
+				SetActive_Internal(action.mParticleEffect, true);
+			else if (action.mObjectType == SGfx_SceneGraphObjectType::Decal)
+				SetActive_Internal(action.mDecal, true);
+			break;
+		case SGfx_SceneGraphActionType::Inactivate:
+			if (action.mObjectType == SGfx_SceneGraphObjectType::Mesh)
+				SetActive_Internal(action.mMeshInstance, false);
+			else if (action.mObjectType == SGfx_SceneGraphObjectType::Light)
+				SetActive_Internal(action.mLight, false);
+			else if (action.mObjectType == SGfx_SceneGraphObjectType::ParticleEffect)
+				SetActive_Internal(action.mParticleEffect, false);
+			else if (action.mObjectType == SGfx_SceneGraphObjectType::Decal)
+				SetActive_Internal(action.mDecal, false);
+			break;
+		}
+	}
+
+	mPendingActions.RemoveAll();
+}
+
+void SGfx_SceneGraph::Add_Internal(SC_Ref<SGfx_MeshInstance> aMeshInstance)
+{
+	mMeshes.Add(aMeshInstance);
+}
+
+void SGfx_SceneGraph::Add_Internal(SC_Ref<SGfx_Light> aLight)
+{
+	mLights.Add(aLight);
+}
+
+void SGfx_SceneGraph::Add_Internal(SC_Ref<SGfx_ParticleEffect> aParticleEffect)
+{
+	mParticleEffects.Add(aParticleEffect);
+}
+
+void SGfx_SceneGraph::Add_Internal(SC_Ref<SGfx_Decal> aDecal)
+{
+	mDecals.Add(aDecal);
+}
+
+void SGfx_SceneGraph::Remove_Internal(SC_Ref<SGfx_MeshInstance> aMeshInstance)
+{
+	mMeshes.RemoveCyclic(aMeshInstance);
+}
+
+void SGfx_SceneGraph::Remove_Internal(SC_Ref<SGfx_Light> aLight)
+{
+	mLights.RemoveCyclic(aLight);
+}
+
+void SGfx_SceneGraph::Remove_Internal(SC_Ref<SGfx_ParticleEffect> aParticleEffect)
+{
+	mParticleEffects.RemoveCyclic(aParticleEffect);
+}
+
+void SGfx_SceneGraph::Remove_Internal(SC_Ref<SGfx_Decal> aDecal)
+{
 	mDecals.RemoveCyclic(aDecal);
+}
+
+void SGfx_SceneGraph::Move_Internal(SC_Ref<SGfx_MeshInstance> /*aMeshInstance*/)
+{
+
+}
+
+void SGfx_SceneGraph::Move_Internal(SC_Ref<SGfx_Light> /*aLight*/)
+{
+
+}
+
+void SGfx_SceneGraph::Move_Internal(SC_Ref<SGfx_ParticleEffect> /*aParticleEffect*/)
+{
+
+}
+
+void SGfx_SceneGraph::Move_Internal(SC_Ref<SGfx_Decal> /*aDecal*/)
+{
+
+}
+
+void SGfx_SceneGraph::SetActive_Internal(SC_Ref<SGfx_MeshInstance> /*aMeshInstance*/, bool /*aValue*/)
+{
+
+}
+
+void SGfx_SceneGraph::SetActive_Internal(SC_Ref<SGfx_Light> /*aLight*/, bool /*aValue*/)
+{
+
+}
+
+void SGfx_SceneGraph::SetActive_Internal(SC_Ref<SGfx_ParticleEffect> /*aParticleEffect*/, bool /*aValue*/)
+{
+
+}
+
+void SGfx_SceneGraph::SetActive_Internal(SC_Ref<SGfx_Decal> /*aDecal*/, bool /*aValue*/)
+{
+
 }
 
 void SGfx_SceneGraph::CullMeshes(SGfx_View* aView)
 {
 	SC_PROFILER_FUNCTION();
-	SC_Array<SC_Ref<SGfx_MeshInstance>> tempMeshList; // Hybrid array?
-	{
-		SC_MutexLock lock(mMeshesMutex);
-		tempMeshList.Add(mMeshes);
-	}
 
 	SGfx_ViewData& prepareData = aView->GetPrepareData();
 	const SGfx_Camera& camera = aView->GetCamera();
@@ -148,7 +375,7 @@ void SGfx_SceneGraph::CullMeshes(SGfx_View* aView)
 
 	const bool depthOnly = aView->IsOnlyDepth();
 
-	for (const SC_Ref<SGfx_MeshInstance>& mesh : tempMeshList)
+	for (const SC_Ref<SGfx_MeshInstance>& mesh : mMeshes)
 	{
 		if (!mesh)
 			continue;
@@ -233,22 +460,18 @@ void SGfx_SceneGraph::CullMeshes(SGfx_View* aView)
 	prepareData.mDepthQueue.Prepare(prepareData);
 	prepareData.mDepthQueue_MotionVectors.Prepare(prepareData); 
 	prepareData.mOpaqueQueue.Prepare(prepareData);
+	prepareData.mInstanceData->Prepare();
 }
 
 void SGfx_SceneGraph::CullLights(SGfx_View* aView)
 {
 	SC_PROFILER_FUNCTION();
-	SC_Array<SC_Ref<SGfx_Light>> tempLightsList; // Hybrid array?
-	{
-		SC_MutexLock lock(mLightsMutex);
-		tempLightsList.Add(mLights);
-	}
 
 	SGfx_ViewData& prepareData = aView->GetPrepareData();
 	const SGfx_Camera& camera = aView->GetCamera();
 	const SGfx_Frustum& frustum = camera.GetFrustum();
 
-	for (const SC_Ref<SGfx_Light>& light : tempLightsList)
+	for (const SC_Ref<SGfx_Light>& light : mLights)
 	{
 		if (light->GetType() == SGfx_LightType::Directional || frustum.Intersects(light->GetBoundingSphere()))
 		{

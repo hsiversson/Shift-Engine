@@ -28,6 +28,7 @@ void SGF_RenderSystem::Update()
 {
 	SC_PROFILER_FUNCTION();
 	UpdateStaticMeshes();
+	mGraphicsWorld->UpdateSceneGraph();
 }
 
 SGfx_World* SGF_RenderSystem::GetGraphicsWorld() const

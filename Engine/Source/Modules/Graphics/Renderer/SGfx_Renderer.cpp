@@ -305,7 +305,6 @@ void SGfx_Renderer::PreRenderUpdates(SGfx_View* aView)
 #endif
 
 	SC_PROFILER_FUNCTION();
-	renderData.mInstanceData->Prepare();
 	SR_Buffer* instanceDataBuffer = renderData.mInstanceData->GetBuffer();
 
 	//SC_Thread::Sleep(10);
