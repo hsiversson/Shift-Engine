@@ -29,7 +29,7 @@ inline void EndFrameQueueAndList(SC_Array<T>& aList, SC_Queue<SC_Pair<uint32, SC
 
 void SR_TempResourceHeap::EndFrame()
 {
-	uint32 deletionFrame = SC_Time::gFrameCounter + 1;
+	uint32 deletionFrame = SC_Time::gFrameCounter + 10;
 	EndFrameQueueAndList(mTextureKeepAliveList, mTempTextureRemovalQueue, deletionFrame);
 	EndFrameQueueAndList(mBufferKeepAliveList, mTempBufferRemovalQueue, deletionFrame);
 	EndFrameInternal();

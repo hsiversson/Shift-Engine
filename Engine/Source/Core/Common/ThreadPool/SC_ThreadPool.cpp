@@ -6,9 +6,9 @@ bool SC_ThreadPool::Create()
 {
     if (!gInstance)
     {
-		//uint32 numSystemThreads = std::thread::hardware_concurrency();
-		//uint32 numPoolThreads = (numSystemThreads > 8) ? (numSystemThreads - 2) : numSystemThreads;
-		gInstance = new SC_ThreadPool(1);
+		uint32 numSystemThreads = std::thread::hardware_concurrency();
+		uint32 numPoolThreads = (numSystemThreads > 8) ? (numSystemThreads - 2) : numSystemThreads;
+		gInstance = new SC_ThreadPool(numPoolThreads);
         return true;
     }
     return false;

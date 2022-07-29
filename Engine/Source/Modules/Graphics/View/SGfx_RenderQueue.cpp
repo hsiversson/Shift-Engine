@@ -126,15 +126,9 @@ void SGfx_RenderQueue::Render(SR_CommandList* aCmdList) const
 					drawInfo.mInstanceOffset = instanceOffset;
 					drawInfo.mNumMeshlets = item.mMeshletData.mMeshletBuffer->GetProperties().mElementCount;
 
-					SR_BufferResourceProperties cbProps;
-					cbProps.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
-					cbProps.mElementCount = sizeof(drawInfo);
-					cbProps.mElementSize = 1;
-					cbProps.mDebugName = "DrawInfoConstants";
-					SR_TempBuffer cb = SR_RenderDevice::gInstance->CreateTempBuffer(cbProps);
-
-					cb.mResource->UpdateData(0, &drawInfo, sizeof(drawInfo));
-					aCmdList->SetRootConstantBuffer(cb.mResource, 0);
+					uint64 cbOffset = 0;
+					SR_BufferResource* cb = aCmdList->GetBufferResource(cbOffset, SR_BufferBindFlag_ConstantBuffer, sizeof(drawInfo), &drawInfo, 1);
+					aCmdList->SetRootConstantBuffer(cb, cbOffset, 0);
 
 					aCmdList->SetShaderState(item.mShader);
 					aCmdList->SetPrimitiveTopology(SR_PrimitiveTopology::TriangleList);
@@ -156,15 +150,9 @@ void SGfx_RenderQueue::Render(SR_CommandList* aCmdList) const
 				constants.mInstanceDataByteSize = sizeof(InstanceData);
 				constants.mMaterialIndex = item.mMaterialIndex;
 
-				SR_BufferResourceProperties cbProps;
-				cbProps.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
-				cbProps.mElementCount = sizeof(constants);
-				cbProps.mElementSize = 1;
-				cbProps.mDebugName = "DrawConstants";
-				SR_TempBuffer cb = SR_RenderDevice::gInstance->CreateTempBuffer(cbProps);
-
-				cb.mResource->UpdateData(0, &constants, sizeof(constants));
-				aCmdList->SetRootConstantBuffer(cb.mResource, 0);
+				uint64 cbOffset = 0;
+				SR_BufferResource* cb = aCmdList->GetBufferResource(cbOffset, SR_BufferBindFlag_ConstantBuffer, sizeof(constants), &constants, 1);
+				aCmdList->SetRootConstantBuffer(cb, cbOffset, 0);
 
 				aCmdList->SetVertexBuffer(vertexBuffer);
 				aCmdList->SetIndexBuffer(indexBuffer);

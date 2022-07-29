@@ -244,7 +244,7 @@ void SR_CommandList::CopyResource(SR_Resource* /*aDstResource*/, SR_Resource* /*
 
 }
 
-void SR_CommandList::CopyBuffer(SR_BufferResource* /*aDstBuffer*/, uint32 /*aDstOffset*/, SR_BufferResource* /*aSrcBuffer*/, uint32 /*aSrcOffset*/, uint32 /*aSize*/)
+void SR_CommandList::CopyBuffer(SR_BufferResource* /*aDstBuffer*/, uint64 /*aDstOffset*/, SR_BufferResource* /*aSrcBuffer*/, uint64 /*aSrcOffset*/, uint32 /*aSize*/)
 {
 }
 
@@ -267,43 +267,43 @@ void SR_CommandList::UpdateTexture(SR_TextureResource* /*aTextureResource*/, con
 SR_BufferResource* SR_CommandList::GetBufferResource(uint64& aOutOffset, SR_BufferBindFlag aBufferType, uint32 aByteSize, void* aInitialData, uint32 aAlignment, const SR_Fence& aCompletionFence)
 {
 	static constexpr uint32 smallSizeKB = KB(64);
-	if (aByteSize > smallSizeKB)
-		return SR_RenderDevice::gInstance->GetTempBuffer(aOutOffset, aBufferType, aByteSize, aInitialData, aAlignment, aCompletionFence);
+	//if (aByteSize > smallSizeKB)
+		return SR_RenderDevice::gInstance->GetTempBufferResource(aOutOffset, aBufferType, aByteSize, aInitialData, aAlignment, aCompletionFence);
 
-	SR_RingBuffer* ringBuffer = nullptr;
-	uint32 size = 0;
+	//SR_RingBuffer* ringBuffer = nullptr;
+	//uint32 size = 0;
+	//
+	//switch (aBufferType)
+	//{
+	//case SR_BufferBindFlag_ConstantBuffer:
+	//	ringBuffer = &mConstantsRingBuffer;
+	//	size = SC_Align(aByteSize, 256);
+	//	break;
+	//case SR_BufferBindFlag_Buffer:
+	//	ringBuffer = &mBuffersRingBuffer;
+	//	size = SC_Align(aByteSize, 256);
+	//	break;
+	//case SR_BufferBindFlag_VertexBuffer:
+	//case SR_BufferBindFlag_IndexBuffer:
+	//	ringBuffer = &mVertexIndexRingBuffer;
+	//	size = SC_Align(aByteSize, 64);
+	//	break;
+	//case SR_BufferBindFlag_Staging:
+	//	ringBuffer = &mStagingRingBuffer;
+	//	size = SC_Align(aByteSize, 64);
+	//	break;
+	//}
+	//
+	//SR_BufferResource* buffer = ringBuffer ? ringBuffer->GetBufferResource() : nullptr;
+	//if (!ringBuffer || !ringBuffer->GetOffset(aOutOffset, size, aAlignment, aCompletionFence))
+	//{
+	//	return SR_RenderDevice::gInstance->GetTempBufferResource(aOutOffset, aBufferType, aByteSize, aInitialData, aAlignment, aCompletionFence);
+	//}
 
-	switch (aBufferType)
-	{
-	case SR_BufferBindFlag_ConstantBuffer:
-		ringBuffer = &mConstantsRingBuffer;
-		size = SC_Align(aByteSize, 256);
-		break;
-	case SR_BufferBindFlag_Buffer:
-		ringBuffer = &mBuffersRingBuffer;
-		size = SC_Align(aByteSize, 256);
-		break;
-	case SR_BufferBindFlag_VertexBuffer:
-	case SR_BufferBindFlag_IndexBuffer:
-		ringBuffer = &mVertexIndexRingBuffer;
-		size = SC_Align(aByteSize, 256);
-		break;
-	case SR_BufferBindFlag_Staging:
-		ringBuffer = &mStagingRingBuffer;
-		size = SC_Align(aByteSize, 256);
-		break;
-	}
-
-	SR_BufferResource* buffer = ringBuffer ? ringBuffer->GetBufferResource() : nullptr;
-	if (!ringBuffer || !ringBuffer->GetOffset(aOutOffset, size, aAlignment, aCompletionFence))
-	{
-		return SR_RenderDevice::gInstance->GetTempBuffer(aOutOffset, aBufferType, aByteSize, aInitialData, aAlignment, aCompletionFence);
-	}
-
-	if (aByteSize && aInitialData)
-		UpdateBuffer(buffer, (uint32)aOutOffset, aInitialData, aByteSize);
-
-	return nullptr;
+	//if (aByteSize && aInitialData)
+	//	UpdateBuffer(buffer, (uint32)aOutOffset, aInitialData, aByteSize);
+	//
+	//return buffer;
 }
 
 SR_Buffer* SR_CommandList::GetBuffer()
@@ -351,13 +351,31 @@ const SR_CommandListType& SR_CommandList::GetType() const
 
 bool SR_CommandList::InitRingBuffers()
 {
-	SR_BufferResourceProperties cprops;
-	cprops.mElementCount = MB(2);
-	cprops.mElementSize = 1;
-	cprops.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
-	cprops.mDebugName = "Constant Ring Buffer";
-	cprops.mIsUploadBuffer = true;
-	mConstantsRingBuffer = SR_RingBuffer(SR_RenderDevice::gInstance->CreateBufferResource(cprops, nullptr), 256);
+	//SR_BufferResourceProperties cprops;
+	//cprops.mElementCount = MB(2);
+	//cprops.mElementSize = 1;
+	//cprops.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
+	//cprops.mDebugName = "Constant Ring Buffer";
+	//cprops.mIsUploadBuffer = true;
+	//mConstantsRingBuffer = SR_RingBuffer(SR_RenderDevice::gInstance->CreateBufferResource(cprops, nullptr), 256);
+	//
+	//cprops.mElementCount = MB(2);
+	//cprops.mBindFlags = SR_BufferBindFlag_Buffer;
+	//cprops.mDebugName = "Buffers Ring Buffer";
+	//cprops.mIsUploadBuffer = true;
+	//mBuffersRingBuffer = SR_RingBuffer(SR_RenderDevice::gInstance->CreateBufferResource(cprops, nullptr), 256);
+	//
+	//cprops.mElementCount = MB(2);
+	//cprops.mBindFlags = SR_BufferBindFlag_VertexBuffer | SR_BufferBindFlag_IndexBuffer;
+	//cprops.mDebugName = "Vertex/Index Ring Buffer";
+	//cprops.mIsUploadBuffer = true;
+	//mBuffersRingBuffer = SR_RingBuffer(SR_RenderDevice::gInstance->CreateBufferResource(cprops, nullptr), 64);
+	//
+	//cprops.mElementCount = MB(8);
+	//cprops.mBindFlags = SR_BufferBindFlag_Staging;
+	//cprops.mDebugName = "Staging Ring Buffer";
+	//cprops.mIsUploadBuffer = true;
+	//mBuffersRingBuffer = SR_RingBuffer(SR_RenderDevice::gInstance->CreateBufferResource(cprops, nullptr), 64);
 
 	return true;
 }

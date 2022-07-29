@@ -35,10 +35,10 @@ void SR_BufferResource::UpdateData(uint32 aOffset, const void* aData, uint64 aSi
 		};
 
 		SC_Ref<SR_TaskEvent> taskEvent = SC_MakeRef<SR_TaskEvent>();
-		SR_RenderDevice::gInstance->GetQueueManager()->SubmitTask(UploadData, SR_CommandListType::Graphics, taskEvent);
+		SR_RenderDevice::gInstance->GetQueueManager()->SubmitTask(UploadData, SR_CommandListType::Copy, taskEvent);
 
 		taskEvent->mCPUEvent.Wait();
-		taskEvent->mFence.Wait();
+		//taskEvent->mFence.Wait();
 	}
 }
 

@@ -583,10 +583,10 @@ bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 		return false;
 
 	// Create Descriptor heaps
-	mBindlessDescriptorHeap = SC_MakeRef<SR_DescriptorHeap_DX12>(8192, SR_DescriptorHeapType::CBV_SRV_UAV, true);
+	mBindlessDescriptorHeap = SC_MakeRef<SR_DescriptorHeap_DX12>(512*1024, SR_DescriptorHeapType::CBV_SRV_UAV, true);
 	mSamplerDescriptorHeap = SC_MakeRef<SR_DescriptorHeap_DX12>(128, SR_DescriptorHeapType::SAMPLER, true);
 	mRTVDescriptorHeap = SC_MakeRef<SR_DescriptorHeap_DX12>(512, SR_DescriptorHeapType::RTV);
-	mDSVDescriptorHeap = SC_MakeRef<SR_DescriptorHeap_DX12>(32, SR_DescriptorHeapType::DSV);
+	mDSVDescriptorHeap = SC_MakeRef<SR_DescriptorHeap_DX12>(16, SR_DescriptorHeapType::DSV);
 
 	CreateDefaultRootSignatures(); 
 

@@ -36,6 +36,7 @@ SR_RingBuffer::SR_RingBuffer(const SC_Ref<SR_BufferResource>& aBufferResource, u
 			break;
 		case SR_BufferBindFlag_VertexBuffer:
 		case SR_BufferBindFlag_IndexBuffer:
+		case (SR_BufferBindFlag_VertexBuffer | SR_BufferBindFlag_IndexBuffer):
 			type = "Vertex/Index";
 			break;
 		}
@@ -152,7 +153,7 @@ bool SR_RingBuffer::GetOffset(uint64& aOutOffset, uint64 aSize, uint64 aAlignmen
 	uint64 remainingBytes = mBeginOffset - mEndOffset;
 	if (alignedSize > remainingBytes)
 	{
-		SC_ERROR("SR_RingBuffer is full.");
+		//SC_ERROR("SR_RingBuffer is full.");
 		return false; // full
 	}
 
@@ -161,7 +162,7 @@ bool SR_RingBuffer::GetOffset(uint64& aOutOffset, uint64 aSize, uint64 aAlignmen
 		remainingBytes = mOffsetBase - mSize + mOffsetBase;
 		if (alignedSize > remainingBytes)
 		{
-			SC_ERROR("SR_RingBuffer is full.");
+			//SC_ERROR("SR_RingBuffer is full.");
 			return false; // full
 		}
 

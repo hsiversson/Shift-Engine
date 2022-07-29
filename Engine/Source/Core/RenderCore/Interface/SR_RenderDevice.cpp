@@ -290,7 +290,7 @@ SR_TempBuffer SR_RenderDevice::CreateTempBuffer(const SR_BufferResourcePropertie
 	return mTempResourceHeap->GetBuffer(aBufferResourceProperties, aIsWritable);
 }
 
-SR_BufferResource* SR_RenderDevice::GetTempBuffer(uint64& aOutOffset, SR_BufferBindFlag aBufferType, uint32 aByteSize, const void* aInitialData, uint32 aAlignment, const SR_Fence& aCompletionFence)
+SR_BufferResource* SR_RenderDevice::GetTempBufferResource(uint64& aOutOffset, SR_BufferBindFlag aBufferType, uint32 aByteSize, const void* aInitialData, uint32 aAlignment, const SR_Fence& aCompletionFence)
 {
 	SC_MutexLock lock;
 	//bool isTaskThread = SC_Thread::gIsTaskThread;
@@ -310,7 +310,32 @@ SR_BufferResource* SR_RenderDevice::GetTempBuffer(uint64& aOutOffset, SR_BufferB
 		bindFlags = SR_BufferBindFlag_ConstantBuffer;
 		name = "Constant Ring Buffer";
 	}
-	//else if (aBufferType == SR_BufferBindFlag_Staging)
+	else if (aBufferType == SR_BufferBindFlag_Staging)
+	{
+		tempRingBuffers = &mTempRingBuffers[static_cast<uint32>(TempRingBufferType::Staging)];
+		size = SC_Align(aByteSize, 64);
+		bindFlags = SR_BufferBindFlag_Staging;
+		name = "Staging Ring Buffer";
+	}
+	else if (aBufferType == SR_BufferBindFlag_Buffer)
+	{
+		tempRingBuffers = &mTempRingBuffers[static_cast<uint32>(TempRingBufferType::Buffer)];
+		size = SC_Align(aByteSize, 256);
+		bindFlags = SR_BufferBindFlag_Buffer;
+		name = "Buffers Ring Buffer";
+	}
+	else if (aBufferType == SR_BufferBindFlag_VertexBuffer || aBufferType == SR_BufferBindFlag_IndexBuffer)
+	{
+		tempRingBuffers = &mTempRingBuffers[static_cast<uint32>(TempRingBufferType::VertexIndex)];
+		size = SC_Align(aByteSize, 64);
+		bindFlags = SR_BufferBindFlag_VertexBuffer | SR_BufferBindFlag_IndexBuffer;
+		name = "Vertex/Index Ring Buffer";
+	}
+	else
+	{
+		SC_ASSERT(false, "No temp allocation supported for this buffer type.");
+		return nullptr;
+	}
 
 	uint32 maxMisalignment = 0;
 	if (aAlignment > 1)

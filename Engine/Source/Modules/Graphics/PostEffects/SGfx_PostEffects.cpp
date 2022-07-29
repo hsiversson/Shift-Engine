@@ -183,10 +183,10 @@ void SGfx_PostEffects::UpsampleBloomMip(SR_TempTexture& aOutMip, SR_Texture* aFu
 	cbProps.mElementCount = sizeof(Constants);
 	cbProps.mElementSize = 1;
 	cbProps.mDebugName = "BloomUpsampleConstants";
-	SR_TempBuffer cb = SR_RenderDevice::gInstance->CreateTempBuffer(cbProps);
 
-	cb.mResource->UpdateData(0, &constants, sizeof(constants));
-	cmdList->SetRootConstantBuffer(cb.mResource, 0);
+	uint64 cbOffset = 0;
+	SR_BufferResource* cb = cmdList->GetBufferResource(cbOffset, SR_BufferBindFlag_ConstantBuffer, sizeof(Constants), &constants, 1);
+	cmdList->SetRootConstantBuffer(cb, cbOffset, 0);
 
 	cmdList->Dispatch(mBloomData.mUpsampleShader, SC_IntVector(upsampleSize.XY(), 1));
 	cmdList->UnorderedAccessBarrier(aOutMip.mResource);
@@ -233,9 +233,10 @@ SR_TempTexture SGfx_PostEffects::Downsample(SR_Texture* aSource)
 	cbProps.mElementCount = sizeof(Constants);
 	cbProps.mElementSize = 1;
 	cbProps.mDebugName = "BloomDownsampleConstants";
-	SR_TempBuffer cb = SR_RenderDevice::gInstance->CreateTempBuffer(cbProps);
-	cb.mResource->UpdateData(0, &constants, sizeof(constants));
-	cmdList->SetRootConstantBuffer(cb.mResource, 0);
+
+	uint64 cbOffset = 0;
+	SR_BufferResource* cb = cmdList->GetBufferResource(cbOffset, SR_BufferBindFlag_ConstantBuffer, sizeof(Constants), &constants, 1);
+	cmdList->SetRootConstantBuffer(cb, cbOffset, 0);
 
 	cmdList->Dispatch(mDownsampleShader, targetSize.x, targetSize.y);
 	cmdList->UnorderedAccessBarrier(tempTex.mResource);

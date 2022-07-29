@@ -100,38 +100,10 @@ bool SR_BufferResource_DX12::Init(const void* aInitialData)
 	}
 
 	if (aInitialData)
-	{
-		SR_BufferResourceProperties uploadProps(mProperties);
-		uploadProps.mIsUploadBuffer = true;
-		uploadProps.mHeap = nullptr;
-
-		SR_BufferResource_DX12* uploadBuffer = new SR_BufferResource_DX12(uploadProps);
-		if (!uploadBuffer->Init(nullptr))
-		{
-			SC_ASSERT(false, "Could not init upload buffer.");
-		}
-
-		uploadBuffer->UpdateData(0, aInitialData, resourceDesc.Width);
-
-		auto UploadData = [this, uploadBuffer]()
-		{
-			SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
-			cmdList->CopyResource(this, uploadBuffer);
-		};
-
-		SC_Ref<SR_TaskEvent> taskEvent = SC_MakeRef<SR_TaskEvent>();
-		SR_RenderDevice::gInstance->GetQueueManager()->SubmitTask(UploadData, SR_CommandListType::Copy, taskEvent);
-
-		taskEvent->mCPUEvent.Wait();
-		taskEvent->mFence.Wait();
-
-		delete uploadBuffer;
-	}
+		UpdateData(0, aInitialData, resourceDesc.Width);
 
 	if (mProperties.mDebugName)
-	{
 		mD3D12Resource->SetName(SC_UTF8ToUTF16(mProperties.mDebugName).c_str());
-	}
 
 	return true;
 }

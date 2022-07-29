@@ -136,7 +136,7 @@ public:
 	virtual SC_Ref<SR_BufferResource> CreateBufferResource(const SR_BufferResourceProperties& aBufferResourceProperties, const void* aInitialData = nullptr);
 
 	SR_TempBuffer CreateTempBuffer(const SR_BufferResourceProperties& aBufferResourceProperties, bool aIsWritable = true);
-	SR_BufferResource* GetTempBuffer(uint64& aOutOffset, SR_BufferBindFlag aBufferType, uint32 aByteSize, const void* aInitialData, uint32 aAlignment = 0, const SR_Fence& aCompletionFence = SR_Fence());
+	SR_BufferResource* GetTempBufferResource(uint64& aOutOffset, SR_BufferBindFlag aBufferType, uint32 aByteSize, const void* aInitialData, uint32 aAlignment = 0, const SR_Fence& aCompletionFence = SR_Fence());
 
 	virtual SC_Ref<SR_Heap> CreateHeap(const SR_HeapProperties& aHeapProperties);
 
@@ -193,7 +193,7 @@ protected:
 	{
 		VertexIndex,
 		Constant,
-		Shader,
+		Buffer,
 		Staging,
 		LowPrioStaging,
 		COUNT,

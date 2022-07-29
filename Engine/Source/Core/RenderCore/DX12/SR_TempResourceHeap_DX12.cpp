@@ -19,7 +19,7 @@ SR_TempResourceHeap_DX12::~SR_TempResourceHeap_DX12()
 bool SR_TempResourceHeap_DX12::Init()
 {
 	SR_HeapProperties heapProps;
-	heapProps.mByteSize = MB(256);
+	heapProps.mByteSize = MB(512);
 	heapProps.mResourceType = SR_HeapResourceType::RenderTarget;
 	heapProps.mType = SR_HeapType::Default;
 	heapProps.mDebugName = "SR_TempResourceHeap_DX12::RenderTarget_Heap";
@@ -30,7 +30,7 @@ bool SR_TempResourceHeap_DX12::Init()
 		return false;
 	}
 
-	heapProps.mByteSize = MB(128);
+	heapProps.mByteSize = MB(256);
 	heapProps.mResourceType = SR_HeapResourceType::Texture;
 	heapProps.mDebugName = "SR_TempResourceHeap_DX12::RWTexture_Heap";
 	mResourceHeap_RW_Textures = SC_MakeUnique<SR_Heap_DX12>(heapProps);
@@ -47,34 +47,12 @@ bool SR_TempResourceHeap_DX12::Init()
 		return false;
 	}
 
-	heapProps.mByteSize = MB(256);
-	heapProps.mResourceType = SR_HeapResourceType::Buffer;
-	heapProps.mType = SR_HeapType::Upload;
-	heapProps.mDebugName = "SR_TempResourceHeap_DX12::ConstantBuffer_Heap";
-	mResourceHeap_ConstantBuffers = SC_MakeUnique<SR_Heap_DX12>(heapProps);
-	if (!mResourceHeap_ConstantBuffers->Init())
-	{
-		SC_ASSERT(false, "Could not create heap.");
-		return false;
-	}
-
-	heapProps.mByteSize = MB(128);
-	heapProps.mType = SR_HeapType::Default;
-	heapProps.mDebugName = "SR_TempResourceHeap_DX12::Buffer_Heap";
-	mResourceHeap_GenericBuffers = SC_MakeUnique<SR_Heap_DX12>(heapProps);
-	if (!mResourceHeap_GenericBuffers->Init())
-	{
-		SC_ASSERT(false, "Could not create heap.");
-		return false;
-	}
 	return true;
 }
 
 void SR_TempResourceHeap_DX12::EndFrameInternal()
 {
 	mResourceHeap_RW_Textures->EndFrame();
-	mResourceHeap_ConstantBuffers->EndFrame();
-	mResourceHeap_GenericBuffers->EndFrame();
 }
 
 SR_TempTexture SR_TempResourceHeap_DX12::GetTextureInternal(const SR_TextureResourceProperties& aTextureProperties, bool aIsTexture, bool aIsRenderTarget, bool aIsWritable)
@@ -113,45 +91,10 @@ SR_TempTexture SR_TempResourceHeap_DX12::GetTextureInternal(const SR_TextureReso
 	return tempTexture;
 }
 
-SR_TempBuffer SR_TempResourceHeap_DX12::GetBufferInternal(const SR_BufferResourceProperties& aBufferProperties, bool aIsWritable)
+SR_TempBuffer SR_TempResourceHeap_DX12::GetBufferInternal(const SR_BufferResourceProperties& /*aBufferProperties*/, bool /*aIsWritable*/)
 {
-	const bool isConstantBuffer = (aBufferProperties.mBindFlags & SR_BufferBindFlag_ConstantBuffer);
-	SR_BufferResourceProperties resourceProps(aBufferProperties);
-
-	if (isConstantBuffer)
-		resourceProps.mHeap = mResourceHeap_ConstantBuffers.get();
-	else
-		resourceProps.mHeap = mResourceHeap_GenericBuffers.get();
-
-	resourceProps.mWritable = resourceProps.mWritable && aIsWritable;
-
-	SR_TempBuffer tempBuffer = {};
-	SC_Ref<SR_BufferResource_DX12> dx12Resource = SC_MakeRef<SR_BufferResource_DX12>(resourceProps);
-	if (dx12Resource->Init(aBufferProperties.mInitialData))
-	{
-		tempBuffer.mResource = dx12Resource;
-
-		if (!isConstantBuffer)
-		{
-			SR_BufferProperties bufferProps;
-			bufferProps.mElementCount = resourceProps.mElementCount;
-			bufferProps.mType = SR_BufferType::Bytes;
-			tempBuffer.mBuffer = SR_RenderDevice_DX12::gInstance->CreateBuffer(bufferProps, tempBuffer.mResource);
-		}
-
-		//if (aIsWritable)
-		//{
-		//	SR_BufferProperties bufferProps;
-		//	bufferProps.mElementCount = resourceProps.mElementCount;
-		//	tempBuffer.mRWBuffer = SR_RenderDevice_DX12::gD3D12Instance->CreateBuffer(bufferProps, tempBuffer.mResource);
-		//}
-	}
-	else
-	{
-		SC_ASSERT(false, "Failed to init buffer.");
-	}
-
-	return tempBuffer;
+	
+	return SR_TempBuffer();
 }
 
 #endif //SR_ENABLE_DX12

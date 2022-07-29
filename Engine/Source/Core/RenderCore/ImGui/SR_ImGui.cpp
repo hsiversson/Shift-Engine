@@ -329,14 +329,9 @@ void SR_ImGui::Render(SR_RenderTarget* aRenderTarget)
 						else
 							vertexConstants.mTextureIndex = mFontTexture->GetDescriptorHeapIndex();
 
-						SR_BufferResourceProperties cbDesc;
-						cbDesc.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
-						cbDesc.mElementCount = 1;
-						cbDesc.mElementSize = sizeof(SR_ImGuiVertexConstants);
-						SR_TempBuffer cb = SR_RenderDevice::gInstance->CreateTempBuffer(cbDesc);
-
-						cb.mResource->UpdateData(0, &vertexConstants, sizeof(SR_ImGuiVertexConstants));
-						cmdList->SetRootConstantBuffer(cb.mResource, 0);
+						uint64 cbOffset = 0;
+						SR_BufferResource* cb = cmdList->GetBufferResource(cbOffset, SR_BufferBindFlag_ConstantBuffer, sizeof(SR_ImGuiVertexConstants), &vertexConstants, 1);
+						cmdList->SetRootConstantBuffer(cb, cbOffset, 0);
 
 						cmdList->SetScissorRect(clipRect);
 

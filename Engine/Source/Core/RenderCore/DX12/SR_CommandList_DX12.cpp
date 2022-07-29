@@ -426,7 +426,10 @@ void SR_CommandList_DX12::SetRootConstant()
 
 void SR_CommandList_DX12::SetRootConstantBuffer(SR_BufferResource* aConstantBuffer, uint32 aSlot)
 {
-	SC_ASSERT(aSlot < 4);
+	SC_ASSERT(aSlot < 2);
+	if (aSlot >= 2)
+		return;
+
 	if (mResourceBindings.mConstantBuffers[aSlot] != aConstantBuffer)
 	{
 		mResourceBindings.mConstantBuffers[aSlot] = aConstantBuffer;
@@ -437,13 +440,16 @@ void SR_CommandList_DX12::SetRootConstantBuffer(SR_BufferResource* aConstantBuff
 
 void SR_CommandList_DX12::SetRootConstantBuffer(SR_BufferResource* aConstantBuffer, uint64 aBufferOffset, uint32 aSlot)
 {
-	SC_ASSERT(aSlot < 4);
-	if (mResourceBindings.mConstantBuffers[aSlot] != aConstantBuffer)
-	{
-		mResourceBindings.mConstantBuffers[aSlot] = aConstantBuffer;
-		mResourceBindings.mConstantBufferOffsets[aSlot] = aBufferOffset;
-		mResourceBindings.mConstantsDirty[aSlot] = true;
-	}
+	SC_ASSERT(aSlot < 2);
+	if (aSlot >= 2)
+		return;
+
+	if (mResourceBindings.mConstantBuffers[aSlot] == aConstantBuffer && mResourceBindings.mConstantBufferOffsets[aSlot] == aBufferOffset)
+		return;
+
+	mResourceBindings.mConstantBuffers[aSlot] = aConstantBuffer;
+	mResourceBindings.mConstantBufferOffsets[aSlot] = aBufferOffset;
+	mResourceBindings.mConstantsDirty[aSlot] = true;
 }
 
 void SR_CommandList_DX12::SetResourceInfo(uint8* /*aData*/, uint32 /*aSize*/)
@@ -557,7 +563,7 @@ void SR_CommandList_DX12::CopyResource(SR_Resource* aDstResource, SR_Resource* a
 	}
 }
 
-void SR_CommandList_DX12::CopyBuffer(SR_BufferResource* aDstBuffer, uint32 aDstOffset, SR_BufferResource* aSrcBuffer, uint32 aSrcOffset, uint32 aSize)
+void SR_CommandList_DX12::CopyBuffer(SR_BufferResource* aDstBuffer, uint64 aDstOffset, SR_BufferResource* aSrcBuffer, uint64 aSrcOffset, uint32 aSize)
 {
 	SC_ASSERT(aDstBuffer != aSrcBuffer);
 	SR_BufferResource_DX12* dstBuffer = static_cast<SR_BufferResource_DX12*>(aDstBuffer);
@@ -588,17 +594,10 @@ void SR_CommandList_DX12::UpdateBuffer(SR_BufferResource* aDstBuffer, uint32 aDs
 	//SR_BufferResource_DX12* dstBuffer = static_cast<SR_BufferResource_DX12*>(aDstBuffer);
 
 	// Create temp buffer for copying
-	SR_BufferResourceProperties tempBufferProps;
-	tempBufferProps.mElementSize = 1;
-	tempBufferProps.mElementCount = aSize;
-	tempBufferProps.mBindFlags = SR_BufferBindFlag_Staging;
-	tempBufferProps.mIsUploadBuffer = true;
-	SC_Ref<SR_BufferResource> tempBuffer = SR_RenderDevice_DX12::gInstance->CreateBufferResource(tempBufferProps); // Can be a temp resource?
-	mTempResources.Add(tempBuffer);
+	uint64 bufOffset = 0;
+	SR_BufferResource* buf = SR_RenderDevice_DX12::gInstance->GetTempBufferResource(bufOffset, SR_BufferBindFlag_Staging, aSize, aData, 64);
 
-	tempBuffer->UpdateData(aDstOffset, aData, aSize);
-
-	CopyBuffer(aDstBuffer, aDstOffset, tempBuffer, 0, aSize);
+	CopyBuffer(aDstBuffer, aDstOffset, buf, bufOffset, aSize);
 }
 
 void SR_CommandList_DX12::UpdateTexture(SR_TextureResource* aTextureResource, const SR_PixelData* aData, uint32 aDataCount, bool /*aKeepData*/)
@@ -764,7 +763,7 @@ void SR_CommandList_DX12::SetResources()
 				SR_BufferResource_DX12* cb = static_cast<SR_BufferResource_DX12*>(mResourceBindings.mConstantBuffers[param.mDescriptor.mRegisterIndex]);
 				uint64 bufferOffset = mResourceBindings.mConstantBufferOffsets[param.mDescriptor.mRegisterIndex];
 
-				if (!cb || !mResourceBindings.mConstantsDirty[param.mDescriptor.mRegisterIndex])
+				if (!mResourceBindings.mConstantsDirty[param.mDescriptor.mRegisterIndex] || !cb)
 				{
 					++paramIndex;
 					continue;

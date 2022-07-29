@@ -27,19 +27,34 @@ void SGfx_InstanceData::Clear()
 	mCurrentOffset = 0;
 }
 
-SR_TempBuffer SGfx_InstanceData::GetBuffer() const
+void SGfx_InstanceData::Prepare()
 {
 	SC_MutexLock lock(mMutex);
 
 	if (mData.IsEmpty())
-		return SR_TempBuffer();
+		return;
 
-	SR_BufferResourceProperties bufferProps;
-	bufferProps.mBindFlags = SR_BufferBindFlag_Buffer;
+	bool createBuffer = !mBuffer || (mBuffer->GetProperties().mElementCount < mData.GetByteSize());
+	if (createBuffer)
+	{
+		SR_BufferResourceProperties resourceProps = {};
+		resourceProps.mBindFlags = SR_BufferBindFlag_Buffer;
+		resourceProps.mElementCount = mData.GetByteSize();
+		resourceProps.mElementSize = 1;
+		resourceProps.mDebugName = "InstanceData";
+		mBufferResource = SR_RenderDevice::gInstance->CreateBufferResource(resourceProps, mData.GetBuffer());
+	}
+	else
+		mBufferResource->UpdateData(0, mData.GetBuffer(), mData.GetByteSize());
+
+	SR_BufferProperties bufferProps = {};
 	bufferProps.mElementCount = mData.GetByteSize();
-	bufferProps.mElementSize = 1;
-	bufferProps.mInitialData = mData.GetBuffer();
-	bufferProps.mDebugName = "InstanceData";
+	bufferProps.mFirstElement = 0;
+	bufferProps.mType = SR_BufferType::Bytes;
+	mBuffer = SR_RenderDevice::gInstance->CreateBuffer(bufferProps, mBufferResource);
+}
 
-	return SR_RenderDevice::gInstance->CreateTempBuffer(bufferProps);
+SR_Buffer* SGfx_InstanceData::GetBuffer() const
+{
+	return mBuffer;
 }

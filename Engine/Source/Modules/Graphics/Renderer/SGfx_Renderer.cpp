@@ -305,13 +305,14 @@ void SGfx_Renderer::PreRenderUpdates(SGfx_View* aView)
 #endif
 
 	SC_PROFILER_FUNCTION();
-	SR_TempBuffer instanceData = renderData.mInstanceData->GetBuffer();
+	renderData.mInstanceData->Prepare();
+	SR_Buffer* instanceDataBuffer = renderData.mInstanceData->GetBuffer();
 
-	SC_Thread::Sleep(10);
+	//SC_Thread::Sleep(10);
 
 	SGfx_MaterialGPUDataBuffer::Get().UpdateBuffer();
 	renderData.mSceneConstants.mMaterialInfoBufferIndex = SGfx_MaterialGPUDataBuffer::Get().GetBufferDescriptorIndex();
-	renderData.mSceneConstants.mInstanceDataBufferIndex = (instanceData.mBuffer) ? instanceData.mBuffer->GetDescriptorHeapIndex() : 0;
+	renderData.mSceneConstants.mInstanceDataBufferIndex = (instanceDataBuffer) ? instanceDataBuffer->GetDescriptorHeapIndex() : 0;
 	mViewConstantsBuffer->UpdateData(0, &renderData.mSceneConstants, sizeof(SGfx_SceneConstants));
 
 	cmdList->SetRootConstantBuffer(mViewConstantsBuffer, 1);
@@ -327,8 +328,8 @@ void SGfx_Renderer::ComputeRaytracingScene(SGfx_View* aView)
 	SGfx_ViewData& renderData = aView->GetMutableRenderData();
 	aView->WaitForPrepareTask(renderData.mPrepareCullMeshesEvent);
 
-	if (renderData.mRaytracingInstances.IsEmpty())
-		return;
+	//if (renderData.mRaytracingInstances.IsEmpty())
+	//	return;
 
 	SC_PROFILER_FUNCTION();
 	cmdList->BeginEvent("Build Raytracing Scene");

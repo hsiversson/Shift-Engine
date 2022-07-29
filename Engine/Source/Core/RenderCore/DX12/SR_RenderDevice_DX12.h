@@ -165,6 +165,7 @@ inline bool VerifyHRESULT(HRESULT aValue)
 #endif
 	}
 
+	SC_ASSERT(false);
 	return false;
 }
 

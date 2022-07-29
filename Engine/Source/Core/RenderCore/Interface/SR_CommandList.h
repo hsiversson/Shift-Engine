@@ -98,7 +98,7 @@ public:
 
 	// Copy
 	virtual void CopyResource(SR_Resource* aDstResource, SR_Resource* aSrcResource);
-	virtual void CopyBuffer(SR_BufferResource* aDstBuffer, uint32 aDstOffset, SR_BufferResource* aSrcBuffer, uint32 aSrcOffset, uint32 aSize);
+	virtual void CopyBuffer(SR_BufferResource* aDstBuffer, uint64 aDstOffset, SR_BufferResource* aSrcBuffer, uint64 aSrcOffset, uint32 aSize);
 	virtual void CopyTexture(SR_TextureResource* aDstTexture, SR_TextureResource* aSrcResource);
 
 	virtual void UpdateBuffer(SR_BufferResource* aDstBuffer, uint32 aDstOffset, const void* aData, uint32 aSize);
