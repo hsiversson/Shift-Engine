@@ -66,7 +66,7 @@
 #endif
 
 #if !IS_MASTER_BUILD
-	#define ENABLE_PROFILER				(1)
+	#define ENABLE_PROFILER				(0)
 	#define ENABLE_LOGGING				(1)
 	#define ENABLE_CONSOLE				(1)
 #else

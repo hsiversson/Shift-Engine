@@ -1,5 +1,7 @@
 #include "SR_GPUProfiler.h"
 
+#if SR_ENABLE_GPU_PROFILER
+
 SR_GPUProfiler* SR_GPUProfiler::gInstance = nullptr;
 
 SR_GPUProfiler::SR_GPUProfiler()
@@ -30,4 +32,6 @@ SR_GPUProfiler& SR_GPUProfiler::Get()
 {
 	return *gInstance;
 }
+
+#endif
 
