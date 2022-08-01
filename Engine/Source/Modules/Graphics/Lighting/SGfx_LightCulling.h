@@ -1,4 +1,5 @@
 #pragma once
+#include "SGfx_Light.h"
 
 struct SGfx_LightCullingConstants
 {
@@ -63,11 +64,13 @@ private:
 
 	SGfx_LightCullingConstants mConstants;
 
+	SC_Array<SGfx_Light::LocalLightShaderData> mShaderData;
 	SC_Array<SC_Ref<SR_Buffer>> mDelayedDeleteResources;
 
 	SC_Ref<SR_BufferResource> mCullConstants;
 	SC_Ref<SR_ShaderState> mLightCullingShader;
 
+	SC_Ref<SR_BufferResource> mLightBufferResource;
 	SC_Ref<SR_Buffer> mLightBuffer;
 	SC_Ref<SR_Buffer> mTileGridBuffer;
 	SC_Ref<SR_Buffer> mTileGridBufferRW;

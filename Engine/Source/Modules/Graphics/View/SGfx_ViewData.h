@@ -147,6 +147,10 @@ public:
 		mRaytracingInstances.RemoveAll();
 #endif
 
+		mPrepareCullMeshesEvent = SC_Future<bool>();
+		mPrepareCullLightsEvent = SC_Future<bool>();
+		mPrepareLightCullingEvent = SC_Future<bool>();
+
 		mBuildRaytracingSceneEvent->Reset();
 		mPreRenderUpdatesEvent->Reset();
 		mPrePassEvent->Reset();

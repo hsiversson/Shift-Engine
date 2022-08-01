@@ -76,12 +76,14 @@ void SR_SwapChain_DXGI::Present()
 		while (WaitForSingleObject(myFrameLatencyWaitableObject, 0) == S_OK);
 	}
 
+	bool vsync = false;
+
 	HRESULT hr = S_FALSE;
 	uint32 flags = 0;
-	if (!mProperties.mFullscreen && (mSwapChainFlags & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING))
+	if (!vsync && !mProperties.mFullscreen && (mSwapChainFlags & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING))
 		flags |= DXGI_PRESENT_ALLOW_TEARING;
 
-	hr = mDXGISwapChain->Present(0, flags);
+	hr = mDXGISwapChain->Present(vsync ? 1 : 0, flags);
 
 	mCurrentIndex = (uint8)mDXGISwapChain4->GetCurrentBackBufferIndex();
 	mCurrentResource = &mBackbufferResources[mCurrentIndex];

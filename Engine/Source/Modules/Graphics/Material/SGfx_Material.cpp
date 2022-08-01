@@ -165,6 +165,10 @@ bool SGfx_Material::Init(const SGfx_MaterialProperties& aProperties)
 	}
 	SR_RenderDevice::gInstance->CompileShader(depthShaderCode, args, mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::Depth)].mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Pixel)]);
 
+	mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::DefaultMeshlet)] = mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::Default)];
+	mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::DepthMeshlet)] = mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::Depth)];
+	mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::ShadowDepthMeshlet)] = mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::ShadowDepth)];
+
 	mTextures.Reserve(aProperties.mTextures.Count());
 	for (const SC_FilePath& path : aProperties.mTextures)
 	{
@@ -240,7 +244,7 @@ static const char* locGetVertexAttributeVariableName(const SR_VertexAttribute& a
 SR_ShaderState* SGfx_Material::GetShaderState(const SR_VertexLayout& aVertexLayout, SGfx_MaterialShaderType aType)
 {
     auto& shaderStates = mShaderStates[static_cast<uint32>(aType)];
-
+	SC_MutexLock lock(testmutex);
     if (shaderStates.count(aVertexLayout) > 0)
         return shaderStates[aVertexLayout];
     else
@@ -276,7 +280,7 @@ SR_ShaderState* SGfx_Material::GetShaderState(const SR_VertexLayout& aVertexLayo
 			std::string shaderCodeBuffer;
 
 #if SR_ENABLE_MESH_SHADERS
-            if (SR_RenderDevice::gInstance->GetSupportCaps().mEnableMeshShaders)
+            if (SR_RenderDevice::gInstance->GetSupportCaps().mEnableMeshShaders && SGfx_IsMeshletMaterialShaderType(aType))
 			{
 				std::ifstream t((SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/DefaultMeshShader.ssf").GetAbsolutePath());
 				shaderCodeBuffer = std::string((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
@@ -303,7 +307,10 @@ SR_ShaderState* SGfx_Material::GetShaderState(const SR_VertexLayout& aVertexLayo
                 SR_RenderDevice::gInstance->CompileShader(vertexShaderCode, vertexShaderCompileArgs, shaderProperties.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Vertex)]);
             }
 
-            mShaderStates[shaderType][aVertexLayout] = SR_RenderDevice::gInstance->CreateShaderState(shaderProperties);
+			SC_Ref<SR_ShaderState> shaderState = SR_RenderDevice::gInstance->CreateShaderState(shaderProperties);
+
+			SC_MutexLock lock(testmutex);
+			mShaderStates[shaderType][aVertexLayout] = shaderState;
         };
         SGfx_MaterialCompilerThread::Get().Queue(CompileMaterial);
 

@@ -149,6 +149,7 @@ void SGfx_RenderQueue::Render(SR_CommandList* aCmdList) const
 				constants.mBaseInstanceDataOffset = item.mBaseInstanceDataOffset;
 				constants.mInstanceDataByteSize = sizeof(InstanceData);
 				constants.mMaterialIndex = item.mMaterialIndex;
+				constants.mInstanceOffset = 0;
 
 				uint64 cbOffset = 0;
 				SR_BufferResource* cb = aCmdList->GetBufferResource(cbOffset, SR_BufferBindFlag_ConstantBuffer, sizeof(constants), &constants, 1);

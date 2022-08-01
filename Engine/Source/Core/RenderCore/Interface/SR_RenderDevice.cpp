@@ -136,7 +136,8 @@ void SR_RenderDevice::Present()
 	{
 		if (fence)
 			fence->mCPUEvent.Wait();
-		
+
+		mTempResourceHeap->EndFrame();
 		std::string tag = SC_FormatStr("SR_RenderDevice::Present (frame: {})", gFrameCounter);
 		SC_PROFILER_EVENT_START(tag.c_str());
 		SR_SwapChain* sc = GetSwapChain();
@@ -158,7 +159,6 @@ void SR_RenderDevice::EndFrame()
 	{
 		{
 			SC_PROFILER_FUNCTION();
-			mTempResourceHeap->EndFrame();
 			locLastEndFrameIndex = gFrameCounter;
 			GarbageCollect();
 		}
@@ -313,7 +313,7 @@ SR_BufferResource* SR_RenderDevice::GetTempBufferResource(uint64& aOutOffset, SR
 	else if (aBufferType == SR_BufferBindFlag_Staging)
 	{
 		tempRingBuffers = &mTempRingBuffers[static_cast<uint32>(TempRingBufferType::Staging)];
-		size = SC_Align(aByteSize, 64);
+		size = SC_Align(aByteSize, 256);
 		bindFlags = SR_BufferBindFlag_Staging;
 		name = "Staging Ring Buffer";
 	}

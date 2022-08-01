@@ -420,7 +420,8 @@ bool SR_DirectXShaderCompiler::CompileFromString(const std::string& aShadercode,
 				static constexpr const char* gShaderDebugCacheFolder = "Cache/ShaderDebug";
 				SC_FilePath::CreateDirectory(gShaderDebugCacheFolder);
 
-				std::string path = SC_FormatStr("{}/{}.shaderpdb", gShaderDebugCacheFolder, cacheEntry.GetFileName());
+				std::string pdbName = SC_UTF16ToUTF8(outputName->GetStringPointer());
+				std::string path = SC_FormatStr("{}/{}", gShaderDebugCacheFolder, pdbName.c_str());
 				std::ofstream outStream(path, std::ios::binary);
 				if (outStream.is_open())
 					outStream.write((const char*)pdbData->GetBufferPointer(), pdbData->GetBufferSize());

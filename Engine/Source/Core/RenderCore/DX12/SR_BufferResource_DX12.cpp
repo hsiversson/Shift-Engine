@@ -83,7 +83,8 @@ bool SR_BufferResource_DX12::Init(const void* aInitialData)
 
 	if (!VerifyHRESULT(hr))
 	{
-		SC_ERROR("Could not create buffer with id: {} \n", mProperties.mDebugName);
+
+		SC_ERROR("Could not create buffer with id: {} \n", (mProperties.mDebugName) ? mProperties.mDebugName : "unnamed buffer");
 		return false;
 	}
 	mTrackedD3D12Resource = mD3D12Resource;

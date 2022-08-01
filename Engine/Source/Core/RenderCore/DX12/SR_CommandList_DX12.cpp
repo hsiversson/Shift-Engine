@@ -206,15 +206,9 @@ SC_Ref<SR_BufferResource> SR_CommandList_DX12::CreateAccelerationStructure(const
 			}
 		}
 
-		SR_BufferResourceProperties uploadBufferProps;
-		uploadBufferProps.mElementCount = instanceDatas.Count();
-		uploadBufferProps.mElementSize = instanceDatas.ElementStride();
-		uploadBufferProps.mIsUploadBuffer = true;
-		SC_Ref<SR_BufferResource> instanceDataBuffer = SR_RenderDevice::gInstance->CreateBufferResource(uploadBufferProps);
-		mTempResources.Add(instanceDataBuffer);
-		instanceDataBuffer->UpdateData(0, instanceDatas.GetBuffer(), instanceDatas.GetByteSize());
-
-		inputs.InstanceDescs = instanceDataBuffer->GetGPUAddressStart();
+		uint64 bufferOffset = 0;
+		SR_BufferResource* instanceDataBuffer = GetBufferResource(bufferOffset, SR_BufferBindFlag_Staging, instanceDatas.GetByteSize(), instanceDatas.GetBuffer(), 1);
+		inputs.InstanceDescs = instanceDataBuffer->GetGPUAddressStart() + bufferOffset;
 		inputs.NumDescs = instanceDatas.Count();
 	}
 	else
@@ -595,7 +589,7 @@ void SR_CommandList_DX12::UpdateBuffer(SR_BufferResource* aDstBuffer, uint32 aDs
 
 	// Create temp buffer for copying
 	uint64 bufOffset = 0;
-	SR_BufferResource* buf = SR_RenderDevice_DX12::gInstance->GetTempBufferResource(bufOffset, SR_BufferBindFlag_Staging, aSize, aData, 64);
+	SR_BufferResource* buf = SR_RenderDevice_DX12::gInstance->GetTempBufferResource(bufOffset, SR_BufferBindFlag_Staging, aSize, aData, 1);
 
 	CopyBuffer(aDstBuffer, aDstOffset, buf, bufOffset, aSize);
 }

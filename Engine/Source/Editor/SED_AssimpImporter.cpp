@@ -23,53 +23,78 @@ SED_AssimpMaterial::SED_AssimpMaterial(aiMaterial* aMaterial, const SC_FilePath&
 {
 	bool useAlphaTesting = false;
 
-	aiString path;
-	for (uint32 i = 0; i < AI_TEXTURE_TYPE_MAX; ++i)
-	{
-		aiTextureType texType = (aiTextureType)i;
-		aiReturn texFound = mImportedMaterial->GetTexture((aiTextureType)i, 0, &path);
-		if (texFound != AI_SUCCESS)
-			continue;
+	const uint32 validTextureTypes[] = {
+		//aiTextureType_BASE_COLOR,
+		aiTextureType_DIFFUSE,
+		aiTextureType_NORMALS,
+		//aiTextureType_NORMAL_CAMERA,
+		aiTextureType_DIFFUSE_ROUGHNESS,
+		aiTextureType_METALNESS,
+		aiTextureType_AMBIENT_OCCLUSION,
+		aiTextureType_SPECULAR,
+		aiTextureType_OPACITY,
+		aiTextureType_EMISSIVE,
+		//aiTextureType_EMISSION_COLOR,
+	};
 
+	aiString path;
+	for (uint32 i = 0; i < SC_ARRAY_SIZE(validTextureTypes); ++i)
+	{
+		const uint32 currentTextureType = validTextureTypes[i];
+		const aiTextureType texType = (aiTextureType)currentTextureType;
+
+		aiReturn texFound = mImportedMaterial->GetTexture(texType, 0, &path);
 		SC_FilePath texturePath(path.data);
 		SC_FilePath truePath(mSourceDir + "/" + texturePath);
-		if (SC_FilePath::Exists(truePath))
+
+		bool found = (texFound == AI_SUCCESS) && SC_FilePath::Exists(truePath);
+		if (found)
 		{
+			if (texType == aiTextureType_OPACITY)
+				useAlphaTesting = true;
+
 			mMaterialProperties.mTextures.Add(truePath);
 		}
 		else
 		{
 			switch (texType)
 			{
+			case aiTextureType_BASE_COLOR:
 			case aiTextureType_DIFFUSE:
-				mMaterialProperties.mTextures.Add(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Grey_1x1.dds");
-				break;
-			case aiTextureType_NORMALS:
-				mMaterialProperties.mTextures.Add(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Normal_1x1.dds");
-				break;
 			case aiTextureType_DIFFUSE_ROUGHNESS:
 				mMaterialProperties.mTextures.Add(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Grey_1x1.dds");
 				break;
+			case aiTextureType_NORMALS:
+			case aiTextureType_NORMAL_CAMERA:
+				mMaterialProperties.mTextures.Add(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Normal_1x1.dds");
+				break;
 			case aiTextureType_METALNESS:
+			{
+				mMaterialProperties.mTextures.Add(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Black_1x1.dds");
+				break;
+			}
+			case aiTextureType_EMISSIVE:
+			case aiTextureType_EMISSION_COLOR:
 				mMaterialProperties.mTextures.Add(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Black_1x1.dds");
 				break;
 			case aiTextureType_AMBIENT_OCCLUSION:
-				mMaterialProperties.mTextures.Add(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_White_1x1.dds");
-				break;
 			case aiTextureType_SPECULAR:
+			case aiTextureType_OPACITY:
 				mMaterialProperties.mTextures.Add(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_White_1x1.dds");
 				break;
 			}
 		}
-
-		if (texType == aiTextureType_OPACITY)
-			useAlphaTesting = true;
 	}
 
-	mMaterialProperties.mShaderProperties.mRasterizerProperties.mCullMode = SR_CullMode::Back;
+	int twoSided = 0;
+	mImportedMaterial->Get(AI_MATKEY_TWOSIDED, twoSided);
+
+
+	mMaterialProperties.mShaderProperties.mRasterizerProperties.mCullMode = (twoSided) ? SR_CullMode::None : SR_CullMode::Back;
+	//mMaterialProperties.mShaderProperties.mRasterizerProperties.mWireframe = true;
 	mMaterialProperties.mShaderProperties.mBlendStateProperties.mNumRenderTargets = 1;
 	mMaterialProperties.mShaderProperties.mRTVFormats.mNumColorFormats = 1;
-	mMaterialProperties.mShaderProperties.mRTVFormats.mColorFormats[0] = SR_Format::RGBA8_UNORM;
+	mMaterialProperties.mShaderProperties.mRTVFormats.mColorFormats[0] = SR_Format::RG11B10_FLOAT;
 	mMaterialProperties.mShaderProperties.mDepthStencilProperties.mWriteDepth = false;
 	mMaterialProperties.mShaderProperties.mDepthStencilProperties.mDepthComparisonFunc = SR_ComparisonFunc::Equal;
 
@@ -78,6 +103,9 @@ SED_AssimpMaterial::SED_AssimpMaterial(aiMaterial* aMaterial, const SC_FilePath&
 	args.mEntryPoint = "MainPS";
 	args.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/DefaultMeshShader.ssf";
 	args.mDefines.Add(SC_Pair<std::string, std::string>("PIXEL_SHADER", "1"));
+
+	args.mDefines.Add(SC_Pair<std::string, std::string>("USE_PACKED_NORMALMAP", "1"));
+
 	args.mType = SR_ShaderType::Pixel;
 	compiler.CompileFromFile(args, mMaterialProperties.mShaderProperties.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Pixel)]);
 
@@ -125,7 +153,7 @@ SC_Ref<SGfx_Material> SED_AssimpMaterial::GetMaterial() const
 	return SC_MakeRef<SGfx_Material>(mMaterialProperties);
 }
 
-SED_AssimpMesh::SED_AssimpMesh(aiMesh* aMesh, uint32 aMaterialIndex, const SC_FilePath& aSourceFile)
+SED_AssimpMesh::SED_AssimpMesh(aiMesh* aMesh, uint32 aMeshIndex, uint32 aMaterialIndex, const SC_FilePath& aSourceFile)
 	: mImportedMesh(aMesh)
 	, mMaterialIndex(aMaterialIndex)
 	, mSourceDir(aSourceFile.GetParentDirectory())
@@ -157,21 +185,22 @@ SED_AssimpMesh::SED_AssimpMesh(aiMesh* aMesh, uint32 aMaterialIndex, const SC_Fi
 	if (mImportedMesh->HasVertexColors(1))
 		vertexLayout.SetAttribute(SR_VertexAttribute::Color, SR_Format::RGBA32_FLOAT, 1);
 
-	if (mImportedMesh->HasBones())
-	{
-		for (uint32 boneIndex = 0; boneIndex < mImportedMesh->mNumBones; ++boneIndex)
-		{
-			SR_VertexAttribute boneAttribute = static_cast<SR_VertexAttribute>(static_cast<uint32>(SR_VertexAttribute::BoneId) + boneIndex);
-			SR_VertexAttribute boneWeightAttribute = static_cast<SR_VertexAttribute>(static_cast<uint32>(SR_VertexAttribute::BoneWeight) + boneIndex);
-			vertexLayout.SetAttribute(boneAttribute, SR_Format::R32_UINT, boneIndex);
-			vertexLayout.SetAttribute(boneWeightAttribute, SR_Format::R32_FLOAT, boneIndex);
-		}
-	}
+	//if (mImportedMesh->HasBones())
+	//{
+	//	for (uint32 boneIndex = 0; boneIndex < mImportedMesh->mNumBones; ++boneIndex)
+	//	{
+	//		SR_VertexAttribute boneAttribute = static_cast<SR_VertexAttribute>(static_cast<uint32>(SR_VertexAttribute::BoneId) + boneIndex);
+	//		SR_VertexAttribute boneWeightAttribute = static_cast<SR_VertexAttribute>(static_cast<uint32>(SR_VertexAttribute::BoneWeight) + boneIndex);
+	//		vertexLayout.SetAttribute(boneAttribute, SR_Format::R32_UINT, boneIndex);
+	//		vertexLayout.SetAttribute(boneWeightAttribute, SR_Format::R32_FLOAT, boneIndex);
+	//	}
+	//}
 
 	ExtractVertices(mMeshParams);
 	ExtractIndices(mMeshParams);
 	GenerateMeshlets(mMeshParams);
 	mMeshParams.mIsMeshletData = true;
+	mName = SC_FormatStr("{}_{}", mImportedMesh->mName.C_Str(), std::to_string(aMeshIndex).c_str());
 }
 
 void SED_AssimpMesh::ExtractVertices(SGfx_MeshCreateParams& aOutCreateParams) const
@@ -226,7 +255,7 @@ void SED_AssimpMesh::ExtractVertices(SGfx_MeshCreateParams& aOutCreateParams) co
 			}
 			else if (vAttribute.mAttributeId == SR_VertexAttribute::UV)
 			{
-				SC_Vector4 vUV;
+				SC_Vector2 vUV;
 				vUV.x = mImportedMesh->mTextureCoords[vAttribute.mAttributeIndex][i].x;
 				vUV.y = mImportedMesh->mTextureCoords[vAttribute.mAttributeIndex][i].y;
 				SC_Memcpy(&aOutCreateParams.mVertexData[currentDataArrayPos], &vUV, sizeof(SC_Vector2));
@@ -242,42 +271,44 @@ void SED_AssimpMesh::ExtractVertices(SGfx_MeshCreateParams& aOutCreateParams) co
 				SC_Memcpy(&aOutCreateParams.mVertexData[currentDataArrayPos], &vColor, sizeof(SC_Vector4));
 				currentDataArrayPos += sizeof(SC_Vector4);
 			}
-			else if (vAttribute.mAttributeId == SR_VertexAttribute::BoneId)
-			{
-			}
-			else if (vAttribute.mAttributeId == SR_VertexAttribute::BoneWeight)
-			{
-			}
+			//else if (vAttribute.mAttributeId == SR_VertexAttribute::BoneId)
+			//{
+			//}
+			//else if (vAttribute.mAttributeId == SR_VertexAttribute::BoneWeight)
+			//{
+			//}
 		}
 	}
 }
 
 void SED_AssimpMesh::ExtractIndices(SGfx_MeshCreateParams& aOutCreateParams) const
 {
-	const uint32 numIndices = mImportedMesh->mNumFaces * 3;
-	const bool use16BitIndices = (numIndices < SC_UINT16_MAX);
+	static constexpr uint32 gMaxNumFaceIndices = 3; // For triangle
+
+	const uint32 numIndices = mImportedMesh->mNumFaces * gMaxNumFaceIndices;
+	const bool use16BitIndices = numIndices < SC_UINT16_MAX;
 	aOutCreateParams.mIndexStride = (use16BitIndices) ? sizeof(uint16) : sizeof(uint32);
 	aOutCreateParams.mIndexData.Respace(numIndices * aOutCreateParams.mIndexStride);
+
+	const uint32 faceStride = aOutCreateParams.mIndexStride * gMaxNumFaceIndices;
 
 	uint32 currentDataArrayPos = 0;
 	for (uint32 faceIdx = 0; faceIdx < mImportedMesh->mNumFaces; ++faceIdx)
 	{
 		const aiFace& face = mImportedMesh->mFaces[faceIdx];
-		assert(face.mNumIndices == 3 && "Mesh isn't triangulated.");
+		assert(face.mNumIndices == gMaxNumFaceIndices && "Mesh isn't triangulated.");
 
-		for (uint32 i = 0; i < 3; ++i)
+		if (use16BitIndices)
 		{
-			if (use16BitIndices)
-			{
-				uint16* index = reinterpret_cast<uint16*>(&aOutCreateParams.mIndexData[currentDataArrayPos]);
-				*index = static_cast<uint16>(face.mIndices[i]);
-			}
-			else
-			{
-				uint32* index = reinterpret_cast<uint32*>(&aOutCreateParams.mIndexData[currentDataArrayPos]);
-				*index = static_cast<uint32>(face.mIndices[i]);
-			}
-			currentDataArrayPos += aOutCreateParams.mIndexStride;
+			uint16 indices[gMaxNumFaceIndices] = { (uint16)face.mIndices[0], (uint16)face.mIndices[1], (uint16)face.mIndices[2] };
+			SC_Memcpy(&aOutCreateParams.mIndexData[currentDataArrayPos], &indices, faceStride);
+			currentDataArrayPos += faceStride;
+		}
+		else
+		{
+			uint32 indices[gMaxNumFaceIndices] = { (uint32)face.mIndices[0], (uint32)face.mIndices[1], (uint32)face.mIndices[2] };
+			SC_Memcpy(&aOutCreateParams.mIndexData[currentDataArrayPos], &indices, faceStride);
+			currentDataArrayPos += faceStride;
 		}
 	}
 }
@@ -327,8 +358,7 @@ bool SED_AssimpMesh::SaveToDisk(const SC_FilePath& aFileDirectory) const
 
 	SC_FilePath path(aFileDirectory);
 	path += std::string("/");
-	path += std::string(mImportedMesh->mName.C_Str());
-	path.RemoveExtension();
+	path += mName;
 	path += std::string(".smf");
 
 	SC_FilePath fullPath(gameDirPath + path);
@@ -377,7 +407,10 @@ bool SED_AssimpScene::Init(const SC_FilePath& aSourceFile)
 
 	mMeshes.Respace(mImportedScene->mNumMeshes);
 	for (uint32 meshIdx = 0; meshIdx < mImportedScene->mNumMeshes; ++meshIdx)
-		mMeshes[meshIdx] = SC_Move(SED_AssimpMesh(mImportedScene->mMeshes[meshIdx], mImportedScene->mMeshes[meshIdx]->mMaterialIndex, mSourceFile));
+	{
+		aiMesh* importedMesh = mImportedScene->mMeshes[meshIdx];
+		mMeshes[meshIdx] = SC_Move(SED_AssimpMesh(importedMesh, meshIdx, importedMesh->mMaterialIndex, mSourceFile));
+	}
 
 	return true;
 }
@@ -392,6 +425,47 @@ uint32 SED_AssimpScene::GetNumMaterials() const
 	return mMaterials.Count();
 }
 
+static void VisitNode(aiNode* aNode, SGF_Level& aOutLevel, const aiMatrix4x4& aParentTransform, const SC_Array<SED_AssimpMesh>& aMeshes, const SC_Array<SED_AssimpMaterial>& aMaterials)
+{
+	aiMatrix4x4 nodeWorldTransform = aParentTransform * aNode->mTransformation;
+	if (aNode->mNumMeshes > 0)
+	{
+		aiVector3D aiPosition;
+		aiVector3D aiRotation;
+		aiVector3D aiScale;
+		nodeWorldTransform.Decompose(aiScale, aiRotation, aiPosition);
+
+		SC_Vector position = SC_Vector(aiPosition.x, aiPosition.y, aiPosition.z);
+		SC_Vector scale = SC_Vector(aiScale.x, aiScale.y, aiScale.z);
+		SC_Quaternion rotation = SC_Quaternion::FromEulerAngles(SC_Vector(aiRotation.x, aiRotation.y, aiRotation.z), false);
+
+		const std::string nodeName = aNode->mName.C_Str();
+		for (uint32 i = 0; i < aNode->mNumMeshes; ++i)
+		{
+			const SED_AssimpMesh& importedMesh = aMeshes[aNode->mMeshes[i]];
+			const SED_AssimpMaterial& importedMaterial = aMaterials[importedMesh.GetMaterialIndex()];
+
+			SGF_EntityManager* entityManager = aOutLevel.GetWorld()->GetEntityManager();
+			SGF_Entity entity = entityManager->CreateEntity();
+			entity.AddComponent<SGF_EntityIdComponent>();
+			entity.AddComponent<SGF_EntityNameComponent>()->mName = nodeName;
+
+			SGF_TransformComponent* transform = entity.AddComponent<SGF_TransformComponent>();
+			transform->mPosition = position;
+			transform->mRotation = rotation;
+			transform->mScale = scale;
+
+			SGF_StaticMeshComponent* meshComponent = entity.AddComponent<SGF_StaticMeshComponent>();
+			meshComponent->SetMesh(SGfx_MeshInstance::Create(importedMesh.GetMesh()));
+			meshComponent->SetMaterial(SGfx_MaterialInstance::Create(importedMaterial.GetMaterial()));
+
+			aOutLevel.AddEntity(entity);
+		}
+	}
+	for (uint32 i = 0; i < aNode->mNumChildren; ++i)
+		VisitNode(aNode->mChildren[i], aOutLevel, nodeWorldTransform, aMeshes, aMaterials);
+}
+
 bool SED_AssimpScene::ConvertToLevelAndSave(SGF_Level& aOutLevel)
 {
 	if (!mImportedScene || !mImportedScene->mRootNode)
@@ -401,46 +475,8 @@ bool SED_AssimpScene::ConvertToLevelAndSave(SGF_Level& aOutLevel)
 	for (const SED_AssimpMesh& mesh : mMeshes)
 		mesh.SaveToDisk(saveDir);
 
-	VisitNode(mImportedScene->mRootNode, aOutLevel);
+	VisitNode(mImportedScene->mRootNode, aOutLevel, mImportedScene->mRootNode->mTransformation, mMeshes, mMaterials);
 	return true;
-}
-
-void SED_AssimpScene::VisitNode(aiNode* aNode, SGF_Level& aOutLevel)
-{
-	aiVector3D aiPosition;
-	aiVector3D aiRotation;
-	aiVector3D aiScale;
-	aNode->mTransformation.Decompose(aiScale, aiRotation, aiPosition);
-
-	SC_Vector position = SC_Vector(aiPosition.x, aiPosition.y, aiPosition.z);
-	SC_Vector scale = SC_Vector(aiScale.x, aiScale.y, aiScale.z);
-	SC_Quaternion rotation = SC_Quaternion::FromEulerAngles(SC_Vector(aiRotation.x, aiRotation.y, aiRotation.z), false);
-
-	for (uint32 i = 0; i < aNode->mNumMeshes; ++i)
-	{
-		uint32 meshIdx = aNode->mMeshes[i];
-		SED_AssimpMesh& importedMesh = mMeshes[meshIdx];
-		std::string nodeName = aNode->mName.C_Str();
-
-		SGF_EntityManager* entityManager = aOutLevel.GetWorld()->GetEntityManager();
-		SGF_Entity entity = entityManager->CreateEntity();
-		entity.AddComponent<SGF_EntityIdComponent>();
-		entity.AddComponent<SGF_EntityNameComponent>()->mName = nodeName;
-
-		SGF_TransformComponent* transform = entity.AddComponent<SGF_TransformComponent>();
-		transform->mPosition = position;
-		transform->mRotation = rotation;
-		transform->mScale = scale;
-
-		SGF_StaticMeshComponent* meshComponent = entity.AddComponent<SGF_StaticMeshComponent>();
-		meshComponent->SetMesh(SGfx_MeshInstance::Create(importedMesh.GetMesh()));
-		meshComponent->SetMaterial(SGfx_MaterialInstance::Create(mMaterials[importedMesh.GetMaterialIndex()].GetMaterial()));
-
-		aOutLevel.AddEntity(entity);
-	}
-
-	for (uint32 i = 0; i < aNode->mNumChildren; ++i)
-		VisitNode(aNode->mChildren[i], aOutLevel);
 }
 
 SED_AssimpImporter::SED_AssimpImporter()
@@ -457,7 +493,7 @@ bool SED_AssimpImporter::ImportScene(const SC_FilePath& aFilePath, SED_AssimpSce
 {
 	mImporter->SetPropertyFloat(AI_CONFIG_GLOBAL_SCALE_FACTOR_KEY, aImportScale);
 
-	uint32 flags = aiProcessPreset_TargetRealtime_Quality | aiProcess_ConvertToLeftHanded | aiProcess_TransformUVCoords | aiProcess_GlobalScale | aiProcess_CalcTangentSpace;
+	uint32 flags = aiProcess_GlobalScale | aiProcessPreset_TargetRealtime_MaxQuality | aiProcess_ConvertToLeftHanded;
 	const aiScene* importedScene = mImporter->ReadFile(aFilePath.GetAbsolutePath(), flags);
 
 	if (!importedScene)

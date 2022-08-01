@@ -9,6 +9,7 @@ struct SGfx_MaterialProperties
 	SC_Array<SC_FilePath> mTextures;
 
 	float mAlphaRef;
+	bool mTwoSided;
 	bool mUseAlphaTesting;
 	bool mOutputVelocity;
 };
@@ -64,11 +65,24 @@ enum class SGfx_MaterialBlendMode
 enum class SGfx_MaterialShaderType
 {
 	Default,
+	DefaultMeshlet,
 	Depth,
+	DepthMeshlet,
 	ShadowDepth,
+	ShadowDepthMeshlet,
 
 	COUNT
 };
+
+inline bool SGfx_IsMeshletMaterialShaderType(const SGfx_MaterialShaderType& aType)
+{
+	if (aType == SGfx_MaterialShaderType::DefaultMeshlet ||
+		aType == SGfx_MaterialShaderType::DepthMeshlet ||
+		aType == SGfx_MaterialShaderType::ShadowDepthMeshlet)
+		return true;
+
+	return false;
+}
 
 template<class T>
 struct SGfx_MaterialParameter
@@ -153,6 +167,8 @@ private:
 
 	bool mEnableGeometricSpecularAA;
 	bool mEnableTangentSpaceNormals;
+
+	SC_Mutex testmutex;
 };
 
 

@@ -437,9 +437,19 @@ void SGfx_SceneGraph::CullMeshes(SGfx_View* aView)
 
 			renderQueueItem.mSortDistance = distanceToCamera;
 
-			SR_ShaderState* depthShader = mesh->GetMaterialInstance()->GetMaterialTemplate()->GetShaderState(meshTemplate->GetVertexLayout(), (depthOnly) ? SGfx_MaterialShaderType::ShadowDepth : SGfx_MaterialShaderType::Depth);
-			SR_ShaderState* defaultShader = (depthOnly) ? depthShader : mesh->GetMaterialInstance()->GetMaterialTemplate()->GetShaderState(meshTemplate->GetVertexLayout(), SGfx_MaterialShaderType::Default);
-			if (!depthShader || !defaultShader)
+			SGfx_MaterialShaderType depthType = SGfx_MaterialShaderType::Depth;
+			SGfx_MaterialShaderType shadowDepthType = SGfx_MaterialShaderType::ShadowDepth;
+			SGfx_MaterialShaderType colorType = SGfx_MaterialShaderType::Default;
+			if (meshTemplate->IsUsingMeshlets())
+			{
+				depthType = SGfx_MaterialShaderType::DepthMeshlet;
+				shadowDepthType = SGfx_MaterialShaderType::ShadowDepthMeshlet;
+				colorType = SGfx_MaterialShaderType::DefaultMeshlet;
+			}
+
+			SR_ShaderState* depthShader = mesh->GetMaterialInstance()->GetMaterialTemplate()->GetShaderState(meshTemplate->GetVertexLayout(), (depthOnly) ? shadowDepthType : depthType);
+			SR_ShaderState* colorShader = (depthOnly) ? depthShader : mesh->GetMaterialInstance()->GetMaterialTemplate()->GetShaderState(meshTemplate->GetVertexLayout(), colorType);
+			if (!depthShader || !colorShader)
 				continue;
 
 			renderQueueItem.mShader = depthShader;
@@ -452,7 +462,7 @@ void SGfx_SceneGraph::CullMeshes(SGfx_View* aView)
 
 			if (!depthOnly)
 			{
-				renderQueueItem.mShader = defaultShader;
+				renderQueueItem.mShader = colorShader;
 				prepareData.mOpaqueQueue.AddItem(renderQueueItem);
 			}
 		}

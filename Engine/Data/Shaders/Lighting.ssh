@@ -10,5 +10,5 @@ float3 CalculateLighting(in MaterialData aMaterialData, in const float3 aWorldPo
     // Apply AmbientOcclusion
     // Apply Reflections
 
-    return (directLighting + indirectLighting);
+    return (directLighting + indirectLighting) + aMaterialData.mEmissive;
 }

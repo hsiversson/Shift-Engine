@@ -38,6 +38,8 @@ float3 GetMatrixXAxis(float3x3 aMat)   { return aMat._m00_m10_m20; }
 float3 GetMatrixYAxis(float3x3 aMat)   { return aMat._m01_m11_m21; }
 float3 GetMatrixZAxis(float3x3 aMat)   { return aMat._m02_m12_m22; }
 
+bool IsNaN(float aX) { return (asuint(aX) & 0x7fffffff) > 0x7f800000;}
+
 bool IsSaturated(float  a) { return a == saturate(a); }
 bool IsSaturated(float2 a) { return IsSaturated(a.x) && IsSaturated(a.y); }
 bool IsSaturated(float3 a) { return IsSaturated(a.x) && IsSaturated(a.y) && IsSaturated(a.z); }

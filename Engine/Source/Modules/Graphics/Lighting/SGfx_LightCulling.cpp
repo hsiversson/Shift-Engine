@@ -50,21 +50,25 @@ void SGfx_LightCulling::Prepare(SGfx_ViewData& aPrepareData)
 	mConstants.mNumTiles = SC_Vector2(resolution + gTileSize - 1) / (float)gTileSize;
     mConstants.mTotalNumLights = aPrepareData.mVisibleLights.Count();
 
+	bool numVisibleLightsChanged = mShaderData.Count() < mConstants.mTotalNumLights;
     if (mConstants.mTotalNumLights > 0)
     {
-		SC_Array<SGfx_Light::LocalLightShaderData> gpuData;
-		gpuData.Reserve(mConstants.mTotalNumLights);
+		mShaderData.Reserve(mConstants.mTotalNumLights);
 
 		for (const SGfx_LightRenderData& lightData : aPrepareData.mVisibleLights)
-			gpuData.Add(lightData.mGPUData);
+			mShaderData.Add(lightData.mGPUData);
 
         SR_BufferResourceProperties lightBufferResourceProps;
         lightBufferResourceProps.mBindFlags = SR_BufferBindFlag_Buffer;
         lightBufferResourceProps.mWritable = false;
-        lightBufferResourceProps.mElementSize = gpuData.ElementStride();
-        lightBufferResourceProps.mElementCount = gpuData.Count();
+        lightBufferResourceProps.mElementSize = mShaderData.ElementStride();
+        lightBufferResourceProps.mElementCount = mShaderData.Count();
 		lightBufferResourceProps.mDebugName = "LightBuffer";
-        SC_Ref<SR_BufferResource> lightBufferResource = SR_RenderDevice::gInstance->CreateBufferResource(lightBufferResourceProps, gpuData.GetBuffer());
+
+		if (numVisibleLightsChanged)
+			mLightBufferResource = SR_RenderDevice::gInstance->CreateBufferResource(lightBufferResourceProps, mShaderData.GetBuffer());
+		else
+			mLightBufferResource->UpdateData(0, mShaderData.GetBuffer(), mShaderData.GetByteSize());
 
 		if (mLightBuffer)
 			mDelayedDeleteResources.Add(mLightBuffer);
@@ -74,7 +78,7 @@ void SGfx_LightCulling::Prepare(SGfx_ViewData& aPrepareData)
         lightBufferProps.mElementCount = lightBufferResourceProps.mElementCount;
         lightBufferProps.mType = SR_BufferType::Structured;
         lightBufferProps.mWritable = false;
-        mLightBuffer = SR_RenderDevice::gInstance->CreateBuffer(lightBufferProps, lightBufferResource);
+        mLightBuffer = SR_RenderDevice::gInstance->CreateBuffer(lightBufferProps, mLightBufferResource);
 
 	    mConstants.mLightBufferDescriptorIndex = mLightBuffer->GetDescriptorHeapIndex();
     }

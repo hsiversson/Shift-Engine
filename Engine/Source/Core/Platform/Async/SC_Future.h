@@ -17,13 +17,13 @@ public:
     bool IsReady() const 
     { 
 		if (!mFuture.valid())
-			return true;
+			return false;
         return mFuture.wait_for(std::chrono::microseconds(0)) == std::future_status::ready; 
     }
     bool Wait( uint32 aMilliseconds = 0 ) const
     {
         if (!mFuture.valid())
-            return true;
+            return false;
 
         if (aMilliseconds)
         {

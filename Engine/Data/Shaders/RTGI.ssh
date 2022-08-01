@@ -57,7 +57,7 @@ float3 TraceGI(in const MaterialData aMaterialData, in const float3 aWorldPositi
             float3x3 transform33 = (float3x3)instanceData.mTransform;
             float3 transformedNormal = normalize(mul(transform33, normal));
 
-            MaterialData materialData = BuildMaterialData((float4)0, float4(0.5f, 0.5f, 0.5f, 1.0f), transformedNormal, float4(0.5f, 0.0f, 1.0f, 1.0f));
+            MaterialData materialData = BuildMaterialData((float4)0, float4(0.5f, 0.5f, 0.5f, 1.0f), transformedNormal, float4(0.5f, 0.0f, 1.0f, 1.0f), (float3)0.0f);
             float3 hitPos = rayQuery.WorldRayOrigin() + rayQuery.CommittedRayT() * rayQuery.WorldRayDirection();
 
             irradiance += 0.0f;//CalculateDirectLighting(materialData, hitPos, -ray.Direction, 0.0f) * 2;

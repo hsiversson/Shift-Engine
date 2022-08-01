@@ -11,27 +11,26 @@ SR_TempResourceHeap::~SR_TempResourceHeap()
 }
 
 template<class T>
-inline void EndFrameQueueAndList(SC_Array<T>& aList, SC_Queue<SC_Pair<uint32, SC_Array<T>>>& aQueue, uint32 aFrame)
+inline void EndFrameQueueAndList(SC_Array<T>& aList, SC_Queue<SC_Pair<SR_Fence, SC_Array<T>>>& aQueue, SR_Fence aFence)
 {
 	while (!aQueue.empty())
 	{
-		const SC_Pair<uint32, SC_Array<T>>& list = aQueue.front();
-		const uint32 frameIndexToDelete = list.mFirst;
-		if (frameIndexToDelete > SC_Time::gFrameCounter)
+		const SC_Pair<SR_Fence, SC_Array<T>>& list = aQueue.front();
+		const SR_Fence fence = list.mFirst;
+		if (fence.IsPending())
 			break;
 
 		aQueue.pop();
 	}
 
-	aQueue.push(SC_Pair(aFrame, aList));
+	aQueue.push(SC_Pair(aFence, aList));
 	aList.RemoveAll();
 }
 
 void SR_TempResourceHeap::EndFrame()
 {
-	uint32 deletionFrame = SC_Time::gFrameCounter + 10;
-	EndFrameQueueAndList(mTextureKeepAliveList, mTempTextureRemovalQueue, deletionFrame);
-	EndFrameQueueAndList(mBufferKeepAliveList, mTempBufferRemovalQueue, deletionFrame);
+	SR_Fence deletionFence = SR_RenderDevice::gInstance->GetQueueManager()->InsertFence(SR_CommandListType::Graphics);
+	EndFrameQueueAndList(mTextureKeepAliveList, mTempTextureRemovalQueue, deletionFence);
 	EndFrameInternal();
 }
 
@@ -42,11 +41,9 @@ SR_TempTexture SR_TempResourceHeap::GetTexture(const SR_TextureResourcePropertie
 	return tempTex;
 }
 
-SR_TempBuffer SR_TempResourceHeap::GetBuffer(const SR_BufferResourceProperties& aBufferProperties, bool aIsWritable)
+SR_TempBuffer SR_TempResourceHeap::GetBuffer(const SR_BufferResourceProperties& /*aBufferProperties*/, bool /*aIsWritable*/)
 {
-	SR_TempBuffer tempBuf = GetBufferInternal(aBufferProperties, aIsWritable);
-	mBufferKeepAliveList.Add(tempBuf);
-	return tempBuf;
+	return SR_TempBuffer();
 }
 
 void SR_TempResourceHeap::EndFrameInternal()

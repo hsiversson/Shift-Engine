@@ -1,6 +1,7 @@
 #pragma once
 #include "SR_Texture.h"
 #include "SR_RenderTarget.h"
+#include "SR_Fence.h"
 
 struct SR_TempTexture
 {
@@ -36,8 +37,6 @@ protected:
 	virtual SR_TempBuffer GetBufferInternal(const SR_BufferResourceProperties& aBufferProperties, bool aIsWritable = false) = 0;
 
 	SC_Array<SR_TempTexture> mTextureKeepAliveList;
-	SC_Array<SR_TempBuffer> mBufferKeepAliveList;
-	SC_Queue<SC_Pair<uint32, SC_Array<SR_TempTexture>>> mTempTextureRemovalQueue;
-	SC_Queue<SC_Pair<uint32, SC_Array<SR_TempBuffer>>> mTempBufferRemovalQueue;
+	SC_Queue<SC_Pair<SR_Fence, SC_Array<SR_TempTexture>>> mTempTextureRemovalQueue;
 };
 

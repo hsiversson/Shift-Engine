@@ -95,6 +95,8 @@ void SGfx_MaterialGPUDataBuffer::UpdateBuffer()
 	if (!mIsDirty)
 		return;
 
+	SC_MutexLock lock(mMutex);
+
 	SC_PROFILER_FUNCTION();
 	mBufferResource->UpdateData(0, mMaterialGPUDatas.GetBuffer(), mMaterialGPUDatas.GetByteSize());
 

@@ -154,6 +154,15 @@ void MainMS(in uint groupId : SV_GroupID, in uint groupThreadId : SV_GroupThread
 #endif // MESH_SHADER
 
 #ifdef PIXEL_SHADER
+
+#ifdef USE_PACKED_NORMALMAP
+float3 UnpackNormal(in float2 aPackedNormal)
+{
+    float z = sqrt(1.0f -saturate(Pow2(aPackedNormal.x) + Pow2(aPackedNormal.y)));
+    return float3(aPackedNormal.x, aPackedNormal.y, z);
+}
+#endif
+
 float4 MainPS(in PixelShaderInput aInput) : SV_TARGET0
 {
 #if !DEBUG_DRAW_MESHLETS
@@ -161,9 +170,13 @@ float4 MainPS(in PixelShaderInput aInput) : SV_TARGET0
 
     SR_MaterialInfo materialInfo = SR_GetMaterialInfo(aInput.mMaterialIndex);
     Texture2D<float4> baseColorMap = GetTexture2D<float4>(materialInfo.mTextureIndices[0]);
-    Texture2D<float3> normalMap = GetTexture2D<float3>(materialInfo.mTextureIndices[2]);
-    Texture2D<float> roughnessMap = GetTexture2D<float>(materialInfo.mTextureIndices[3]);
-    Texture2D<float> metallicMap = GetTexture2D<float>(materialInfo.mTextureIndices[1]);
+    Texture2D<float3> normalMap = GetTexture2D<float3>(materialInfo.mTextureIndices[1]);
+    Texture2D<float> roughnessMap = GetTexture2D<float>(materialInfo.mTextureIndices[2]);
+    Texture2D<float> metallicMap = GetTexture2D<float>(materialInfo.mTextureIndices[3]);
+    //Texture2D<float> aoMap = GetTexture2D<float>(materialInfo.mTextureIndices[4]);
+    Texture2D<float> specularMap = GetTexture2D<float>(materialInfo.mTextureIndices[5]);
+    //Texture2D<float> opacityMap = GetTexture2D<float>(materialInfo.mTextureIndices[6]);
+    Texture2D<float3> emissiveMap = GetTexture2D<float3>(materialInfo.mTextureIndices[7]);
 
     //Texture2D<float> aoTex = GetTexture2D<float>(aInput.maoIndex);
 
@@ -173,9 +186,16 @@ float4 MainPS(in PixelShaderInput aInput) : SV_TARGET0
     //float metallicSample = 1.0f;
     
     float4 baseColorSample = baseColorMap.Sample(gAnisotropicWrap, aInput.mUV);
+    
+#ifdef USE_PACKED_NORMALMAP
+    float3 normalSample = normalize(UnpackNormal(normalMap.Sample(gAnisotropicWrap, aInput.mUV).rg) * 2.0f - 1.0f); // Remap to -1 -> 1 range (NormalMaps are stored in 0 -> 1 range)
+#else
     float3 normalSample = normalize(normalMap.Sample(gAnisotropicWrap, aInput.mUV).rgb * 2.0f - 1.0f); // Remap to -1 -> 1 range (NormalMaps are stored in 0 -> 1 range)
+#endif
     float roughnessSample = roughnessMap.Sample(gAnisotropicWrap, aInput.mUV).r;
     float metallicSample = metallicMap.Sample(gAnisotropicWrap, aInput.mUV).r;
+    float specularSample = specularMap.Sample(gAnisotropicWrap, aInput.mUV).r;
+    float3 emissiveSample = emissiveMap.Sample(gAnisotropicWrap, aInput.mUV).rgb;
     //float aoSample = aoTex.SampleLevel(gBilinearClamp, aInput.mClipPosition.xy * gSceneConstants.mViewConstants.mRenderTargetSizeAndInvSize.zw, 0);
 
     float3x3 tangentToWorld = float3x3(
@@ -185,7 +205,7 @@ float4 MainPS(in PixelShaderInput aInput) : SV_TARGET0
         );
     float3 normal = mul(tangentToWorld, normalSample);
 
-    MaterialData materialData = BuildMaterialData(aInput.mClipPosition, float4(baseColorSample.rgb, 1.0f), normal, float4(roughnessSample, metallicSample, 1.0f, 1.0f));
+    MaterialData materialData = BuildMaterialData(aInput.mClipPosition, float4(baseColorSample.rgb, 1.0f), normal, float4(roughnessSample, metallicSample, 1.0f, specularSample), emissiveSample * 100.f);
     float3 color = CalculateLighting(materialData, aInput.mWorldPosition, viewDirection, aInput.mViewPosition.z);
 
     return float4(color, 1.0f);

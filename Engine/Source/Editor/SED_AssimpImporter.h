@@ -7,9 +7,11 @@ struct aiScene;
 struct aiMaterial;
 struct aiMesh;
 struct aiNode;
+
 class SGF_Level;
 class SGfx_Material;
 class SGfx_Mesh;
+
 
 class SED_AssimpMaterial
 {
@@ -43,7 +45,7 @@ public:
 	const SC_FilePath& GetSavePath() const;
 
 private:
-	SED_AssimpMesh(aiMesh* aMesh, uint32 aMaterialIndex, const SC_FilePath& aSourceFile);
+	SED_AssimpMesh(aiMesh* aMesh, uint32 aMeshIndex, uint32 aMaterialIndex, const SC_FilePath& aSourceFile);
 
 	void ExtractVertices(SGfx_MeshCreateParams& aOutCreateParams) const;
 	void ExtractIndices(SGfx_MeshCreateParams& aOutCreateParams) const;
@@ -53,6 +55,7 @@ private:
 	aiMesh* mImportedMesh;
 	uint32 mMaterialIndex;
 	SC_FilePath mSourceDir;
+	std::string mName;
 };
 
 class SED_AssimpScene
@@ -70,8 +73,6 @@ public:
 	bool ConvertToLevelAndSave(SGF_Level& aOutLevel);
 
 private:
-	void VisitNode(aiNode* aNode, SGF_Level& aOutLevel);
-
 	SC_Array<SED_AssimpMaterial> mMaterials;
 	SC_Array<SED_AssimpMesh> mMeshes;
 
