@@ -32,7 +32,7 @@ void SR_ResourceDelayDestructor::Run()
 	while (!mQueue.IsEmpty())
 	{
 		PendingDestruct& pending = mQueue.Peek();
-		if (pending.mDestructionFrame == SR_RenderDevice::gLatestFinishedFrame)
+		if (pending.mDestructionFrame <= SR_RenderDevice::gLatestFinishedFrame)
 		{
 			delete pending.mResource;
 			mQueue.Remove();
