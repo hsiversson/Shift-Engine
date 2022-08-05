@@ -135,7 +135,14 @@ void SED_Camera::UpdateArcBall()
 
 void SED_Camera::UpdatePlaneMove()
 {
+	ImGuiIO& io = ImGui::GetIO();
+	SC_Vector2 deltaScale = SC_Vector2(1.0f) / mParentViewport->GetViewportSize();
+	SC_Vector2 mouseMoveDelta = SC_Vector2(io.MouseDelta) * deltaScale * 8.0f;
 
+	if (mouseMoveDelta.x != 0.0f)
+		mTargetPosition += GetRight() * mouseMoveDelta.x;
+	if (mouseMoveDelta.y != 0.0f)
+		mTargetPosition += GetUp() * (-mouseMoveDelta.y);
 }
 
 void SED_Camera::UpdateFreeLook()
