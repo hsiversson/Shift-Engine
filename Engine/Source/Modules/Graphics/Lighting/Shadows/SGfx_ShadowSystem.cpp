@@ -2,7 +2,7 @@
 #include "Graphics/View/SGfx_Camera.h"
 #include "Graphics/View/SGfx_View.h"
 #include "Graphics/Renderer/SGfx_DrawInfo.h"
-#include "Graphics/Renderer/SGfx_DebugRenderer.h"
+#include "Graphics/Renderer/SGfx_PrimitiveRenderer.h"
 
 SGfx_CascadedShadowMap::SGfx_CascadedShadowMap()
 #if IS_DEBUG_BUILD

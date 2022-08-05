@@ -2,7 +2,7 @@
 #include "Platform/Async/SC_Event.h"
 #include "RenderCore/Interface/SR_Fence.h"
 
-struct SR_TaskEvent
+struct SR_TaskEvent : public SC_ReferenceCounted
 {
 	void Reset()
 	{

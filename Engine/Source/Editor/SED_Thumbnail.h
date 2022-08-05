@@ -1,7 +1,7 @@
 #pragma once
 #include "SED_Asset.h"
-
-class SR_Texture;
+#include "EngineTypes/Functional/SC_Ref.h"
+#include "RenderCore/Interface/SR_Texture.h"
 
 class SED_Thumbnail
 {

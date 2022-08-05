@@ -53,7 +53,7 @@ bool SR_Buffer_DX12::InitAsSRV()
 
 		srvDesc.Format = DXGI_FORMAT_R32_TYPELESS;
 		srvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_RAW;
-		srvDesc.Buffer.FirstElement = mProperties.mFirstElement / 4;
+		srvDesc.Buffer.FirstElement = mResource ? (mProperties.mOffset) / 4 : 0;
 		srvDesc.Buffer.NumElements = mProperties.mElementCount / 4;
 
 		resource = mDX12Resource->GetD3D12Resource();
@@ -66,16 +66,21 @@ bool SR_Buffer_DX12::InitAsSRV()
 	}
 	else
 	{
+		uint32 elementStride = 0;
 		if (mProperties.mType == SR_BufferType::Structured)
 		{
 			srvDesc.Format = DXGI_FORMAT_UNKNOWN;
 			srvDesc.Buffer.StructureByteStride = bufferResourceProperties.mElementSize;
+			elementStride = bufferResourceProperties.mElementSize;
 		}
 		else
+		{
 			srvDesc.Format = SR_D3D12ConvertFormat(mProperties.mFormat);
+			elementStride = SR_GetFormatBitsPerPixel(mProperties.mFormat) / 8;
+		}
 
 		srvDesc.Buffer.NumElements = mProperties.mElementCount;
-		srvDesc.Buffer.FirstElement = mProperties.mFirstElement;
+		srvDesc.Buffer.FirstElement = mProperties.mOffset / elementStride;
 
 		resource = mDX12Resource->GetD3D12Resource();
 	}
@@ -99,21 +104,26 @@ bool SR_Buffer_DX12::InitAsUAV()
 
 		uavDesc.Format = DXGI_FORMAT_R32_TYPELESS;
 		uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
-		uavDesc.Buffer.FirstElement = mProperties.mFirstElement / 4;
+		uavDesc.Buffer.FirstElement = mProperties.mOffset / 4;
 		uavDesc.Buffer.NumElements = mProperties.mElementCount / 4;
 	}
 	else
 	{
+		uint32 elementStride = 0;
 		if (mProperties.mType == SR_BufferType::Structured)
 		{
 			uavDesc.Format = DXGI_FORMAT_UNKNOWN;
 			uavDesc.Buffer.StructureByteStride = bufferResourceProperties.mElementSize;
+			elementStride = bufferResourceProperties.mElementSize;
 		}
 		else
+		{
 			uavDesc.Format = SR_D3D12ConvertFormat(mProperties.mFormat);
+			elementStride = SR_GetFormatBitsPerPixel(mProperties.mFormat) / 8;
+		}
 
 		uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
-		uavDesc.Buffer.FirstElement = mProperties.mFirstElement;
+		uavDesc.Buffer.FirstElement = mProperties.mOffset / elementStride;
 		uavDesc.Buffer.NumElements = mProperties.mElementCount;
 	}
 

@@ -12,17 +12,18 @@ enum class SR_BufferType
 
 struct SR_BufferProperties
 {
-	SR_BufferProperties() : mFirstElement(0), mElementCount(0), mFormat(SR_Format::UNKNOWN), mType(SR_BufferType::Default), mWritable(false) {}
+	SR_BufferProperties() : mFirstElement(0), mElementCount(0), mOffset(0), mFormat(SR_Format::UNKNOWN), mType(SR_BufferType::Default), mWritable(false) {}
 
 	uint32 mFirstElement;
 	uint32 mElementCount;
+	uint32 mOffset;
 
 	SR_Format mFormat;
 	SR_BufferType mType;
 	bool mWritable;
 };
 
-class SR_Buffer
+class SR_Buffer : public SR_Resource
 {
 public:
 	SR_Buffer(const SR_BufferProperties& aProperties, const SC_Ref<SR_BufferResource>& aResource);

@@ -17,9 +17,6 @@ public:
 	bool Init(const SR_PixelData* aInitialData, uint32 aDataCount);
 
 	D3D12_TEXTURE_COPY_LOCATION GetCopyLocation(uint32 aSubresourceIndex) const;
-	ID3D12Resource* GetD3D12Resource() const;
-private:
-	ID3D12Resource* mD3D12Resource;
 };
 
 void SR_MemcpyPixelData(void* aDest, const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& aDstFootprint, const SR_PixelData& aData, const SR_Format& aFormat);

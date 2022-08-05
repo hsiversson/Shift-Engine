@@ -28,7 +28,6 @@ bool SGfx_LightCulling::Init()
 
 void SGfx_LightCulling::Prepare(SGfx_ViewData& aPrepareData)
 {
-	aPrepareData.mPrepareCullLightsEvent.Wait();
 
 	SC_PROFILER_FUNCTION();
 	mDelayedDeleteResources.RemoveAll();
@@ -46,13 +45,37 @@ void SGfx_LightCulling::Prepare(SGfx_ViewData& aPrepareData)
 
 	}
 
+	SC_Vector2u numTiles = SC_Vector2(resolution + gTileSize - 1) / (float)gTileSize;
+	bool numTilesChanged = (numTiles.x != mConstants.mNumTiles.x) && (numTiles.y != mConstants.mNumTiles.y);
 
-	mConstants.mNumTiles = SC_Vector2(resolution + gTileSize - 1) / (float)gTileSize;
+	if (numTilesChanged)
+	{
+		mConstants.mNumTiles = numTiles;
+
+		SR_BufferResourceProperties tileGridResourceProps;
+		tileGridResourceProps.mBindFlags = SR_BufferBindFlag_Buffer;
+		tileGridResourceProps.mWritable = true;
+		tileGridResourceProps.mElementSize = sizeof(uint32) * (gNumLightsPerTile + 1); // +1 is for num active lights count
+		tileGridResourceProps.mElementCount = mConstants.mNumTiles.x * mConstants.mNumTiles.y;
+		tileGridResourceProps.mDebugName = "TileGrid";
+		SC_Ref<SR_BufferResource> tileGridResource = SR_RenderDevice::gInstance->CreateBufferResource(tileGridResourceProps);
+
+		SR_BufferProperties tileGridProps;
+		tileGridProps.mFirstElement = 0;
+		tileGridProps.mElementCount = tileGridResourceProps.mElementCount;
+		tileGridProps.mType = SR_BufferType::Structured;
+		tileGridProps.mWritable = false;
+		mTileGridBuffer = SR_RenderDevice::gInstance->CreateBuffer(tileGridProps, tileGridResource);
+		tileGridProps.mWritable = true;
+		mTileGridBufferRW = SR_RenderDevice::gInstance->CreateBuffer(tileGridProps, tileGridResource);
+
+		mConstants.mTileGridDescriptorIndex = mTileGridBuffer->GetDescriptorHeapIndex();
+	}
+
     mConstants.mTotalNumLights = aPrepareData.mVisibleLights.Count();
-
-	bool numVisibleLightsChanged = mShaderData.Count() < mConstants.mTotalNumLights;
     if (mConstants.mTotalNumLights > 0)
     {
+		mShaderData.RemoveAll();
 		mShaderData.Reserve(mConstants.mTotalNumLights);
 
 		for (const SGfx_LightRenderData& lightData : aPrepareData.mVisibleLights)
@@ -64,17 +87,9 @@ void SGfx_LightCulling::Prepare(SGfx_ViewData& aPrepareData)
         lightBufferResourceProps.mElementSize = mShaderData.ElementStride();
         lightBufferResourceProps.mElementCount = mShaderData.Count();
 		lightBufferResourceProps.mDebugName = "LightBuffer";
-
-		if (numVisibleLightsChanged)
-			mLightBufferResource = SR_RenderDevice::gInstance->CreateBufferResource(lightBufferResourceProps, mShaderData.GetBuffer());
-		else
-			mLightBufferResource->UpdateData(0, mShaderData.GetBuffer(), mShaderData.GetByteSize());
-
-		if (mLightBuffer)
-			mDelayedDeleteResources.Add(mLightBuffer);
+		mLightBufferResource = SR_RenderDevice::gInstance->CreateBufferResource(lightBufferResourceProps, mShaderData.GetBuffer());
 
         SR_BufferProperties lightBufferProps;
-        lightBufferProps.mFirstElement = 0;
         lightBufferProps.mElementCount = lightBufferResourceProps.mElementCount;
         lightBufferProps.mType = SR_BufferType::Structured;
         lightBufferProps.mWritable = false;
@@ -83,27 +98,6 @@ void SGfx_LightCulling::Prepare(SGfx_ViewData& aPrepareData)
 	    mConstants.mLightBufferDescriptorIndex = mLightBuffer->GetDescriptorHeapIndex();
     }
 
-	SR_BufferResourceProperties tileGridResourceProps;
-	tileGridResourceProps.mBindFlags = SR_BufferBindFlag_Buffer;
-	tileGridResourceProps.mWritable = true;
-	tileGridResourceProps.mElementSize = sizeof(uint32) * (gNumLightsPerTile + 1); // +1 is for num active lights count
-	tileGridResourceProps.mElementCount = mConstants.mNumTiles.x * mConstants.mNumTiles.y;
-	tileGridResourceProps.mDebugName = "TileGrid";
-	SC_Ref<SR_BufferResource> tileGridResource = SR_RenderDevice::gInstance->CreateBufferResource(tileGridResourceProps);
-
-	if (mTileGridBuffer)
-		mDelayedDeleteResources.Add(mTileGridBuffer);
-
-	SR_BufferProperties tileGridProps;
-	tileGridProps.mFirstElement = 0;
-	tileGridProps.mElementCount = tileGridResourceProps.mElementCount;
-	tileGridProps.mType = SR_BufferType::Structured;
-	tileGridProps.mWritable = false;
-	mTileGridBuffer = SR_RenderDevice::gInstance->CreateBuffer(tileGridProps, tileGridResource);
-	tileGridProps.mWritable = true;
-	mTileGridBufferRW = SR_RenderDevice::gInstance->CreateBuffer(tileGridProps, tileGridResource);
-
-	mConstants.mTileGridDescriptorIndex = mTileGridBuffer->GetDescriptorHeapIndex();
 	aPrepareData.mSceneConstants.mLightCullingConstants = mConstants;
 }
 

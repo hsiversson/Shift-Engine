@@ -4,7 +4,7 @@
 #include "RenderCore/Interface/SR_RaytracingStructs.h"
 
 class SGfx_InstanceData;
-class SGfx_MeshInstance
+class SGfx_MeshInstance : public SC_ReferenceCounted
 {
 public:
 	static SC_Ref<SGfx_MeshInstance> Create(const SGfx_MeshCreateParams& aCreateParams);

@@ -1,8 +1,9 @@
 #pragma once
 #include "Platform/Types/SC_TypeDefines.h"
 #include "RenderCore/Defines/SR_RenderEnums.h"
+#include "RenderCore/Resources/SR_Resource.h"
 
-class SR_FenceResource
+class SR_FenceResource : public SR_Resource
 {
 public:
 	SR_FenceResource() {}

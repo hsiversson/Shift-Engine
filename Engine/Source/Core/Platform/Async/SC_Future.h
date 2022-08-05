@@ -2,7 +2,7 @@
 #include <future>
 
 template<class T>
-class SC_Future
+class SC_Future : public SC_ReferenceCounted
 {
 public:
     SC_Future() {}
@@ -42,7 +42,7 @@ private:
 };
 
 template<class T>
-class SC_Promise
+class SC_Promise : public SC_ReferenceCounted
 {
 public:
 	SC_Promise() {}

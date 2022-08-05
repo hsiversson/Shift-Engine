@@ -17,6 +17,7 @@ target_link_libraries(ExampleGame
                         GameFramework	
                         Graphics
                         Application
+                        Scripting
                         RenderCore
                         Common
                         InputOutput

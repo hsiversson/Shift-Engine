@@ -1,5 +1,5 @@
 #include "SR_CommandQueueManager.h"
-
+#if 0
 thread_local SR_CommandListType SR_CommandQueueManager::gCurrentTaskType = SR_CommandListType::Unknown;
 thread_local SC_Ref<SR_CommandList> SR_CommandQueueManager::gCurrentCommandList = nullptr;
 
@@ -237,11 +237,16 @@ SR_Fence SR_CommandQueueManager::CommandQueueThread::InsertFence()
 	CommandQueueWork work;
 	work.mFence = mCommandQueue->GetNextFence();
 	work.mType = CommandQueueWork::Type::SignalFence;
-
-	SC_MutexLock lock(mWorkQueueMutex);
-	mWorkQueue.push(work);
-	mHasWorkEvent.Signal();
-
+	if (SC_Thread::gCurrentThread == this)
+	{
+		mCommandQueue->SignalFence(work.mFence);
+	}
+	else
+	{
+		SC_MutexLock lock(mWorkQueueMutex);
+		mWorkQueue.push(work);
+		mHasWorkEvent.Signal();
+	}
 	return work.mFence;
 }
 
@@ -464,3 +469,4 @@ void SR_CommandQueueManager::CommandSubmissionThread::SubmitCommandLists(SC_Arra
 		aEventsToSignal.RemoveAll();
 	}
 }
+#endif

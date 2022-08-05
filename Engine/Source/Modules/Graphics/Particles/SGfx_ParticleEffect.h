@@ -17,7 +17,7 @@ class SGfx_ParticleBehaviour
 
 };
 
-class SGfx_ParticleEffect
+class SGfx_ParticleEffect : public SC_ReferenceCounted
 {
 public:
 

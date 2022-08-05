@@ -8,7 +8,7 @@ struct SR_DepthStencilProperties : public SR_TextureRange
 	SR_Format mFormat;
 };
 
-class SR_DepthStencil
+class SR_DepthStencil : public SR_Resource
 {
 public:
 	virtual ~SR_DepthStencil();

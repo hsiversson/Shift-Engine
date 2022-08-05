@@ -20,6 +20,7 @@ public:
 
 	T& Add();
 	T& Add(const T& aItem);
+	void Add(const SC_Array<T>& aItems);
 
 	T& Peek() const;
 	T& operator[](uint32 aIndex);
@@ -178,6 +179,14 @@ inline T& SC_RingArray<T>::Add(const T& aItem)
 
 	mCurrentItemCount++;
 	return *(mInternalItemBuffer + write);
+}
+
+template<class T>
+inline void SC_RingArray<T>::Add(const SC_Array<T>& aItems)
+{
+	Reserve(aItems.Count());
+	for (const T& item : aItems)
+		Add(item);
 }
 
 template<class T>

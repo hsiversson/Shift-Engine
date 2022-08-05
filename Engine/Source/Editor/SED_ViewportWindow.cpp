@@ -94,8 +94,8 @@ SED_ViewportWindow::SED_ViewportWindow(SGfx_World* aGfxWorld, const char* aId)
 	mView->SetMainView(true);
 
 	mEditorCamera.SetPerspectiveProjection({ 1920.f, 1080.f }, 0.01f, 10000.f, 90.0f);
-	mEditorCamera.SetPosition({ -10.0f, 2.0f, 0.0f });
-	mEditorCamera.LookAt({ 0.f, 1.f, 0.f });
+	mEditorCamera.SetPosition({ -8.0f, 6.0f, 0.0f });
+	mEditorCamera.LookAt({ 0.f, 5.f, 0.f });
 	mActiveCamera = &mEditorCamera;
 }
 
@@ -183,7 +183,7 @@ void SED_ViewportWindow::OnDraw()
 	mToolbar.OnDraw();
 	mIsFocused = IsFocused();
 
-	const SGfx_ViewConstants constants = GetCamera().GetViewConstants();
+	const SGfx_ViewConstants constants = GetCamera().GetViewConstants(); 
 	const SC_Vector4 viewportBounds = GetViewportBounds();
 	mGizmo.SetViewportPositionAndSize(SC_Vector4(viewportBounds.x, viewportBounds.y, viewportBounds.z - viewportBounds.x, viewportBounds.w - viewportBounds.y));
 	mGizmo.SetViewAndProjection(constants.mWorldToCamera, constants.mCameraToClip);

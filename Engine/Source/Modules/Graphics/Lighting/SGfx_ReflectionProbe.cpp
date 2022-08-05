@@ -110,7 +110,7 @@ void SGfx_ReflectionProbe::RenderFace(SR_CommandList* aCmdList, uint32 aFaceInde
 	std::string eventTag = std::string("Face") + std::to_string(aFaceIndex);
 	aCmdList->BeginEvent(eventTag.c_str());
 
-	SC_Array<SC_Pair<uint32, SR_Resource*>> barriers;
+	SC_Array<SC_Pair<uint32, SR_TrackedResource*>> barriers;
 	barriers.Add(SC_Pair(SR_ResourceState_RenderTarget, mProbeRTs[aFaceIndex]->GetResource()));
 	barriers.Add(SC_Pair(SR_ResourceState_DepthWrite, mDepthStencil->GetResource()));
 	aCmdList->TransitionBarrier(barriers);

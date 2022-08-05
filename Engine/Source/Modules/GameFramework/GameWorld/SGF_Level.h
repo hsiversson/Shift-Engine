@@ -3,7 +3,7 @@
 
 class SGF_World;
 
-class SGF_Level
+class SGF_Level : public SC_ReferenceCounted
 {
 	friend class SED_WorldHierarchyWindow;
 public:

@@ -2,6 +2,7 @@
 #include "SR_RenderStates.h"
 #include "SR_VertexLayout.h"
 #include "RenderCore/ShaderCompiler/SR_ShaderCompileStructs.h"
+#include "RenderCore/Resources/SR_Resource.h"
 
 class SR_RootSignature;
 
@@ -37,7 +38,7 @@ struct SR_ShaderStateProperties
 
 };
 
-class SR_ShaderState
+class SR_ShaderState : public SR_Resource
 {
 public:
 	virtual ~SR_ShaderState();

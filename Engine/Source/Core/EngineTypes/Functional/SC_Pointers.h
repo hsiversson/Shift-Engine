@@ -9,8 +9,7 @@
 template<class T, class... Args>
 inline SC_Ref<T> SC_MakeRef(Args&&... _Args)
 {
-	std::shared_ptr<T> shared = std::make_shared<T>(std::forward<Args>(_Args)...);
-	return SC_Ref<T>(shared);
+	return new T(std::forward<Args>(_Args)...);
 }
 
 template<class T>

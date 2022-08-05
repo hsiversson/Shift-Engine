@@ -69,12 +69,12 @@ public:
 	void SetBlendFactor(const SC_Vector4& aBlendFactor) override;
 
 	// Barriers
-	void TransitionBarrier(const SC_Array<SC_Pair<uint32, SR_Resource*>>& aTransitions) override;
-	void UnorderedAccessBarrier(SR_Resource* aResource) override;
+	void TransitionBarrier(const SC_Array<SC_Pair<uint32, SR_TrackedResource*>>& aTransitions) override;
+	void UnorderedAccessBarrier(SR_TrackedResource* aResource) override;
 	void AliasBarrier();
 
 	// Copy
-	void CopyResource(SR_Resource* aDstResource, SR_Resource* aSrcResource) override;
+	void CopyResource(SR_TrackedResource* aDstResource, SR_TrackedResource* aSrcResource) override;
 	void CopyBuffer(SR_BufferResource* aDstBuffer, uint64 aDstOffset, SR_BufferResource* aSrcBuffer, uint64 aSrcOffset, uint32 aSize) override;
 	void CopyTexture(SR_TextureResource* aDstTexture, SR_TextureResource* aSrcResource) override;
 

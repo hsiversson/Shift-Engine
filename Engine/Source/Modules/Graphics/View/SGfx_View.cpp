@@ -109,13 +109,13 @@ void SGfx_ViewDataBufferer::StartRender()
 
     uint32 renderIndexCounter = mPendingRenderIndexCounter;
 
-	mStartRenderEvent = SR_RenderDevice::gInstance->GetQueueManager()->SubmitLightTask([this, renderIndexCounter]() {
+	mStartRenderEvent = SR_RenderDevice::gInstance->PostGraphicsTask([this, renderIndexCounter]() {
 		SC_PROFILER_FUNCTION();
         SC_MutexLock lock(mRenderMutex);
         mRenderIndexCounter = renderIndexCounter;
         mRenderIndex = renderIndexCounter % mNumBuffers;
         mIsRendering = true;
-    }, SR_CommandListType::Graphics);
+    });
 }
 
 void SGfx_ViewDataBufferer::EndRender()
@@ -127,12 +127,12 @@ void SGfx_ViewDataBufferer::EndRender()
 	SC_PROFILER_FUNCTION();
     WaitForEndRenderEvent();
 
-	mEndRenderEvent = SR_RenderDevice::gInstance->GetQueueManager()->SubmitLightTask([this]() {
+	mEndRenderEvent = SR_RenderDevice::gInstance->PostGraphicsTask([this]() {
 		SC_PROFILER_FUNCTION();
         SC_ASSERT(mIsRendering);
 		mIsRendering = false;
         mFramesInFlightSemaphore.Release();
-		}, SR_CommandListType::Graphics);
+		});
 
     mIsRenderingMainThread = false;
 }
@@ -183,8 +183,8 @@ void SGfx_ViewDataBufferer::WaitForStartRenderEvent()
 {
     if (mStartRenderEvent)
     {
-        if (!mStartRenderEvent->IsSignalled())
-            mStartRenderEvent->Wait();
+        if (!mStartRenderEvent->mCPUEvent.IsSignalled())
+            mStartRenderEvent->mCPUEvent.Wait();
 
         mStartRenderEvent.Reset();
     }
@@ -194,8 +194,8 @@ void SGfx_ViewDataBufferer::WaitForEndRenderEvent()
 {
 	if (mEndRenderEvent)
 	{
-		if (!mEndRenderEvent->IsSignalled())
-            mEndRenderEvent->Wait();
+		if (!mEndRenderEvent->mCPUEvent.IsSignalled())
+            mEndRenderEvent->mCPUEvent.Wait();
 
         mEndRenderEvent.Reset();
 	}

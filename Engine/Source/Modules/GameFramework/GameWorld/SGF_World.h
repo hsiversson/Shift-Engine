@@ -13,7 +13,7 @@ class SGfx_World;
 class SGF_EntityManager;
 class SGF_GameSystemManager;
 class SGF_RenderSystem;
-class SGF_World
+class SGF_World : public SC_ReferenceCounted
 {
 	friend class SED_WorldHierarchyWindow;
 public:

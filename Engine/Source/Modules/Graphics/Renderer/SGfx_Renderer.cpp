@@ -10,7 +10,7 @@
 #include "Graphics/Misc/SGfx_DefaultTextures.h"
 #include "Graphics/PostEffects/SGfx_PostEffects.h"
 #include "SGfx_DrawInfo.h"
-#include "SGfx_DebugRenderer.h"
+#include "SGfx_PrimitiveRenderer.h"
 
 SC_CVAR(bool, gEnableTemporalAA, "Renderer.TAA.Enable", true);
 
@@ -125,7 +125,7 @@ bool SGfx_Renderer::Init(SGfx_Environment* aEnvironment)
 	if (!mPostEffects->Init())
 		return false;
 
-	mDebugRenderer = SC_MakeUnique<SGfx_DebugRenderer>();
+	mDebugRenderer = SC_MakeUnique<SGfx_PrimitiveRenderer>();
 	if (!mDebugRenderer->Init())
 		return false;
 
@@ -145,22 +145,22 @@ void SGfx_Renderer::RenderView(SGfx_View* aView)
 	//UpdateViewSettings();
 
 #if SR_ENABLE_RAYTRACING
-	SubmitGraphicsTask(std::bind(&SGfx_Renderer::ComputeRaytracingScene, this, SC_Placeholder::Arg1), prepareData.mBuildRaytracingSceneEvent, aView); // needs to be posted before PreRenderUpdates to make sure RaytracingScene descriptor is ready
+	prepareData.mBuildRaytracingSceneEvent = SubmitGraphicsTask(std::bind(&SGfx_Renderer::ComputeRaytracingScene, this, SC_Placeholder::Arg1), aView); // needs to be posted before PreRenderUpdates to make sure RaytracingScene descriptor is ready
 #endif
 
-	SubmitGraphicsTask(std::bind(&SGfx_Renderer::PreRenderUpdates, this, SC_Placeholder::Arg1), prepareData.mPreRenderUpdatesEvent, aView);
+	prepareData.mPreRenderUpdatesEvent = SubmitGraphicsTask(std::bind(&SGfx_Renderer::PreRenderUpdates, this, SC_Placeholder::Arg1), aView);
 
-	SubmitGraphicsTask(std::bind(&SGfx_Renderer::RenderPrePass, this, SC_Placeholder::Arg1), prepareData.mPrePassEvent, aView);
+	prepareData.mPrePassEvent = SubmitGraphicsTask(std::bind(&SGfx_Renderer::RenderPrePass, this, SC_Placeholder::Arg1), aView);
 
-	SubmitGraphicsTask(std::bind(&SGfx_Renderer::ComputeLightCulling, this, SC_Placeholder::Arg1), prepareData.mLightCullingEvent, aView);
+	//prepareData.mLightCullingEvent = SubmitGraphicsTask(std::bind(&SGfx_Renderer::ComputeLightCulling, this, SC_Placeholder::Arg1), aView);
 
 	//SubmitComputeTask(std::bind(&SGfx_Renderer::ComputeAmbientOcclusion, this), prepareData.mAmbientOcclusionEvent);
 
 	//SubmitGraphicsTask(std::bind(&SGfx_Renderer::RenderShadows, this), prepareData.mShadowsEvent);
 
-	SubmitGraphicsTask(std::bind(&SGfx_Renderer::RenderOpaque, this, SC_Placeholder::Arg1), prepareData.mRenderOpaqueEvent, aView);
-	SubmitGraphicsTask(std::bind(&SGfx_Renderer::RenderDebugObjects, this, SC_Placeholder::Arg1), prepareData.mRenderDebugObjectsEvent, aView);
-	SubmitGraphicsTask(std::bind(&SGfx_Renderer::ComputePostEffects, this, SC_Placeholder::Arg1), prepareData.mPostEffectsEvent, aView);
+	prepareData.mRenderOpaqueEvent = SubmitGraphicsTask(std::bind(&SGfx_Renderer::RenderOpaque, this, SC_Placeholder::Arg1), aView);
+	prepareData.mRenderDebugObjectsEvent = SubmitGraphicsTask(std::bind(&SGfx_Renderer::RenderDebugObjects, this, SC_Placeholder::Arg1), aView);
+	prepareData.mPostEffectsEvent = SubmitGraphicsTask(std::bind(&SGfx_Renderer::ComputePostEffects, this, SC_Placeholder::Arg1), aView);
 
 	//for (SC_Event* taskEvent : mSubmittedTaskEvents)
 	//	taskEvent->Wait();
@@ -253,46 +253,28 @@ void SGfx_Renderer::OnChanged(const SC_FilePath& aPath, const ChangeReason& /*aR
 
 }
 
-void SGfx_Renderer::SubmitGraphicsTask(SGfx_ViewTaskFunctionSignature aTask, SR_TaskEvent* aEvent, SGfx_View* aView)
+SC_Ref<SR_TaskEvent> SGfx_Renderer::SubmitGraphicsTask(SGfx_ViewTaskFunctionSignature aTask, SGfx_View* aView)
 {
-	SR_CommandQueueManager* renderTaskManager = SR_RenderDevice::gInstance->GetQueueManager(); 
-
-	renderTaskManager->SubmitTask([aTask, aView]() { aTask(aView); }, SR_CommandListType::Graphics, aEvent);
-	mSubmittedTaskEvents.Add(&aEvent->mCPUEvent);
-	mLatestTaskEvent = &aEvent->mCPUEvent;
+	SC_Ref<SR_TaskEvent> taskEvent = SR_RenderDevice::gInstance->PostGraphicsTask([aTask, aView]() { aTask(aView); });
+	mSubmittedTaskEvents.Add(&taskEvent->mCPUEvent);
+	mLatestTaskEvent = &taskEvent->mCPUEvent;
+	return taskEvent;
 }
 
-void SGfx_Renderer::SubmitGraphicsTask(SGfx_ViewTaskFunctionSignature aTask, const SC_UniquePtr<SR_TaskEvent>& aEvent, SGfx_View* aView)
+SC_Ref<SR_TaskEvent> SGfx_Renderer::SubmitComputeTask(SGfx_ViewTaskFunctionSignature aTask, SGfx_View* aView)
 {
-	SubmitGraphicsTask(aTask, aEvent.get(), aView);
+	SC_Ref<SR_TaskEvent> taskEvent = SR_RenderDevice::gInstance->PostComputeTask([aTask, aView]() { aTask(aView); });
+	mSubmittedTaskEvents.Add(&taskEvent->mCPUEvent);
+	mLatestTaskEvent = &taskEvent->mCPUEvent;
+	return taskEvent;
 }
 
-void SGfx_Renderer::SubmitComputeTask(SGfx_ViewTaskFunctionSignature aTask, SR_TaskEvent* aEvent, SGfx_View* aView)
+SC_Ref<SR_TaskEvent> SGfx_Renderer::SubmitCopyTask(SGfx_ViewTaskFunctionSignature aTask, SGfx_View* aView)
 {
-	SR_CommandQueueManager* renderTaskManager = SR_RenderDevice::gInstance->GetQueueManager();
-
-	const SR_CommandListType type = (SR_RenderDevice::gInstance->GetSupportCaps().mEnableAsyncCompute) ? SR_CommandListType::Compute : SR_CommandListType::Graphics;
-	renderTaskManager->SubmitTask([aTask, aView]() { aTask(aView); }, type, aEvent);
-	mSubmittedTaskEvents.Add(&aEvent->mCPUEvent);
-	mLatestTaskEvent = &aEvent->mCPUEvent;
-}
-
-void SGfx_Renderer::SubmitComputeTask(SGfx_ViewTaskFunctionSignature aTask, const SC_UniquePtr<SR_TaskEvent>& aEvent, SGfx_View* aView)
-{
-	SubmitComputeTask(aTask, aEvent.get(), aView);
-}
-
-void SGfx_Renderer::SubmitCopyTask(SGfx_ViewTaskFunctionSignature aTask, SR_TaskEvent* aEvent, SGfx_View* aView)
-{
-	SR_CommandQueueManager* renderTaskManager = SR_RenderDevice::gInstance->GetQueueManager();
-	renderTaskManager->SubmitTask([aTask, aView]() { aTask(aView); }, SR_CommandListType::Copy, aEvent);
-	mSubmittedTaskEvents.Add(&aEvent->mCPUEvent);
-	mLatestTaskEvent = &aEvent->mCPUEvent;
-}
-
-void SGfx_Renderer::SubmitCopyTask(SGfx_ViewTaskFunctionSignature aTask, const SC_UniquePtr<SR_TaskEvent>& aEvent, SGfx_View* aView)
-{
-	SubmitCopyTask(aTask, aEvent.get(), aView);
+	SC_Ref<SR_TaskEvent> taskEvent = SR_RenderDevice::gInstance->PostCopyTask([aTask, aView]() { aTask(aView); });
+	mSubmittedTaskEvents.Add(&taskEvent->mCPUEvent);
+	mLatestTaskEvent = &taskEvent->mCPUEvent;
+	return taskEvent;
 }
 
 void SGfx_Renderer::PreRenderUpdates(SGfx_View* aView)
@@ -300,6 +282,7 @@ void SGfx_Renderer::PreRenderUpdates(SGfx_View* aView)
 	SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
 	SGfx_ViewData& renderData = aView->GetMutableRenderData();
 	aView->WaitForPrepareTask(renderData.mPrepareCullMeshesEvent);
+	aView->WaitForPrepareTask(renderData.mPrepareCullLightsEvent);
 #if SR_ENABLE_RAYTRACING
 	cmdList->WaitFor(renderData.mBuildRaytracingSceneEvent);
 #endif
@@ -307,7 +290,7 @@ void SGfx_Renderer::PreRenderUpdates(SGfx_View* aView)
 	SC_PROFILER_FUNCTION();
 	SR_Buffer* instanceDataBuffer = renderData.mInstanceData->GetBuffer();
 
-	//SC_Thread::Sleep(10);
+	//mLightCulling->Prepare(renderData);
 
 	SGfx_MaterialGPUDataBuffer::Get().UpdateBuffer();
 	renderData.mSceneConstants.mMaterialInfoBufferIndex = SGfx_MaterialGPUDataBuffer::Get().GetBufferDescriptorIndex();
@@ -316,7 +299,6 @@ void SGfx_Renderer::PreRenderUpdates(SGfx_View* aView)
 
 	cmdList->SetRootConstantBuffer(mViewConstantsBuffer, 1);
 	mEnvironment->ComputeSkyAtmosphereLUTs(cmdList);
-
 }
 
 #if SR_ENABLE_RAYTRACING
@@ -357,7 +339,7 @@ void SGfx_Renderer::RenderPrePass(SGfx_View* aView)
 
 	SC_PROFILER_FUNCTION();
 	cmdList->BeginEvent("Render PrePass");
-	SC_Array<SC_Pair<uint32, SR_Resource*>> transitions;
+	SC_Array<SC_Pair<uint32, SR_TrackedResource*>> transitions;
 	transitions.Add(SC_Pair(SR_ResourceState_DepthWrite, mDepthStencil->GetResource()));
 	transitions.Add(SC_Pair(SR_ResourceState_RenderTarget, mMotionVectors.mResource));
 	cmdList->TransitionBarrier(transitions);
@@ -397,7 +379,6 @@ void SGfx_Renderer::ComputeLightCulling(SGfx_View* aView)
 	SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
 	const SGfx_ViewData& renderData = aView->GetRenderData();
 
-	aView->WaitForPrepareTask(renderData.mPrepareLightCullingEvent);
 	cmdList->WaitFor(renderData.mPrePassEvent);
 
 	SC_PROFILER_FUNCTION();
@@ -432,12 +413,13 @@ void SGfx_Renderer::RenderOpaque(SGfx_View* aView)
 	const SGfx_ViewData& renderData = aView->GetRenderData();
 
 	cmdList->WaitFor(renderData.mPrePassEvent);
+	cmdList->WaitFor(renderData.mLightCullingEvent);
 	//cmdList->WaitFor(renderData.mAmbientOcclusionEvent);
 
 	SC_PROFILER_FUNCTION();
 	cmdList->BeginEvent("Render Opaque");
 
-	SC_Array<SC_Pair<uint32, SR_Resource*>> barriers;
+	SC_Array<SC_Pair<uint32, SR_TrackedResource*>> barriers;
 	barriers.Add(SC_Pair(SR_ResourceState_RenderTarget, mSceneColor.mResource));
 	cmdList->TransitionBarrier(barriers);
 	cmdList->ClearRenderTarget(mSceneColor.mRenderTarget, SC_Vector4(0.f, 0.f, 0.f, 0.f));
@@ -540,7 +522,7 @@ void SGfx_Renderer::ComputePostEffects(SGfx_View* aView)
 		cmdList->SetRootConstantBuffer(mPostEffectCBuffers[1], 0);
 		cmdList->Dispatch(mTAAResolveShader, SC_IntVector(screenRect.mRight, screenRect.mBottom, 1));
 
-		SC_Array<SC_Pair<uint32, SR_Resource*>> barriers;
+		SC_Array<SC_Pair<uint32, SR_TrackedResource*>> barriers;
 		barriers.Add(SC_Pair(SR_ResourceState_CopySrc, mSceneColor2.mResource));
 		barriers.Add(SC_Pair(SR_ResourceState_CopyDst, mHistoryBuffer.mResource));
 		cmdList->TransitionBarrier(barriers);

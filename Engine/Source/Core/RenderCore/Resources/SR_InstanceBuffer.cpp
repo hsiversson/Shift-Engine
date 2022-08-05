@@ -3,6 +3,7 @@
 SR_InstanceBuffer::SR_InstanceBuffer()
 	: mCurrentAddress(0)
 	, mOffsetStride(0)
+	, mMappedDataPtr(nullptr)
 	, mIsActive(false)
 {
 

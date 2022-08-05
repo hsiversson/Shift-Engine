@@ -192,7 +192,7 @@ bool SED_Editor::Render()
 
 	//mMaterialEditor->OnRender();
 	ImGui::End();
-	mImGui.Render(SR_RenderDevice::gInstance->GetSwapChain()->GetRenderTarget());
+	mImGui.Render(nullptr);
 
 	return true;
 }

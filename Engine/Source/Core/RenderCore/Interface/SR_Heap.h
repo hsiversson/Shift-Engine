@@ -32,7 +32,7 @@ struct SR_HeapProperties
 	bool mDebugPrint;
 };
 
-class SR_Heap
+class SR_Heap : public SR_Resource
 {
 public:
 	SR_Heap(const SR_HeapProperties& aProperties);

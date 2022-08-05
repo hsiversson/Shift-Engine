@@ -16,9 +16,7 @@ void SR_TextureResource::UpdatePixels(const SR_PixelData* aData, uint32 aDataCou
 		cmdList->UpdateTexture(this, aData, aDataCount, true);
 	};
 
-	SC_Ref<SR_TaskEvent> taskEvent = SC_MakeRef<SR_TaskEvent>();
-	SR_RenderDevice::gInstance->GetQueueManager()->SubmitTask(UploadData, SR_CommandListType::Graphics, taskEvent);
-
+	SC_Ref<SR_TaskEvent> taskEvent = SR_RenderDevice::gInstance->PostCopyTask(UploadData);
 	taskEvent->mCPUEvent.Wait();
 	taskEvent->mFence.Wait();
 }

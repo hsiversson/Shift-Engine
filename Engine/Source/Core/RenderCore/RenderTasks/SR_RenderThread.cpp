@@ -1,81 +1,96 @@
 #include "SR_RenderThread.h"
 
-#if 0
-SR_RenderThread* SR_RenderThread::gInstance = nullptr;
+thread_local SR_CommandListType SR_RenderThread::gCurrentContextType = SR_CommandListType::Unknown;
+thread_local SC_Ref<SR_CommandList> SR_RenderThread::gCurrentCommandList = nullptr;
 
-SR_RenderThread::SR_RenderThread()
-	: mCurrentFrameIndex(0)
+SR_RenderThread::SR_RenderThread(const SR_CommandListType& aContextType)
+	: mContextType(aContextType)
 {
-	SC_ASSERT(gInstance == nullptr, "Only one RenderThread may exist.");
-	gInstance = this;
-
-	SetName("Render Thread");
+	switch (aContextType)
+	{
+	case SR_CommandListType::Graphics:
+		SetName("Graphics Thread");
+		break;
+	case SR_CommandListType::Compute:
+		SetName("Compute Thread");
+		break;
+	case SR_CommandListType::Copy:
+		SetName("Copy Thread");
+		break;
+	default:
+		SetName("Unknown Queue Thread");
+		break;
+	}
 	Start();
 }
 
 SR_RenderThread::~SR_RenderThread()
 {
 	Stop(true);
-	gInstance = nullptr;
 }
 
-void SR_RenderThread::PostTask(std::function<void()> aTask)
+SC_Ref<SR_TaskEvent> SR_RenderThread::PostTask(SR_RenderTaskSignature aTask)
 {
-	SC_MutexLock lock(mTaskQueueMutex);
-	mTaskQueue.push(aTask);
-	mHasWorkEvent.Signal();
-}
+	SC_Ref<SR_TaskEvent> taskEvent = SC_MakeRef<SR_TaskEvent>();
 
-uint64 SR_RenderThread::GetCurrentFrameIndex() const
-{
-	return mCurrentFrameIndex;
-}
-
-void SR_RenderThread::Synchronize()
-{
-	// Insert waitable and wait for it.
-	SC_ASSERT(!gIsRenderThread, "RenderThread should never sync with itself.");
-	if (!gIsRenderThread)
+	auto taskFn = [this, aTask]()
 	{
-		mEndOfFrameEvent.Wait();
-		mEndOfFrameEvent.Reset();
-	}
-}
+		SR_CommandListType prevContextType = gCurrentContextType;
+		SC_Ref<SR_CommandList> prevCmdList = gCurrentCommandList;
+		gCurrentContextType = mContextType;
+		gCurrentCommandList = nullptr;
+		aTask();
+		SC_Ref<SR_CommandList> usedCmdList = gCurrentCommandList;
+		gCurrentContextType = prevContextType;
+		gCurrentCommandList = prevCmdList;
+		return usedCmdList;
+	};
 
-void SR_RenderThread::EndFrame(uint32 aUpdateThreadFrameIdx)
-{
-	SC_ASSERT(gIsRenderThread);
-	mCurrentFrameIndex = aUpdateThreadFrameIdx;
-	mEndOfFrameEvent.Signal();
-	SR_RenderDevice::gInstance->gLatestFinishedFrame = mCurrentFrameIndex;
-}
+	Task task;
+	task.mTask = taskFn;
+	task.mTaskEvent = taskEvent;
 
-SR_RenderThread* SR_RenderThread::Get()
-{
-	return gInstance;
+	SC_MutexLock lock(mTaskQueueMutex);
+	mTaskQueue.Add(task);
+	mHasWorkEvent.Signal();
+	return taskEvent;
 }
 
 void SR_RenderThread::ThreadMain()
 {
-	SC_Thread::gIsRenderThread = true;
+	SC_Thread::gIsRenderThread = (mContextType == SR_CommandListType::Graphics);
 
-	std::queue<std::function<void()>> tasks;
 	while (mIsRunning)
 	{
 		SC_PROFILER_FUNCTION();
 		mHasWorkEvent.Wait();
 		mHasWorkEvent.Reset();
 
+		for (;;)
 		{
-			SC_MutexLock lock(mTaskQueueMutex);
-			tasks.swap(mTaskQueue);
-		}
+			Task task;
+			{
+				SC_MutexLock lock(mTaskQueueMutex);
+				if (mTaskQueue.IsEmpty())
+				{
+					lock.Unlock();
+					break;
+				}
 
-		while (!tasks.empty())
-		{
-			tasks.front()();
-			tasks.pop();
+				task = mTaskQueue.Peek();
+				mTaskQueue.Remove();
+			}
+
+			SC_Ref<SR_CommandList> cmdList = task.mTask();
+			if (cmdList)
+			{
+				cmdList->End();
+				task.mTaskEvent->mFence = SR_RenderDevice::gInstance->GetQueueManager()->GetNextFence(mContextType);
+				SR_RenderDevice::gInstance->GetQueueManager()->SubmitCommandLists(mContextType, task.mTaskEvent->mFence, { cmdList });
+				task.mTaskEvent->mCPUEvent.Signal();
+			}
+			else
+				task.mTaskEvent->mCPUEvent.Signal();
 		}
 	}
 }
-#endif

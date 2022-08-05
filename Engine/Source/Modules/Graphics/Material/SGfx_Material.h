@@ -108,7 +108,7 @@ protected:
 };
 
 static constexpr uint32 SGfx_MaxMaterialTextureCount = 16;
-class SGfx_Material
+class SGfx_Material : public SC_ReferenceCounted
 {
 public:
 	SGfx_Material();
@@ -167,8 +167,6 @@ private:
 
 	bool mEnableGeometricSpecularAA;
 	bool mEnableTangentSpaceNormals;
-
-	SC_Mutex testmutex;
 };
 
 

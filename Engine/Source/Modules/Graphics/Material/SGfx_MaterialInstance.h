@@ -60,7 +60,7 @@ private:
 	Type mType;
 };
 
-class SGfx_MaterialInstance
+class SGfx_MaterialInstance : public SC_ReferenceCounted
 {
 public:
 	static SC_Ref<SGfx_MaterialInstance> GetDefault();

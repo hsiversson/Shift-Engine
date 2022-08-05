@@ -7,25 +7,18 @@
 
 SR_TextureResource_DX12::SR_TextureResource_DX12(const SR_TextureResourceProperties& aProperties)
 	: SR_TextureResource(aProperties)
-	, mD3D12Resource(nullptr)
 {
 
 }
 
 SR_TextureResource_DX12::SR_TextureResource_DX12(const SR_TextureResourceProperties& aProperties, ID3D12Resource* aResource)
 	: SR_TextureResource(aProperties)
-	, mD3D12Resource(aResource)
 {
-	mTrackedD3D12Resource = mD3D12Resource;
+	mTrackedD3D12Resource = aResource;
 }
 
 SR_TextureResource_DX12::~SR_TextureResource_DX12()
 {
-	if (mD3D12Resource)
-	{
-		mD3D12Resource->Release();
-		mD3D12Resource = nullptr;
-	}
 }
 
 bool SR_TextureResource_DX12::Init(const SR_PixelData* aInitialData, uint32 aDataCount)
@@ -56,7 +49,7 @@ bool SR_TextureResource_DX12::Init(const SR_PixelData* aInitialData, uint32 aDat
 			&resourceDesc,
 			initialState,
 			useOptimizedClearValue ? &omptimizedClearValue : nullptr,
-			IID_PPV_ARGS(&mD3D12Resource)
+			IID_PPV_ARGS(&mTrackedD3D12Resource)
 		);
 	}
 	else
@@ -74,7 +67,7 @@ bool SR_TextureResource_DX12::Init(const SR_PixelData* aInitialData, uint32 aDat
 			&resourceDesc,
 			initialState,
 			useOptimizedClearValue ? &omptimizedClearValue : nullptr,
-			IID_PPV_ARGS(&mD3D12Resource)
+			IID_PPV_ARGS(&mTrackedD3D12Resource)
 		);
 	}
 
@@ -84,10 +77,10 @@ bool SR_TextureResource_DX12::Init(const SR_PixelData* aInitialData, uint32 aDat
 		return false;
 	}
 
-	mTrackedD3D12Resource = mD3D12Resource;
+	mTrackedD3D12Resource = mTrackedD3D12Resource;
 
 	if (!mProperties.mDebugName.empty())
-		mD3D12Resource->SetName(SC_UTF8ToUTF16(mProperties.mDebugName.c_str()).c_str());
+		mTrackedD3D12Resource->SetName(SC_UTF8ToUTF16(mProperties.mDebugName.c_str()).c_str());
 
 	if (aInitialData)
 		UpdatePixels(aInitialData, aDataCount);
@@ -97,18 +90,12 @@ bool SR_TextureResource_DX12::Init(const SR_PixelData* aInitialData, uint32 aDat
 
 D3D12_TEXTURE_COPY_LOCATION SR_TextureResource_DX12::GetCopyLocation(uint32 aSubresourceIndex) const
 {
-	D3D12_TEXTURE_COPY_LOCATION location = { mD3D12Resource };
+	D3D12_TEXTURE_COPY_LOCATION location = { mTrackedD3D12Resource };
 	D3D12_RESOURCE_DESC desc = SR_GetD3D12ResourceDesc(mProperties);
 	location.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
 	SR_RenderDevice_DX12::gInstance->GetD3D12Device()->GetCopyableFootprints(&desc, aSubresourceIndex, 1, 0, &location.PlacedFootprint, nullptr, nullptr, nullptr);
 	return location;
 }
-
-ID3D12Resource* SR_TextureResource_DX12::GetD3D12Resource() const
-{
-	return mD3D12Resource;
-}
-
 
 void SR_MemcpyPixelData(void* aDest, const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& aDstFootprint, const SR_PixelData& aData, const SR_Format& aFormat)
 {

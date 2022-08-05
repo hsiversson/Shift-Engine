@@ -19,7 +19,7 @@ class SGfx_LightCulling;
 class SGfx_ReflectionProbe;
 class SGfx_AmbientOcclusion;
 class SGfx_PostEffects;
-class SGfx_DebugRenderer;
+class SGfx_PrimitiveRenderer;
 class SGfx_Environment;
 
 /**
@@ -36,7 +36,7 @@ public:
 	{
 		Settings()
 			: mEnableTemporalAA(true)
-			, mDrawGridHelper(true)
+			, mDrawGridHelper(false)
 		{}
 
 		bool mEnableTemporalAA;
@@ -69,12 +69,9 @@ protected:
 	void OnChanged(const SC_FilePath& aPath, const ChangeReason& aReason) override;
 
 private:
-	void SubmitGraphicsTask(SGfx_ViewTaskFunctionSignature aTask, SR_TaskEvent* aEvent, SGfx_View* aView);
-	void SubmitGraphicsTask(SGfx_ViewTaskFunctionSignature aTask, const SC_UniquePtr<SR_TaskEvent>& aEvent, SGfx_View* aView);
-	void SubmitComputeTask(SGfx_ViewTaskFunctionSignature aTask, SR_TaskEvent* aEvent, SGfx_View* aView);
-	void SubmitComputeTask(SGfx_ViewTaskFunctionSignature aTask, const SC_UniquePtr<SR_TaskEvent>& aEvent, SGfx_View* aView);
-	void SubmitCopyTask(SGfx_ViewTaskFunctionSignature aTask, SR_TaskEvent* aEvent, SGfx_View* aView);
-	void SubmitCopyTask(SGfx_ViewTaskFunctionSignature aTask, const SC_UniquePtr<SR_TaskEvent>& aEvent, SGfx_View* aView);
+	SC_Ref<SR_TaskEvent> SubmitGraphicsTask(SGfx_ViewTaskFunctionSignature aTask, SGfx_View* aView);
+	SC_Ref<SR_TaskEvent> SubmitComputeTask(SGfx_ViewTaskFunctionSignature aTask, SGfx_View* aView);
+	SC_Ref<SR_TaskEvent> SubmitCopyTask(SGfx_ViewTaskFunctionSignature aTask, SGfx_View* aView);
 
 	/////////////////////////
 	// Render Tasks
@@ -109,7 +106,7 @@ private:
 	SC_UniquePtr<SGfx_Raytracing> mRaytracingSystem; 
 	SC_UniquePtr<SGfx_AmbientOcclusion> mAmbientOcclusion;
 	SC_UniquePtr<SGfx_PostEffects> mPostEffects;
-	SC_UniquePtr<SGfx_DebugRenderer> mDebugRenderer;
+	SC_UniquePtr<SGfx_PrimitiveRenderer> mDebugRenderer;
 	SGfx_Environment* mEnvironment;
 
 	// Temp

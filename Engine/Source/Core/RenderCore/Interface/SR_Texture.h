@@ -22,7 +22,7 @@ struct SR_TextureProperties : public SR_TextureRange
 	bool mWritable;
 };
 
-class SR_Texture
+class SR_Texture : public SR_Resource
 {
 public:
 	virtual ~SR_Texture();

@@ -1,53 +1,57 @@
 #include "SC_Ref.h"
 #include "Platform/Atomics/SC_Atomics.h"
 
-bool SC_RefCountedBase::Increment_NotZero()
+SC_ReferenceCounted::SC_ReferenceCounted()
+	: mReferenceCount(0)
 {
-	uint32 count = mCounter;
-	while (count != 0)
+
+}
+
+SC_ReferenceCounted::SC_ReferenceCounted(const SC_ReferenceCounted&)
+	: mReferenceCount(0)
+{
+
+}
+
+SC_ReferenceCounted& SC_ReferenceCounted::operator=(const SC_ReferenceCounted&)
+{
+	return *this;
+}
+
+void SC_ReferenceCounted::IncrementReference() const
+{
+	SC_Atomic::Increment_GetNew(mReferenceCount);
+}
+
+void SC_ReferenceCounted::DecrementReference() const
+{
+	for (;;)
 	{
-		const uint32 oldValue = SC_Atomic::CompareExchange_GetOld(mCounter, count + 1, count);
-		if (oldValue == count)
-			return true;
-
-		count = oldValue;
-	}
-	return false;
-}
-
-void SC_RefCountedBase::Increment()
-{
-	SC_Atomic::Increment(mCounter);
-}
-
-void SC_RefCountedBase::Decrement()
-{
-	if (SC_Atomic::Decrement_GetNew(mCounter) == 0)
-	{
-		Destroy();
-		DecrementWeak();
+		uint32 currentCount = mReferenceCount;
+		SC_ASSERT(currentCount > 0, "Trying to decrement Reference Count even though it is already 0");
+		if (currentCount == 1)
+		{
+			if (const_cast<SC_ReferenceCounted*>(this)->CanDestruct(mReferenceCount))
+				delete this;
+			return;
+		}
+		
+		if (SC_Atomic::CompareExchange(mReferenceCount, currentCount - 1, currentCount))
+			return;		
 	}
 }
 
-void SC_RefCountedBase::IncrementWeak()
+uint32 SC_ReferenceCounted::GetReferenceCount() const
 {
-	SC_Atomic::Increment(mWeakCounter);
+	return mReferenceCount;
 }
 
-void SC_RefCountedBase::DecrementWeak()
+SC_ReferenceCounted::~SC_ReferenceCounted()
 {
-	if (SC_Atomic::Decrement_GetNew(mWeakCounter) == 0)
-	{
-		DestroySelf();
-	}
+	SC_ASSERT(mReferenceCount == 0, "Reference Count is expected to be 0 but was {}", mReferenceCount);
 }
 
-uint32 SC_RefCountedBase::GetCount() const
+bool SC_ReferenceCounted::CanDestruct(volatile uint32& aReferenceCount)
 {
-	return mCounter;
-}
-
-void* SC_RefCountedBase::GetDeleter(const type_info&) const noexcept
-{
-	return nullptr;
+	return SC_Atomic::Decrement_GetNew(aReferenceCount) == 0;
 }

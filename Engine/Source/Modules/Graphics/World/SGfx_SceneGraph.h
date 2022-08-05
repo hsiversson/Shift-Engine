@@ -1,11 +1,11 @@
 #pragma once
+#include "Graphics/Mesh/SGfx_MeshInstance.h"
 
 class SGfx_Model;
 class SGfx_Light;
 class SGfx_ParticleEffect;
 class SGfx_Decal;
 class SGfx_View;
-class SGfx_MeshInstance;
 class SGfx_World;
 
 enum class SGfx_SceneGraphActionType

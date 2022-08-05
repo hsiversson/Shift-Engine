@@ -174,7 +174,7 @@ float4 MainPS(in PixelShaderInput aInput) : SV_TARGET0
     Texture2D<float> roughnessMap = GetTexture2D<float>(materialInfo.mTextureIndices[2]);
     Texture2D<float> metallicMap = GetTexture2D<float>(materialInfo.mTextureIndices[3]);
     //Texture2D<float> aoMap = GetTexture2D<float>(materialInfo.mTextureIndices[4]);
-    Texture2D<float> specularMap = GetTexture2D<float>(materialInfo.mTextureIndices[5]);
+    Texture2D<float2> specularMap = GetTexture2D<float2>(materialInfo.mTextureIndices[5]);
     //Texture2D<float> opacityMap = GetTexture2D<float>(materialInfo.mTextureIndices[6]);
     Texture2D<float3> emissiveMap = GetTexture2D<float3>(materialInfo.mTextureIndices[7]);
 
@@ -194,7 +194,7 @@ float4 MainPS(in PixelShaderInput aInput) : SV_TARGET0
 #endif
     float roughnessSample = roughnessMap.Sample(gAnisotropicWrap, aInput.mUV).r;
     float metallicSample = metallicMap.Sample(gAnisotropicWrap, aInput.mUV).r;
-    float specularSample = specularMap.Sample(gAnisotropicWrap, aInput.mUV).r;
+    float specularSample = specularMap.Sample(gAnisotropicWrap, aInput.mUV).g;
     float3 emissiveSample = emissiveMap.Sample(gAnisotropicWrap, aInput.mUV).rgb;
     //float aoSample = aoTex.SampleLevel(gBilinearClamp, aInput.mClipPosition.xy * gSceneConstants.mViewConstants.mRenderTargetSizeAndInvSize.zw, 0);
 

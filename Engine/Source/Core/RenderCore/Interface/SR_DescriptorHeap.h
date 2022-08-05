@@ -9,7 +9,7 @@ enum class SR_DescriptorHeapType
 	SAMPLER
 };
 
-class SR_DescriptorHeap
+class SR_DescriptorHeap : public SR_Resource
 {
 public:
 	virtual ~SR_DescriptorHeap() {}

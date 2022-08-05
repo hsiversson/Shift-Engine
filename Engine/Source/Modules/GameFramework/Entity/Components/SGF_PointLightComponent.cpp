@@ -2,7 +2,7 @@
 #include "SGF_TransformComponent.h"
 #include "GameFramework/Entity/SGF_Entity.h"
 
-#include "../../GameWorld/SGF_World.h"
+#include "GameFramework/GameWorld/SGF_World.h"
 #include "Graphics/World/SGfx_World.h"
 
 SGF_PointLightComponent::SGF_PointLightComponent()
@@ -22,8 +22,8 @@ SGF_PointLightComponent::~SGF_PointLightComponent()
 
 void SGF_PointLightComponent::OnCreate()
 {
-	//if (const SGF_Entity2& entity = GetParentEntity())
-	//	entity->GetWorld()->GetGraphicsWorld()->AddLight(mPointLight);
+	if (const SGF_Entity& entity = GetParentEntity())
+		entity.GetWorld()->GetGraphicsWorld()->AddLight(mPointLight);
 }
 
 void SGF_PointLightComponent::OnUpdate()
@@ -47,6 +47,6 @@ void SGF_PointLightComponent::OnUpdate()
 
 void SGF_PointLightComponent::OnDestroy()
 {
-	//if (SGF_Entity* entity = GetParentEntity())
-	//	entity->GetWorld()->GetGraphicsWorld()->RemoveLight(mPointLight);
+	if (const SGF_Entity& entity = GetParentEntity())
+		entity.GetWorld()->GetGraphicsWorld()->RemoveLight(mPointLight);
 }

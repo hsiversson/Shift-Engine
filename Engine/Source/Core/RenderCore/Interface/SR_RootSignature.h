@@ -99,7 +99,7 @@ struct SR_RootSignatureProperties
 	const char* mDebugName;
 };
 
-class SR_RootSignature
+class SR_RootSignature : public SR_Resource
 {
 public:
 	SR_RootSignature(const SR_RootSignatureProperties& aProperties);

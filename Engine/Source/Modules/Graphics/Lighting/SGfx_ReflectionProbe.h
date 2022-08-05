@@ -3,7 +3,7 @@
 struct SGfx_ViewData;
 class SGfx_Camera;
 
-class SGfx_ReflectionProbe
+class SGfx_ReflectionProbe : public SC_ReferenceCounted
 {
 public:
 	SGfx_ReflectionProbe();

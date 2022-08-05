@@ -115,16 +115,6 @@ public:
 	SGfx_ViewData()
 	{
 		SC_ZeroMemory(this, sizeof(SGfx_ViewData));
-
-		mBuildRaytracingSceneEvent = SC_MakeUnique<SR_TaskEvent>();
-		mPreRenderUpdatesEvent = SC_MakeUnique<SR_TaskEvent>();
-		mPrePassEvent = SC_MakeUnique<SR_TaskEvent>();
-		mLightCullingEvent = SC_MakeUnique<SR_TaskEvent>();
-		mShadowsEvent = SC_MakeUnique<SR_TaskEvent>();
-		mAmbientOcclusionEvent = SC_MakeUnique<SR_TaskEvent>();
-		mRenderOpaqueEvent = SC_MakeUnique<SR_TaskEvent>();
-		mRenderDebugObjectsEvent = SC_MakeUnique<SR_TaskEvent>();
-		mPostEffectsEvent = SC_MakeUnique<SR_TaskEvent>();
 		mInstanceData = SC_MakeUnique<SGfx_InstanceData>();
 	}
 
@@ -151,15 +141,15 @@ public:
 		mPrepareCullLightsEvent = SC_Future<bool>();
 		mPrepareLightCullingEvent = SC_Future<bool>();
 
-		mBuildRaytracingSceneEvent->Reset();
-		mPreRenderUpdatesEvent->Reset();
-		mPrePassEvent->Reset();
-		mLightCullingEvent->Reset();
-		mShadowsEvent->Reset();
-		mAmbientOcclusionEvent->Reset();
-		mRenderOpaqueEvent->Reset();
-		mRenderDebugObjectsEvent->Reset();
-		mPostEffectsEvent->Reset();
+		mBuildRaytracingSceneEvent.Reset();
+		mPreRenderUpdatesEvent.Reset();
+		mPrePassEvent.Reset();
+		mLightCullingEvent.Reset();
+		mShadowsEvent.Reset();
+		mAmbientOcclusionEvent.Reset();
+		mRenderOpaqueEvent.Reset();
+		mRenderDebugObjectsEvent.Reset();
+		mPostEffectsEvent.Reset();
 
 		mInstanceData->Clear();
 
@@ -192,15 +182,15 @@ public:
 	SC_Future<bool> mPrepareLightCullingEvent;
 
 	// RenderEvents
-	SC_UniquePtr<SR_TaskEvent> mBuildRaytracingSceneEvent;
-	SC_UniquePtr<SR_TaskEvent> mPreRenderUpdatesEvent;
-	SC_UniquePtr<SR_TaskEvent> mPrePassEvent;
-	SC_UniquePtr<SR_TaskEvent> mLightCullingEvent;
-	SC_UniquePtr<SR_TaskEvent> mShadowsEvent;
-	SC_UniquePtr<SR_TaskEvent> mAmbientOcclusionEvent;
-	SC_UniquePtr<SR_TaskEvent> mRenderOpaqueEvent;
-	SC_UniquePtr<SR_TaskEvent> mRenderDebugObjectsEvent;
-	SC_UniquePtr<SR_TaskEvent> mPostEffectsEvent;
+	SC_Ref<SR_TaskEvent> mBuildRaytracingSceneEvent;
+	SC_Ref<SR_TaskEvent> mPreRenderUpdatesEvent;
+	SC_Ref<SR_TaskEvent> mPrePassEvent;
+	SC_Ref<SR_TaskEvent> mLightCullingEvent;
+	SC_Ref<SR_TaskEvent> mShadowsEvent;
+	SC_Ref<SR_TaskEvent> mAmbientOcclusionEvent;
+	SC_Ref<SR_TaskEvent> mRenderOpaqueEvent;
+	SC_Ref<SR_TaskEvent> mRenderDebugObjectsEvent;
+	SC_Ref<SR_TaskEvent> mPostEffectsEvent;
 
 	SC_UniquePtr<SGfx_InstanceData> mInstanceData;
 

@@ -94,6 +94,7 @@ void SR_CommandList_DX12::Begin()
 void SR_CommandList_DX12::End()
 {
 	mD3D12CommandList->Close();
+	SR_CommandList::End();
 }
 
 void SR_CommandList_DX12::BeginEvent(const char* aName)
@@ -504,13 +505,13 @@ void SR_CommandList_DX12::SetBlendFactor(const SC_Vector4& aBlendFactor)
 	mD3D12CommandList->OMSetBlendFactor(&aBlendFactor.x);
 }
 
-void SR_CommandList_DX12::TransitionBarrier(const SC_Array<SC_Pair<uint32, SR_Resource*>>& aTransitions)
+void SR_CommandList_DX12::TransitionBarrier(const SC_Array<SC_Pair<uint32, SR_TrackedResource*>>& aTransitions)
 {
 	SC_Array<D3D12_RESOURCE_BARRIER> barriers;
 
 	for (uint32 i = 0; i < aTransitions.Count(); ++i)
 	{
-		const SC_Pair<uint32, SR_Resource*>& currentResource = aTransitions[i];
+		const SC_Pair<uint32, SR_TrackedResource*>& currentResource = aTransitions[i];
 
 		D3D12_RESOURCE_BARRIER barrier = {}; 
 		barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -533,7 +534,7 @@ void SR_CommandList_DX12::TransitionBarrier(const SC_Array<SC_Pair<uint32, SR_Re
 	}
 }
 
-void SR_CommandList_DX12::UnorderedAccessBarrier(SR_Resource* aResource)
+void SR_CommandList_DX12::UnorderedAccessBarrier(SR_TrackedResource* aResource)
 {
 	D3D12_RESOURCE_BARRIER barrier = {};
 	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
@@ -548,7 +549,7 @@ void SR_CommandList_DX12::AliasBarrier()
 
 }
 
-void SR_CommandList_DX12::CopyResource(SR_Resource* aDstResource, SR_Resource* aSrcResource)
+void SR_CommandList_DX12::CopyResource(SR_TrackedResource* aDstResource, SR_TrackedResource* aSrcResource)
 {
 	SC_ASSERT((aDstResource != nullptr) && (aSrcResource != nullptr) && "Resources cannot be nullptr.");
 	if (aDstResource->mTrackedD3D12Resource != aSrcResource->mTrackedD3D12Resource)

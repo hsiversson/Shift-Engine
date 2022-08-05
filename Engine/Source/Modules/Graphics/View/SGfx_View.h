@@ -44,8 +44,8 @@ private:
 
 	uint32 mNumBuffersInFlight;
 
-	SC_Ref<SC_Event> mStartRenderEvent;
-	SC_Ref<SC_Event> mEndRenderEvent;
+	SC_Ref<SR_TaskEvent> mStartRenderEvent;
+	SC_Ref<SR_TaskEvent> mEndRenderEvent;
 	SC_Mutex mRenderMutex;
 	SC_ReadWriteMutex mWaitingForPrepareMutex;
 	SC_Semaphore mFramesInFlightSemaphore;
@@ -58,7 +58,7 @@ private:
 	bool mStartedRenderingFrame;
 };
 
-class SGfx_View
+class SGfx_View : public SC_ReferenceCounted
 {
 public:
 	SGfx_View();

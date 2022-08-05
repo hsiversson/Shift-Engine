@@ -69,10 +69,6 @@ void SR_CommandQueue_DX12::SubmitCommandLists(SR_CommandList** aCommandLists, ui
 	{
 		SR_CommandList_DX12* dx12cmdList = static_cast<SR_CommandList_DX12*>(aCommandLists[i]);
 		d3d12CmdLists.Add(dx12cmdList->GetD3D12CommandList());
-
-		const SC_Array<SR_Fence>& fenceWaits = dx12cmdList->GetFenceWaits();
-		for (const SR_Fence& fence : fenceWaits)
-			InsertWait(fence);
 	}
 
 	mD3D12CommandQueue->ExecuteCommandLists(d3d12CmdLists.Count(), d3d12CmdLists.GetBuffer());

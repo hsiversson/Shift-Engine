@@ -20,7 +20,7 @@ struct SR_BufferResourceProperties
 	const char* mDebugName;
 };
 
-class SR_BufferResource : public SR_Resource
+class SR_BufferResource : public SR_TrackedResource
 {
 public:
 	SR_BufferResource(const SR_BufferResourceProperties& aProperties);

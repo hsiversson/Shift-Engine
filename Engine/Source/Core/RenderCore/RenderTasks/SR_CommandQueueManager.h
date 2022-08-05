@@ -4,7 +4,7 @@
 #include "SR_TaskEvent.h"
 #include "Platform/Async/SC_Event.h"
 
-
+#if 0
 using SR_RenderTaskFunctionSignature = std::function<void()>;
 
 /*
@@ -146,3 +146,4 @@ private:
 	static thread_local SC_Ref<SR_CommandList> gCurrentCommandList;
 };
 
+#endif

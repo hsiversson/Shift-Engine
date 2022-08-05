@@ -4,7 +4,7 @@
 #include "GameFramework/Entity/SGF_Entity.h"
 
 class SGF_Entity;
-class SGF_Component : public SGF_PropertyContainer
+class SGF_Component : public SGF_PropertyContainer, public SC_ReferenceCounted
 {
 	friend class SGF_Entity;
 public:
@@ -33,7 +33,7 @@ private:
 };
 SC_ALLOW_MEMCPY_RELOCATE(SGF_Component);
 
-class SGF_ComponentListBase
+class SGF_ComponentListBase : public SC_ReferenceCounted
 {
 public:
 	SGF_ComponentListBase() {}

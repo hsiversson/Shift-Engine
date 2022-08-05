@@ -3,7 +3,7 @@
 class SGF_EntityManager;
 class SGF_ComponentManager;
 
-class SGF_GameSystem
+class SGF_GameSystem : public SC_ReferenceCounted
 {
 	friend class SGF_GameSystemManager;
 public:

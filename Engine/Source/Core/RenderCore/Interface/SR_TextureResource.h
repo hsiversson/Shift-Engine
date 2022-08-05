@@ -104,7 +104,7 @@ struct SR_PixelData
 	operator void* () const { return mData; }
 };
 
-class SR_TextureResource : public SR_Resource
+class SR_TextureResource : public SR_TrackedResource
 {
 public:
 	virtual ~SR_TextureResource();

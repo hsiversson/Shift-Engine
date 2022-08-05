@@ -8,7 +8,7 @@ struct aiMesh;
 
 struct SGfx_MeshCreateParams;
 
-class SGfx_ModelImporterScene
+class SGfx_ModelImporterScene : public SC_ReferenceCounted
 {
 	friend class SGfx_ModelImporter;
 public:

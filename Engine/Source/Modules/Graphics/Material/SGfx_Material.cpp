@@ -244,7 +244,6 @@ static const char* locGetVertexAttributeVariableName(const SR_VertexAttribute& a
 SR_ShaderState* SGfx_Material::GetShaderState(const SR_VertexLayout& aVertexLayout, SGfx_MaterialShaderType aType)
 {
     auto& shaderStates = mShaderStates[static_cast<uint32>(aType)];
-	SC_MutexLock lock(testmutex);
     if (shaderStates.count(aVertexLayout) > 0)
         return shaderStates[aVertexLayout];
     else
@@ -307,10 +306,7 @@ SR_ShaderState* SGfx_Material::GetShaderState(const SR_VertexLayout& aVertexLayo
                 SR_RenderDevice::gInstance->CompileShader(vertexShaderCode, vertexShaderCompileArgs, shaderProperties.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Vertex)]);
             }
 
-			SC_Ref<SR_ShaderState> shaderState = SR_RenderDevice::gInstance->CreateShaderState(shaderProperties);
-
-			SC_MutexLock lock(testmutex);
-			mShaderStates[shaderType][aVertexLayout] = shaderState;
+			mShaderStates[shaderType][aVertexLayout] = SR_RenderDevice::gInstance->CreateShaderState(shaderProperties);
         };
         SGfx_MaterialCompilerThread::Get().Queue(CompileMaterial);
 

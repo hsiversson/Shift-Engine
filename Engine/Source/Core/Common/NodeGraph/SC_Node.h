@@ -2,7 +2,7 @@
 #include "SC_NodePin.h"
 
 class SC_NodeGraph;
-class SC_Node
+class SC_Node : public SC_ReferenceCounted
 {
 	friend class SC_NodeGraph;
 public:

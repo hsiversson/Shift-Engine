@@ -80,7 +80,6 @@ void SGfx_PostEffects::RenderBloom(SGfx_View* aView, SR_Texture* aScreenColor)
 	resourceProps.mAllowRenderTarget = true;
 	resourceProps.mAllowUnorderedAccess = true;
 	resourceProps.mType = SR_ResourceType::Texture2D;
-	SC_Ref<SR_TextureResource> tempResource = SR_RenderDevice::gInstance->CreateTextureResource(resourceProps);
 	SR_TempTexture tempTex = SR_RenderDevice::gInstance->CreateTempTexture(resourceProps, true, false, true);
 
 	struct FilterConstants

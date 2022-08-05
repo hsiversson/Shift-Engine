@@ -23,7 +23,7 @@ struct SR_SwapChainProperties
 	bool mFullscreen;
 };
 
-class SR_SwapChain
+class SR_SwapChain : public SR_Resource
 {
 public:
 	SR_SwapChain();

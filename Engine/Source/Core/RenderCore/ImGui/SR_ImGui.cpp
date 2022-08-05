@@ -212,7 +212,7 @@ void SR_ImGui::BeginFrame()
 	ImGui::NewFrame();
 }
 
-void SR_ImGui::Render(SR_RenderTarget* aRenderTarget)
+void SR_ImGui::Render(SR_RenderTarget* /*aRenderTarget*/)
 {
 	SC_PROFILER_FUNCTION();
 	ImGui::Render();
@@ -220,10 +220,10 @@ void SR_ImGui::Render(SR_RenderTarget* aRenderTarget)
 	if (drawData->DisplaySize.x <= 0.0f || drawData->DisplaySize.y <= 0.0f)
 		return;
 
-	auto Task = [this, drawData, aRenderTarget]()
+	auto Task = [this, drawData]()
 	{
 		SC_PROFILER_FUNCTION();
-		SR_RenderTarget* rt = aRenderTarget;
+		SR_RenderTarget* rt = SR_RenderDevice::gInstance->GetSwapChain()->GetRenderTarget();
 		SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
 		ImGuiIO& io = ImGui::GetIO();
 		drawData->ScaleClipRects(io.DisplayFramebufferScale);
@@ -345,8 +345,7 @@ void SR_ImGui::Render(SR_RenderTarget* aRenderTarget)
 		cmdList->TransitionBarrier(SR_ResourceState_Present, rt->GetResource());
 	};
 
-	mLastTaskEvent = SC_MakeRef<SR_TaskEvent>();
-	SR_RenderDevice::gInstance->GetQueueManager()->SubmitTask(Task, SR_CommandListType::Graphics, mLastTaskEvent);
+	mLastTaskEvent = SR_RenderDevice::gInstance->PostGraphicsTask(Task);
 }
 
 void SR_ImGui::SetDPIScale(float aScale)

@@ -69,10 +69,8 @@ SED_AssimpMaterial::SED_AssimpMaterial(aiMaterial* aMaterial, const SC_FilePath&
 				mMaterialProperties.mTextures.Add(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Normal_1x1.dds");
 				break;
 			case aiTextureType_METALNESS:
-			{
 				mMaterialProperties.mTextures.Add(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Black_1x1.dds");
 				break;
-			}
 			case aiTextureType_EMISSIVE:
 			case aiTextureType_EMISSION_COLOR:
 				mMaterialProperties.mTextures.Add(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Black_1x1.dds");

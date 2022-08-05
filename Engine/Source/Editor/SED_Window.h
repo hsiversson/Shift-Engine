@@ -1,6 +1,6 @@
 #pragma once
 
-class SED_Window
+class SED_Window : public SC_ReferenceCounted
 {
 public:
 	SED_Window();

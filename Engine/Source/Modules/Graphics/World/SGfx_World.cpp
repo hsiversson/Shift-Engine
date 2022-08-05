@@ -98,7 +98,7 @@ void SGfx_World::PrepareView(SGfx_View* aView)
 
 	mSceneGraph->PrepareView(aView);
 
-	prepareData.mPrepareLightCullingEvent = SC_ThreadPool::Get().SubmitTask([this, aView]() { mRenderer->GetLightCulling()->Prepare(aView->GetPrepareData()); });
+	//prepareData.mPrepareLightCullingEvent = SC_ThreadPool::Get().SubmitTask([this, aView]() { mRenderer->GetLightCulling()-> });
 	//mRenderer->GetLightCulling()->Prepare(aView->GetPrepareData());
 	prepareData.mSky = mEnvironment->GetSky();
 

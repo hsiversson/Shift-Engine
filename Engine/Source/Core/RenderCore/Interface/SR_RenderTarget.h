@@ -9,7 +9,7 @@ struct SR_RenderTargetProperties : public SR_TextureLevel
 	SR_Format mFormat;
 };
 
-class SR_RenderTarget
+class SR_RenderTarget : public SR_Resource
 {
 public:
 	virtual ~SR_RenderTarget();

@@ -14,7 +14,7 @@ enum class SGfx_LightUnit
 	Lumens
 };
 
-class SGfx_Light
+class SGfx_Light : public SC_ReferenceCounted
 {
 public:
 	struct LocalLightShaderData

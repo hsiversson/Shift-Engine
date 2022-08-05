@@ -44,7 +44,7 @@ public:
 		if (mCache.find(f) != mCache.end())
 			return;
 
-		if (mCache[f].GetRefCount() <= 2) // The cache holds one ref
+		if (mCache[f]->GetReferenceCount() <= 2) // The cache holds one ref
 		{
 			mCache.erase(f);
 		}
@@ -77,7 +77,7 @@ struct FrameFence
 static SC_RingArray<FrameFence> locFrameSyncEvents;
 uint32 locLastEndFrameIndex;
 
-void SR_RenderDevice::BeginFrame(uint32 aFrameIndex)
+SC_Ref<SR_TaskEvent> SR_RenderDevice::BeginFrame(uint32 aFrameIndex)
 {
 	//SC_Event event;
 	auto beginFrame = [this, aFrameIndex]()
@@ -89,68 +89,57 @@ void SR_RenderDevice::BeginFrame(uint32 aFrameIndex)
 
 		static constexpr uint32 maxFrameDelay = 1;
 
-		if (locFrameSyncEvents.Count() <= maxFrameDelay)
+		while (locFrameSyncEvents.Count() <= maxFrameDelay)
 		{
-			while (locFrameSyncEvents.Count() <= maxFrameDelay)
-			{
-				SC_Ref<SR_TaskEvent> fence = SC_MakeRef<SR_TaskEvent>();
-				fence->mFence = mQueueManager->InsertFence(SR_CommandListType::Graphics);
-				fence->mCPUEvent.Signal();
+			SC_Ref<SR_TaskEvent> fence = SC_MakeRef<SR_TaskEvent>();
+			fence->mFence = InsertFence(SR_CommandListType::Graphics);
+			fence->mCPUEvent.Signal();
 
-				FrameFence frameFence = { fence, locLastEndFrameIndex };
-				locFrameSyncEvents.Add(frameFence);
-			}
+			FrameFence frameFence = { fence, locLastEndFrameIndex };
+			locFrameSyncEvents.Add(frameFence);
 		}
-		else
-		{
-			if (locFrameSyncEvents.Count())
-			{
-				FrameFence& fence = locFrameSyncEvents.Peek();
-				if (fence.mFence)
-				{
-					mQueueManager->WaitForFence(fence.mFence->mFence);
-					gLatestFinishedFrame = SC_Max(gLatestFinishedFrame, fence.mFrameIndex);
-				}
-				locFrameSyncEvents.Remove();
-			}
 
-			for (uint32 i = 0, e = locFrameSyncEvents.Count(); i != e; ++i)
+		if (locFrameSyncEvents.Count())
+		{
+			FrameFence& fence = locFrameSyncEvents.Peek();
+			if (fence.mFence)
 			{
-				FrameFence& fence = locFrameSyncEvents[i];
-				if (fence.mFence && fence.mFence->mFence.IsPending())
-				{
-					fence.mFence.Reset();
-					gLatestFinishedFrame = SC_Max(gLatestFinishedFrame, fence.mFrameIndex);
-				}
+				SC_Timer timer;
+				WaitForFence(fence.mFence->mFence);
+				gLatestFinishedFrame = SC_Max(gLatestFinishedFrame, fence.mFrameIndex);
+			}
+			locFrameSyncEvents.Remove();
+		}
+
+		for (uint32 i = 0; i < locFrameSyncEvents.Count(); ++i)
+		{
+			FrameFence& fence = locFrameSyncEvents[i];
+			if (fence.mFence && !fence.mFence->mFence.IsPending())
+			{
+				fence.mFence.Reset();
+				gLatestFinishedFrame = SC_Max(gLatestFinishedFrame, fence.mFrameIndex);
 			}
 		}
 	};
-	mBeginFrameEvent = mQueueManager->SubmitLightTask(beginFrame, SR_CommandListType::Graphics);
+	mBeginFrameEvent = PostGraphicsTask(beginFrame);
+	return mBeginFrameEvent;
 }
 
 void SR_RenderDevice::Present()
 {
-	SC_Ref<SR_TaskEvent> fence = SR_ImGui::Get() ? SR_ImGui::Get()->GetLatestFenceRef() : nullptr;
-	
-	auto presentTask = [this, fence]()
+	auto presentTask = [this]()
 	{
-		if (fence)
-			fence->mCPUEvent.Wait();
-
-		mTempResourceHeap->EndFrame();
+		GetQueueManager()->Flush();
 		std::string tag = SC_FormatStr("SR_RenderDevice::Present (frame: {})", gFrameCounter);
 		SC_PROFILER_EVENT_START(tag.c_str());
 		SR_SwapChain* sc = GetSwapChain();
 		sc->Present();
+		//SC_Thread::Sleep(16);
 		SC_PROFILER_EVENT_END();
 	};
 
-	//uint32 frameIndex = SC_Time::gFrameCounter % 2;
-	//if (mPresentEvents[frameIndex])
-	//	mPresentEvents[frameIndex]->Wait();
-
-	mPresentEvents[0] = mQueueManager->SubmitLightTask(presentTask, SR_CommandListType::Graphics);
-	mPresentEvents[0]->Wait();
+	mPresentEvent = PostGraphicsTask(presentTask);
+	mPresentEvent->mCPUEvent.Wait();
 }
 
 void SR_RenderDevice::EndFrame()
@@ -160,12 +149,14 @@ void SR_RenderDevice::EndFrame()
 		{
 			SC_PROFILER_FUNCTION();
 			locLastEndFrameIndex = gFrameCounter;
+			mTempResourceHeap->EndFrame();
 			GarbageCollect();
+			mDelayDestructor->Run();
 		}
 		std::string tag = SC_FormatStr("Render Frame {}", gFrameCounter);
 		SC_PROFILER_END_SESSION(tag);
 	};
-	mEndFrameEvent = mQueueManager->SubmitLightTask(endFrame, SR_CommandListType::Graphics);
+	mEndFrameEvent = PostGraphicsTask(endFrame);
 }
 
 void SR_RenderDevice::GarbageCollect()
@@ -389,17 +380,6 @@ SR_BufferResource* SR_RenderDevice::GetTempBufferResource(uint64& aOutOffset, SR
 		props.mElementSize = 1;
 		props.mDebugName = name;
 		props.mIsUploadBuffer = true;
-		
-		//if (aBufferType == MR_STAGING_BUFFER)
-		//{
-		//	props.myCPUAccess = MR_CPU_ACCESS_MAP_WRITE;
-		//	props.myGPUAccess = MR_GPU_ACCESS_STAGING;
-		//}
-		/*else if (myCaps.mySupportPermanentMapBufferData)*/
-		//{
-		//	// always use permanent map when supported for rendercore temp buffers (unlike context buffers), to avoid contention when updating them
-		//	props.myMemoryAccess = MR_MEMORY_ACCESS_WRITE;
-		//}
 
 		SC_Ref<SR_BufferResource> newBufferResource = CreateBufferResource(props, nullptr);
 		bufferResource = newBufferResource;
@@ -528,12 +508,37 @@ SR_SwapChain* SR_RenderDevice::GetSwapChain() const
 	return mDefaultSwapChain;
 }
 
-SR_InstanceBuffer* SR_RenderDevice::GetPersistentResourceInfo() const
+SC_Ref<SR_TaskEvent> SR_RenderDevice::PostGraphicsTask(SR_RenderTaskSignature aTask)
 {
-	return mPersistentResourceInfo.get();
+	SC_Ref<SR_TaskEvent> taskEvent = mContextThreads[static_cast<uint32>(SR_CommandListType::Graphics)]->PostTask(aTask);
+	return taskEvent;
 }
 
-SR_CommandQueueManager* SR_RenderDevice::GetQueueManager() const
+SC_Ref<SR_TaskEvent> SR_RenderDevice::PostComputeTask(SR_RenderTaskSignature aTask)
+{
+	SC_Ref<SR_TaskEvent> taskEvent = mContextThreads[static_cast<uint32>(SR_CommandListType::Compute)]->PostTask(aTask);
+	return taskEvent;
+}
+
+SC_Ref<SR_TaskEvent> SR_RenderDevice::PostCopyTask(SR_RenderTaskSignature aTask)
+{
+	SC_Ref<SR_TaskEvent> taskEvent = mContextThreads[static_cast<uint32>(SR_CommandListType::Copy)]->PostTask(aTask);
+	return taskEvent;
+}
+
+SR_Fence SR_RenderDevice::InsertFence(const SR_CommandListType& aContextType)
+{
+	SR_Fence fence = GetCommandQueue(aContextType)->GetNextFence();
+	GetQueueManager()->SignalFence(aContextType, fence);
+	return fence;
+}
+
+//SR_InstanceBuffer* SR_RenderDevice::GetPersistentResourceInfo() const
+//{
+//	return mPersistentResourceInfo.get();
+//}
+
+SR_QueueManager* SR_RenderDevice::GetQueueManager() const
 {
 	return mQueueManager.get();
 }
@@ -543,7 +548,15 @@ SC_Ref<SR_CommandList> SR_RenderDevice::GetTaskCommandList()
 	if (!mQueueManager)
 		return nullptr;
 
-	return mQueueManager->GetCommandList(SR_CommandQueueManager::gCurrentTaskType);
+	if (!SR_RenderThread::gCurrentCommandList)
+		SR_RenderThread::gCurrentCommandList = mQueueManager->GetCommandList(SR_RenderThread::gCurrentContextType);
+
+	return SR_RenderThread::gCurrentCommandList;
+}
+
+SR_ResourceDelayDestructor* SR_RenderDevice::GetDelayDestructor() const
+{
+	return mDelayDestructor.get();
 }
 
 const SR_RenderSupportCaps& SR_RenderDevice::GetSupportCaps() const
@@ -684,15 +697,20 @@ SC_Ref<SR_Texture> SR_RenderDevice::LoadTextureInternal(const SC_FilePath& /*aTe
 
 bool SR_RenderDevice::PostInit()
 {
-	mPersistentResourceInfo = SC_MakeUnique<SR_InstanceBuffer>();
-	if (!mPersistentResourceInfo->Init(32768))
-	{
-		return false;
-	}
+	//mPersistentResourceInfo = SC_MakeUnique<SR_InstanceBuffer>();
+	//if (!mPersistentResourceInfo->Init(32768))
+	//{
+	//	return false;
+	//}
 
-	mQueueManager = SC_MakeUnique<SR_CommandQueueManager>();
+	mDelayDestructor = SC_MakeUnique<SR_ResourceDelayDestructor>();
+
+	mQueueManager = SC_MakeUnique<SR_QueueManager>();
 	if (!mQueueManager->Init())
 		return false;
+
+	for (uint32 i = 0; i < static_cast<uint32>(SR_CommandListType::COUNT); ++i)
+		mContextThreads[i] = SC_MakeUnique<SR_RenderThread>(static_cast<SR_CommandListType>(i));
 
 	return true;
 }

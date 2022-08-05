@@ -2,8 +2,9 @@
 #include <mutex>
 #include <vector> // Only using vector because we don't want to introduce a SC_Array dependency into the Platform lib.
 #include "SC_Semaphore.h"
+#include "EngineTypes/Functional/SC_Ref.h"
 
-class SC_Event
+class SC_Event : public SC_ReferenceCounted
 {
 public:
 	SC_Event();

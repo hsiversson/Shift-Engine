@@ -3,6 +3,7 @@
 #include "SR_RaytracingStructs.h"
 #include "RenderCore/Profiling/SR_GPUProfiler.h"
 #include "RenderCore/Resources/SR_RingBuffer.h"
+#include "RenderCore/Resources/SR_Resource.h"
 #include <bitset>
 
 class SR_ShaderState;
@@ -12,7 +13,6 @@ class SR_Buffer;
 class SR_BufferResource;
 class SR_RootSignature;
 class SR_Texture;
-class SR_Resource;
 class SR_TextureResource;
 struct SR_Fence;
 struct SR_TaskEvent;
@@ -25,7 +25,7 @@ enum class SR_DepthClearFlags
 	All,
 };
 
-class SR_CommandList
+class SR_CommandList : public SR_Resource
 {
 public:
 	SR_CommandList(const SR_CommandListType& aType);
@@ -33,6 +33,7 @@ public:
 
 	virtual void Begin();
 	virtual void End();
+	bool IsClosed() const;
 
 	virtual void BeginEvent(const char* aName);
 	virtual void EndEvent();
@@ -91,13 +92,13 @@ public:
 	virtual void SetBlendFactor(const SC_Vector4& aBlendFactor);
 
 	// Barriers
-	void TransitionBarrier(uint32 aTargetResourceState, SR_Resource* aResource);
-	virtual void TransitionBarrier(const SC_Array<SC_Pair<uint32, SR_Resource*>>& aTransitions);
-	virtual void UnorderedAccessBarrier(SR_Resource* aResource);
+	void TransitionBarrier(uint32 aTargetResourceState, SR_TrackedResource* aResource);
+	virtual void TransitionBarrier(const SC_Array<SC_Pair<uint32, SR_TrackedResource*>>& aTransitions);
+	virtual void UnorderedAccessBarrier(SR_TrackedResource* aResource);
 	virtual void AliasBarrier();
 
 	// Copy
-	virtual void CopyResource(SR_Resource* aDstResource, SR_Resource* aSrcResource);
+	virtual void CopyResource(SR_TrackedResource* aDstResource, SR_TrackedResource* aSrcResource);
 	virtual void CopyBuffer(SR_BufferResource* aDstBuffer, uint64 aDstOffset, SR_BufferResource* aSrcBuffer, uint64 aSrcOffset, uint32 aSize);
 	virtual void CopyTexture(SR_TextureResource* aDstTexture, SR_TextureResource* aSrcResource);
 
@@ -153,6 +154,7 @@ protected:
 	SR_RingBuffer mBuffersRingBuffer;
 	SR_RingBuffer mStagingRingBuffer;
 
+	bool mIsClosed;
 	SR_CommandListType mType;
 };
 

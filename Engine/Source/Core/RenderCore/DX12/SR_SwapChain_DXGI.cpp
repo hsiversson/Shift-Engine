@@ -84,6 +84,7 @@ void SR_SwapChain_DXGI::Present()
 		flags |= DXGI_PRESENT_ALLOW_TEARING;
 
 	hr = mDXGISwapChain->Present(vsync ? 1 : 0, flags);
+	VerifyHRESULT(hr);
 
 	mCurrentIndex = (uint8)mDXGISwapChain4->GetCurrentBackBufferIndex();
 	mCurrentResource = &mBackbufferResources[mCurrentIndex];
@@ -186,7 +187,7 @@ bool SR_SwapChain_DXGI::CreateResources()
 			mBackbufferResources[i].mTexture = SR_RenderDevice_DX12::gInstance->CreateTexture(texProperties, mBackbufferResources[i].mResource);
 		}
 
-		mCurrentResource = &mBackbufferResources[0];
+		mCurrentResource = &mBackbufferResources[mCurrentIndex];
 	}
 
 	return true;

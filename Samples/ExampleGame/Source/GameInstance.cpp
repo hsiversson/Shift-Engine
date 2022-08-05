@@ -35,7 +35,6 @@ bool GameInstance::Init()
 	mView->SetCamera(mCamera);
 
 	mActiveWorld->LoadLevel("");
-	copyEvent = SC_MakeRef<SR_TaskEvent>();
 	return true;
 }
 
@@ -57,11 +56,9 @@ bool GameInstance::Render()
 		SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
 		cmdList->TransitionBarrier(SR_ResourceState_CopySrc, mActiveWorld->GetGraphicsWorld()->GetRenderer()->GetScreenColor()->GetResource());
 		cmdList->CopyResource(SR_RenderDevice::gInstance->GetSwapChain()->GetTexture()->GetResource(), mActiveWorld->GetGraphicsWorld()->GetRenderer()->GetScreenColor()->GetResource());
-		cmdList->TransitionBarrier(SR_ResourceState_Read, mActiveWorld->GetGraphicsWorld()->GetRenderer()->GetScreenColor()->GetResource());
+		cmdList->TransitionBarrier(SR_ResourceState_Present, mActiveWorld->GetGraphicsWorld()->GetRenderer()->GetScreenColor()->GetResource());
 	};
-
-	SR_CommandQueueManager* renderTaskManager = SR_RenderDevice::gInstance->GetQueueManager();
-	renderTaskManager->SubmitTask(CopyToBackBuffer, SR_CommandListType::Graphics, copyEvent.Get());
+	copyEvent = SR_RenderDevice::gInstance->PostGraphicsTask(CopyToBackBuffer);
 
 	return true;
 }

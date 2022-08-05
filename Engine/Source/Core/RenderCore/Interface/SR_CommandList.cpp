@@ -2,7 +2,8 @@
 #include "RenderCore/Resources/SR_RingBuffer.h"
 
 SR_CommandList::SR_CommandList(const SR_CommandListType& aType)
-	: mType(aType)
+	: mIsClosed(true)
+	, mType(aType)
 {
 	InitRingBuffers();
 }
@@ -16,11 +17,17 @@ void SR_CommandList::Begin()
 	mTempResources.RemoveAll();
 	mFenceWaits.RemoveAll();
 	mResourceBindings.Clear();
+	mIsClosed = false;
 }
 
 void SR_CommandList::End()
 {
+	mIsClosed = true;
+}
 
+bool SR_CommandList::IsClosed() const
+{
+	return mIsClosed;
 }
 
 void SR_CommandList::BeginEvent(const char* /*aName*/)
@@ -217,19 +224,19 @@ void SR_CommandList::SetBlendFactor(const SC_Vector4& /*aBlendFactor*/)
 {
 }
 
-void SR_CommandList::TransitionBarrier(uint32 aTargetResourceState, SR_Resource* aResource)
+void SR_CommandList::TransitionBarrier(uint32 aTargetResourceState, SR_TrackedResource* aResource)
 {
-	SC_Array<SC_Pair<uint32, SR_Resource*>> pairs;
+	SC_Array<SC_Pair<uint32, SR_TrackedResource*>> pairs;
 	pairs.Add(SC_Pair(aTargetResourceState, aResource));
 	TransitionBarrier(pairs);
 }
 
-void SR_CommandList::TransitionBarrier(const SC_Array<SC_Pair<uint32, SR_Resource*>>& /*aTransitions*/)
+void SR_CommandList::TransitionBarrier(const SC_Array<SC_Pair<uint32, SR_TrackedResource*>>& /*aTransitions*/)
 {
 
 }
 
-void SR_CommandList::UnorderedAccessBarrier(SR_Resource* /*aResource*/)
+void SR_CommandList::UnorderedAccessBarrier(SR_TrackedResource* /*aResource*/)
 {
 
 }
@@ -239,7 +246,7 @@ void SR_CommandList::AliasBarrier()
 
 }
 
-void SR_CommandList::CopyResource(SR_Resource* /*aDstResource*/, SR_Resource* /*aSrcResource*/)
+void SR_CommandList::CopyResource(SR_TrackedResource* /*aDstResource*/, SR_TrackedResource* /*aSrcResource*/)
 {
 
 }

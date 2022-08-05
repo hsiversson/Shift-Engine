@@ -38,7 +38,7 @@ struct SGfx_MeshletBuffers
 	SC_Ref<SR_Buffer> mPrimitiveIndexBuffer;
 };
 
-class SGfx_Mesh
+class SGfx_Mesh : public SC_ReferenceCounted
 {
 	friend class SGfx_MeshCache;
 public:

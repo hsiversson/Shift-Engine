@@ -90,7 +90,7 @@ public:
 	SGfx_MaterialNodeConnection mConnection;
 };
 
-class SGfx_MaterialNode
+class SGfx_MaterialNode : public SC_ReferenceCounted
 {
 	friend class SGfx_MaterialNodeGraph;
 public:

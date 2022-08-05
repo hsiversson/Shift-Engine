@@ -6,18 +6,12 @@
 
 SR_BufferResource_DX12::SR_BufferResource_DX12(const SR_BufferResourceProperties& aProperties)
 	: SR_BufferResource(aProperties)
-	, mD3D12Resource(nullptr)
 {
 
 }
 
 SR_BufferResource_DX12::~SR_BufferResource_DX12()
 {
-	if (mD3D12Resource)
-	{
-		mD3D12Resource->Release();
-		mD3D12Resource = nullptr;
-	}
 }
 
 bool SR_BufferResource_DX12::Init(const void* aInitialData)
@@ -75,11 +69,11 @@ bool SR_BufferResource_DX12::Init(const void* aInitialData)
 			&resourceDesc,
 			initialState,
 			nullptr,
-			IID_PPV_ARGS(&mD3D12Resource)
+			IID_PPV_ARGS(&mTrackedD3D12Resource)
 		);
 	}
 	else
-		hr = SR_RenderDevice_DX12::gInstance->GetD3D12Device()->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, initialState, nullptr, IID_PPV_ARGS(&mD3D12Resource)); // CRASH nvwgf2umx.dll - temp resources
+		hr = SR_RenderDevice_DX12::gInstance->GetD3D12Device()->CreateCommittedResource(&heapProps, D3D12_HEAP_FLAG_NONE, &resourceDesc, initialState, nullptr, IID_PPV_ARGS(&mTrackedD3D12Resource)); // CRASH nvwgf2umx.dll - temp resources
 
 	if (!VerifyHRESULT(hr))
 	{
@@ -87,13 +81,12 @@ bool SR_BufferResource_DX12::Init(const void* aInitialData)
 		SC_ERROR("Could not create buffer with id: {} \n", (mProperties.mDebugName) ? mProperties.mDebugName : "unnamed buffer");
 		return false;
 	}
-	mTrackedD3D12Resource = mD3D12Resource;
 
 	if (heapProps.Type == D3D12_HEAP_TYPE_UPLOAD)
 	{
 		D3D12_RANGE readRange{ 0, 0 };
 		void* dataPtr = nullptr;
-		hr = mD3D12Resource->Map(0, &readRange, &dataPtr);
+		hr = mTrackedD3D12Resource->Map(0, &readRange, &dataPtr);
 		if (!VerifyHRESULT(hr))
 			SC_ASSERT(false, "Could not map resource.");
 
@@ -104,19 +97,14 @@ bool SR_BufferResource_DX12::Init(const void* aInitialData)
 		UpdateData(0, aInitialData, resourceDesc.Width);
 
 	if (mProperties.mDebugName)
-		mD3D12Resource->SetName(SC_UTF8ToUTF16(mProperties.mDebugName).c_str());
+		mTrackedD3D12Resource->SetName(SC_UTF8ToUTF16(mProperties.mDebugName).c_str());
 
 	return true;
 }
 
 uint64 SR_BufferResource_DX12::GetGPUAddressStart() const
 {
-	return mD3D12Resource->GetGPUVirtualAddress();
-}
-
-ID3D12Resource* SR_BufferResource_DX12::GetD3D12Resource() const
-{
-	return mD3D12Resource;
+	return mTrackedD3D12Resource->GetGPUVirtualAddress();
 }
 
 #endif

@@ -1,6 +1,6 @@
 #pragma once
 
-class SGfx_Decal
+class SGfx_Decal : public SC_ReferenceCounted
 {
 
 };

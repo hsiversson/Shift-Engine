@@ -14,9 +14,12 @@
 #include "SR_ShaderState.h"
 #include "SR_RootSignature.h"
 #include "SR_TempResourceHeap.h"
-#include "RenderCore/Resources/SR_InstanceBuffer.h"
 #include "RenderCore/RenderTasks/SR_CommandQueueManager.h"
+#include "RenderCore/RenderTasks/SR_QueueManager.h"
+#include "RenderCore/RenderTasks/SR_RenderThread.h"
 #include "RenderCore/Resources/SR_RingBuffer.h"
+#include "RenderCore/Resources/SR_ResourceDelayDestructor.h"
+
 
 #define ENABLE_NVAPI			(1)
 #define ENABLE_AGS				(1)
@@ -115,7 +118,7 @@ class SR_RenderDevice
 public:
 	virtual ~SR_RenderDevice();
 
-	void BeginFrame(uint32 aFrameIndex);
+	SC_Ref<SR_TaskEvent> BeginFrame(uint32 aFrameIndex);
 	void Present();
 	void EndFrame();
 
@@ -161,10 +164,18 @@ public:
 	void SetSwapChain(SR_SwapChain* aSwapChain);
 	SR_SwapChain* GetSwapChain() const;
 
-	SR_InstanceBuffer* GetPersistentResourceInfo() const;
+	//SR_InstanceBuffer* GetPersistentResourceInfo() const;
 
-	SR_CommandQueueManager* GetQueueManager() const;
+	SC_Ref<SR_TaskEvent> PostGraphicsTask(SR_RenderTaskSignature aTask);
+	SC_Ref<SR_TaskEvent> PostComputeTask(SR_RenderTaskSignature aTask);
+	SC_Ref<SR_TaskEvent> PostCopyTask(SR_RenderTaskSignature aTask);
+
+	SR_Fence InsertFence(const SR_CommandListType& aContextType);
+
+	SR_QueueManager* GetQueueManager() const;
 	SC_Ref<SR_CommandList> GetTaskCommandList(); // Returns the command list assigned to the current render task. Should only be called inside render tasks.
+
+	SR_ResourceDelayDestructor* GetDelayDestructor() const;
 
 	const SR_RenderSupportCaps& GetSupportCaps() const;
 
@@ -211,16 +222,17 @@ protected:
 	SC_Ref<SR_RootSignature> mRootSignatures[static_cast<uint32>(SR_RootSignatureType::COUNT)];
 
 	SC_Ref<SR_SwapChain> mDefaultSwapChain;
-	SC_Ref<SC_Event> mBeginFrameEvent;
-	SC_Ref<SC_Event> mPresentEvent;
-	SC_Ref<SC_Event> mPresentEvents[2];
-	SC_Ref<SC_Event> mEndFrameEvent;
+	SC_Ref<SR_TaskEvent> mBeginFrameEvent;
+	SC_Ref<SR_TaskEvent> mPresentEvent;
+	SC_Ref<SR_TaskEvent> mEndFrameEvent;
 
-	SC_UniquePtr<SR_InstanceBuffer> mPersistentResourceInfo;
-
-	SC_UniquePtr<SR_CommandQueueManager> mQueueManager;
+	//SC_UniquePtr<SR_InstanceBuffer> mPersistentResourceInfo;
+	SC_StaticArray<SC_UniquePtr<SR_RenderThread>, static_cast<uint32>(SR_CommandListType::COUNT)> mContextThreads;
+	SC_UniquePtr<SR_QueueManager> mQueueManager;
 
 	SC_UniquePtr<SR_TempResourceHeap> mTempResourceHeap;
+
+	SC_UniquePtr<SR_ResourceDelayDestructor> mDelayDestructor;
 
 	SR_RenderSupportCaps mSupportCaps;
 	bool mEnableDebugMode : 1;

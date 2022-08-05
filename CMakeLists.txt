@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.18)
 
 ##################################
 # Solution Name + Version
-project(ShiftEngine VERSION 1.0)
+project(ShiftEngine VERSION 1.0 LANGUAGES CXX CSharp)
 
 ##################################
 # Set various C++ config variables
@@ -16,6 +16,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)       ## Enforce the C++20 Standard
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/Bin)               ## Where to put the .exe files etc.
 set(ENGINE_SOURCE_DIRECTORY ${PROJECT_SOURCE_DIR}/Engine/Source)            ## Where is the engine source code located
 set(GAME_SOURCE_DIRECTORY ${PROJECT_SOURCE_DIR}/Samples/ExampleGame/Source) ## Where is the game source code located
+set(GAME_DATA_DIRECTORY ${PROJECT_SOURCE_DIR}/Samples/ExampleGame/Data)     ## Where is the game data located
 set(ENGINE_EXTERNAL_DIRECTORY ${ENGINE_SOURCE_DIRECTORY}/External)
 
 ##################################
@@ -86,6 +87,13 @@ set(DXC_LIB "${DXC_LIB_PATH}/dxcompiler.lib")
 set(IMGUI_SDK_PATH "${ENGINE_EXTERNAL_DIRECTORY}/ImGui")
 set(IMGUI_INCLUDE_PATH "${IMGUI_SDK_PATH}")
 
+## Mono
+set(MONO_SDK_PATH "${ENGINE_EXTERNAL_DIRECTORY}/Mono")
+set(MONO_BIN_PATH "${MONO_SDK_PATH}/bin")
+set(MONO_LIB_PATH "${MONO_SDK_PATH}/lib")
+set(MONO_INCLUDE_PATH "${MONO_SDK_PATH}/include")
+set(MONO_LIB "${MONO_LIB_PATH}/mono-2.0-sgen.lib")
+
 ## Nlohmann JSON
 set(NLOHMANN_JSON_SDK_PATH "${ENGINE_EXTERNAL_DIRECTORY}/NlohmannJson")
 set(NLOHMANN_JSON_INCLUDE_PATH "${NLOHMANN_JSON_SDK_PATH}")
@@ -110,7 +118,7 @@ set(WINPIXEVENTRUNTIME_INCLUDE_PATH "${WINPIXEVENTRUNTIME_SDK_PATH}/Include")
 set(WINPIXEVENTRUNTIME_LIB "${WINPIXEVENTRUNTIME_BIN_PATH}/WinPixEventRuntime.lib")
 
 ## Gather all SDKs into one variable
-set(VENDOR_SDK_LIBS ${AGS_LIB} ${ASSIMP_LIB} ${DIRECTSTORAGE_LIB} ${DXC_LIB} ${NVAPI_LIB} ${AFTERMATH_LIB} ${WINPIXEVENTRUNTIME_LIB})
+set(VENDOR_SDK_LIBS ${AGS_LIB} ${ASSIMP_LIB} ${DIRECTSTORAGE_LIB} ${DXC_LIB} ${NVAPI_LIB} ${AFTERMATH_LIB} ${WINPIXEVENTRUNTIME_LIB} ${MONO_LIB})
 
 ##################################
 # Global Include Directories
@@ -184,6 +192,14 @@ function(ConfigTargetPostBuildLibInstall aTarget)
         TARGET ${aTarget} POST_BUILD 
         COMMAND ${CMAKE_COMMAND} -E copy "${WINPIXEVENTRUNTIME_BIN_PATH}/${WINPIXEVENTRUNTIME_DLL}" "$<TARGET_FILE_DIR:${aTarget}>/${WINPIXEVENTRUNTIME_DLL}"
         COMMENT "Copying [${WINPIXEVENTRUNTIME_DLL}] to output directory...\n"
+    )
+
+    ## Mono
+    set(MONO_DLL mono-2.0-sgen.dll)
+    add_custom_command(
+        TARGET ${aTarget} POST_BUILD 
+        COMMAND ${CMAKE_COMMAND} -E copy "${MONO_BIN_PATH}/${MONO_DLL}" "$<TARGET_FILE_DIR:${aTarget}>/${MONO_DLL}"
+        COMMENT "Copying [${MONO_DLL}] to output directory...\n"
     )
 
 endfunction()

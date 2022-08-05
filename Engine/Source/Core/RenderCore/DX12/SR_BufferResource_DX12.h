@@ -14,11 +14,6 @@ public:
 	bool Init(const void* aInitialData);
 
 	uint64 GetGPUAddressStart() const override;
-
-	ID3D12Resource* GetD3D12Resource() const;
-
-private:
-	ID3D12Resource* mD3D12Resource;
 };
 
 #endif

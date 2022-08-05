@@ -34,11 +34,9 @@ void SR_BufferResource::UpdateData(uint32 aOffset, const void* aData, uint64 aSi
 			cmdList->UpdateBuffer(this, aOffset, aData, (uint32)aSize);
 		};
 
-		SC_Ref<SR_TaskEvent> taskEvent = SC_MakeRef<SR_TaskEvent>();
-		SR_RenderDevice::gInstance->GetQueueManager()->SubmitTask(UploadData, SR_CommandListType::Copy, taskEvent);
-
+		SC_Ref<SR_TaskEvent> taskEvent = SR_RenderDevice::gInstance->PostCopyTask(UploadData);
 		taskEvent->mCPUEvent.Wait();
-		//taskEvent->mFence.Wait();
+		taskEvent->mFence.Wait();
 	}
 }
 
