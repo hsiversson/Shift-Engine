@@ -8,7 +8,7 @@
 
 #if IS_WINDOWS_PLATFORM
 	#define SR_ENABLE_DX12					(1)
-	#define SR_ENABLE_DIRECTSTORAGE			(1)
+	#define SR_ENABLE_DIRECTSTORAGE			(0)
 	#define SR_ENABLE_VULKAN				(0)
 	#define SR_ENABLE_RAYTRACING			(1)
 	#define SR_ENABLE_MESH_SHADERS			(1)

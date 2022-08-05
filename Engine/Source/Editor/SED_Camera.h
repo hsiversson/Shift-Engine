@@ -18,6 +18,9 @@ public:
 	void SetRotationSpeed(float aValue);
 	float GetRotationSpeed() const;
 
+	void SetPivot(const SC_Vector& aPivot);
+	const SC_Vector& GetPivot() const;
+
 private:
 	enum ControlType
 	{
@@ -35,7 +38,11 @@ private:
 
 	ControlType mActiveControlType;
 	SED_ViewportWindow* mParentViewport;
-	SC_Vector2 mStoredMousePos;
+
+	SC_Vector mTargetPosition;
+
+	SC_Vector mArcBallPivotPosition;
+	float mDistanceToPivotPosition;
 
 	float mMovementSpeed;
 	float mBoostMultiplier;

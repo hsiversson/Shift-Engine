@@ -305,6 +305,12 @@ inline SC_TVector3<T> SC_TVector3<T>::GetNormalized() const
 	return SC_TVector3<T>(0);
 }
 
+//template<class T>
+//inline SC_Vector& SC_TVector3<T>::LerpTowards(const SC_Vector& aTarget, float aDeltaTime, float aLerpSpeed)
+//{
+//	// // O: insert return statement here
+//}
+
 template<class T>
 inline T& SC_TVector3<T>::operator[](uint32 aIndex)
 {

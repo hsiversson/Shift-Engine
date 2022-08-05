@@ -152,7 +152,7 @@ void SGfx_Renderer::RenderView(SGfx_View* aView)
 
 	prepareData.mPrePassEvent = SubmitGraphicsTask(std::bind(&SGfx_Renderer::RenderPrePass, this, SC_Placeholder::Arg1), aView);
 
-	//prepareData.mLightCullingEvent = SubmitGraphicsTask(std::bind(&SGfx_Renderer::ComputeLightCulling, this, SC_Placeholder::Arg1), aView);
+	prepareData.mLightCullingEvent = SubmitGraphicsTask(std::bind(&SGfx_Renderer::ComputeLightCulling, this, SC_Placeholder::Arg1), aView);
 
 	//SubmitComputeTask(std::bind(&SGfx_Renderer::ComputeAmbientOcclusion, this), prepareData.mAmbientOcclusionEvent);
 
@@ -290,7 +290,7 @@ void SGfx_Renderer::PreRenderUpdates(SGfx_View* aView)
 	SC_PROFILER_FUNCTION();
 	SR_Buffer* instanceDataBuffer = renderData.mInstanceData->GetBuffer();
 
-	//mLightCulling->Prepare(renderData);
+	mLightCulling->Prepare(renderData);
 
 	SGfx_MaterialGPUDataBuffer::Get().UpdateBuffer();
 	renderData.mSceneConstants.mMaterialInfoBufferIndex = SGfx_MaterialGPUDataBuffer::Get().GetBufferDescriptorIndex();

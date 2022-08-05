@@ -159,21 +159,37 @@ void SGfx_Camera::Move(const SC_Vector& aDirection, float aLength)
 	SetPosition(target);
 }
 
+void SGfx_Camera::MoveTowards(const SC_Vector& aTarget, float aDeltaTime, float aLerpSpeed)
+{
+	if (aLerpSpeed <= 0.0f)
+	{
+		SetPosition(aTarget);
+		return;
+	}
+
+	const SC_Vector currentPos = GetPosition();
+	const SC_Vector distance = aTarget - currentPos;
+	if (distance.Length2() < SC_FLT_SMALL_NUMBER)
+	{
+		SetPosition(aTarget);
+		return;
+	}
+
+	const SC_Vector deltaMovement = distance * SC_Clamp(aDeltaTime * aLerpSpeed, 0.0f, 1.0f);
+	SetPosition(currentPos + deltaMovement);
+}
+
 void SGfx_Camera::Rotate(const SC_Vector& aRotationAngles)
 {
-	SC_Quaternion newRotation(mTransform);
-
 	SC_Quaternion pitch = SC_Quaternion::CreateRotation(GetRight(), SC_Math::DegreesToRadians(aRotationAngles.x));
-	newRotation *= pitch;
-
 	SC_Quaternion yaw = SC_Quaternion::CreateRotation(SC_Vector::UpVector(), SC_Math::DegreesToRadians(aRotationAngles.y));
-	newRotation *= yaw;
-
 	SC_Quaternion roll = SC_Quaternion::CreateRotation(GetForward(), SC_Math::DegreesToRadians(aRotationAngles.z));
-	newRotation *= roll;
+
+	SC_Quaternion newRotation = pitch * yaw * roll;
+	newRotation.Normalize();
 
 	SC_Vector position = GetPosition();
-	mTransform = newRotation.AsMatrix();
+	mTransform *= newRotation.AsMatrix();
 	SetPosition(position);
 }
 
@@ -247,6 +263,11 @@ const SC_Vector& SGfx_Camera::GetRight() const
 const SC_Vector2& SGfx_Camera::GetSize() const
 {
 	return mSize;
+}
+
+float SGfx_Camera::GetFov() const
+{
+	return mFov;
 }
 
 float SGfx_Camera::GetNear() const

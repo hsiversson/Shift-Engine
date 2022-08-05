@@ -18,7 +18,6 @@ namespace SC_Math
 	float Log(float aValue);
 	float Log2(float aValue);
 	float Abs(float aValue);
-
 	float Floor(float aValue);
 	float Ceil(float aValue);
 	float Frac(float aValue);
@@ -53,6 +52,12 @@ namespace SC_Math
 	inline T FastLerp(T aA, T aB, T aValue)
 	{
 		return aA + aValue * (aB - aA);
+	}
+
+	template <typename T> 
+	inline int Sign(T aValue) 
+	{
+		return (T(0) < aValue) - (aValue < T(0));
 	}
 }
 

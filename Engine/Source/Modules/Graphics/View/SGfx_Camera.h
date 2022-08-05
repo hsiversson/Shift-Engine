@@ -75,6 +75,8 @@ public:
 	void SetViewportOffset(const SC_IntVector2& aOffset);
 
 	void Move(const SC_Vector& aDirection, float aLength);
+	void MoveTowards(const SC_Vector& aTarget, float aDeltaTime, float aLerpSpeed);
+
 	void Rotate(const SC_Vector& aRotationAngles);
 	void Rotate(const SC_Vector& aAxis, float aValue);
 
@@ -91,6 +93,7 @@ public:
 	const SC_Vector& GetRight() const;
 
 	const SC_Vector2& GetSize() const;
+	float GetFov() const;
 	float GetNear() const;
 	float GetFar() const;
 
