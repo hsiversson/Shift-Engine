@@ -6,6 +6,21 @@ We are primarily targeting Windows 64-bit platforms at the moment. Support for o
 
 ![](Preview_Screenshot.png)
 
+## Notable Features
+* Based entirely on C++20
+* Built exclusively for next generation hardware
+* DirectX 12 support
+* Geometry meshletization
+* Mesh Shading
+* Raytraced Diffuse GI
+* Raytraced Specular GI (Reflections)
+* Raytraced Ambient Occlusion
+* Raytraced Shadows
+* No baking by default (very quick iteration times)
+* Tile-based Forward Rendering
+* Asset import driven by Assimp
+* ImGui based Editor
+
 ## How to build & run the editor
 * Download the repository
 * Run the GenerateSolution_Editor_ExampleGame.bat script
