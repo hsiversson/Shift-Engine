@@ -1,6 +1,7 @@
 #include "SR_CommandList_Vk.h"
 
 #if SR_ENABLE_VULKAN
+#include "SR_BufferResource_Vk.h"
 
 SR_CommandList_Vk::SR_CommandList_Vk(const SR_CommandListType& aType)
 	: SR_CommandList(aType)
@@ -104,19 +105,21 @@ void SR_CommandList_Vk::SetRootSignature(SR_RootSignature* /*aRootSignature*/)
 
 }
 
-void SR_CommandList_Vk::SetVertexBuffer(SR_BufferResource* /*aVertexBuffer*/)
+void SR_CommandList_Vk::SetVertexBuffer(SR_BufferResource* aVertexBuffer)
 {
-
+	SR_BufferResource_Vk* vertexBuffer = static_cast<SR_BufferResource_Vk*>(aVertexBuffer);
+	VkBuffer vkVertexBuffer = vertexBuffer->GetVkBuffer();
+	vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, &vkVertexBuffer, nullptr);
 }
 
-void SR_CommandList_Vk::SetIndexBuffer(SR_BufferResource* /*aIndexBuffer*/)
+void SR_CommandList_Vk::SetIndexBuffer(SR_BufferResource* aIndexBuffer)
 {
-
+	SR_BufferResource_Vk* indexBuffer = static_cast<SR_BufferResource_Vk*>(aIndexBuffer);
+	vkCmdBindIndexBuffer(mCommandBuffer, indexBuffer->GetVkBuffer(), 0, indexBuffer->GetProperties().mElementSize == sizeof(uint16) ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
 }
 
 void SR_CommandList_Vk::SetPrimitiveTopology(const SR_PrimitiveTopology& /*aPrimitiveTopology*/)
 {
-
 }
 
 void SR_CommandList_Vk::SetRootConstant()
@@ -180,7 +183,6 @@ void SR_CommandList_Vk::UnorderedAccessBarrier(SR_TrackedResource* /*aResource*/
 
 void SR_CommandList_Vk::AliasBarrier()
 {
-
 }
 
 void SR_CommandList_Vk::CopyResource(SR_TrackedResource* /*aDstResource*/, SR_TrackedResource* /*aSrcResource*/)
@@ -190,7 +192,6 @@ void SR_CommandList_Vk::CopyResource(SR_TrackedResource* /*aDstResource*/, SR_Tr
 
 void SR_CommandList_Vk::CopyBuffer(SR_BufferResource* /*aDstBuffer*/, uint64 /*aDstOffset*/, SR_BufferResource* /*aSrcBuffer*/, uint64 /*aSrcOffset*/, uint32 /*aSize*/)
 {
-
 }
 
 void SR_CommandList_Vk::CopyTexture(SR_TextureResource* /*aDstTexture*/, SR_TextureResource* /*aSrcResource*/)
