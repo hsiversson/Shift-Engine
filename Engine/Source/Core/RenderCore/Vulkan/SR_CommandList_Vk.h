@@ -83,6 +83,7 @@ public:
 	void SetScissorRect(const SR_Rect& aRect) override;
 
 private:
+	void SetResources();
 
 	VkCommandBuffer mCommandBuffer;
 };

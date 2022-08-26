@@ -38,34 +38,40 @@ void SR_CommandList_Vk::EndEvent()
 
 void SR_CommandList_Vk::Dispatch(uint32 aGroupCountX, uint32 aGroupCountY /*= 1*/, uint32 aGroupCountZ /*= 1*/)
 {
+	SetResources();
 	vkCmdDispatch(mCommandBuffer, aGroupCountX, aGroupCountY, aGroupCountZ);
 }
 
 void SR_CommandList_Vk::DrawInstanced(uint32 aVertexCount, uint32 aInstanceCount, uint32 aStartVertex /*= 0*/, uint32 aStartInstance /*= 0*/)
 {
+	SetResources();
 	vkCmdDraw(mCommandBuffer, aVertexCount, aInstanceCount, aStartVertex, aStartInstance);
 }
 
 void SR_CommandList_Vk::DrawIndexedInstanced(uint32 aIndexCount, uint32 aInstanceCount, uint32 aStartIndex /*= 0*/, uint32 aStartVertex /*= 0*/, uint32 aStartInstance /*= 0*/)
 {
+	SetResources();
 	vkCmdDrawIndexed(mCommandBuffer, aIndexCount, aInstanceCount, aStartIndex, aStartVertex, aStartInstance);
 }
 
 #if SR_ENABLE_MESH_SHADERS
 void SR_CommandList_Vk::DispatchMesh(uint32 /*aGroupCountX*/, uint32 /*aGroupCountY*/ /*= 1*/, uint32 /*aGroupCountZ*/ /*= 1*/)
 {
+	SetResources();
 	//vkCmdDrawMeshTasksNV(mCommandBuffer, );
 }
 #endif //SR_ENABLE_MESH_SHADERS
 
 #if SR_ENABLE_RAYTRACING
-void SR_CommandList_Vk::DispatchRays(uint32 /*aThreadCountX*/, uint32 /*aThreadCountY*/ /*= 1*/, uint32 /*aThreadCountZ*/ /*= 1*/)
+void SR_CommandList_Vk::DispatchRays(uint32 aThreadCountX, uint32 aThreadCountY /*= 1*/, uint32 aThreadCountZ /*= 1*/)
 {
-
+	SetResources();
+	vkCmdTraceRaysKHR(mCommandBuffer, nullptr, nullptr, nullptr, nullptr, aThreadCountX, aThreadCountY, aThreadCountZ);
 }
 
 SC_Ref<SR_BufferResource> SR_CommandList_Vk::CreateAccelerationStructure(const SR_AccelerationStructureInputs& /*aInputs*/, SR_BufferResource* /*aExistingBufferResource*/)
 {
+	vkCmdBuildAccelerationStructuresKHR(mCommandBuffer, 0, nullptr, nullptr);
 	return nullptr;
 }
 #endif //SR_ENABLE_RAYTRACING
@@ -80,8 +86,17 @@ void SR_CommandList_Vk::ClearDepthStencil(SR_DepthStencil* /*aDSV*/, float /*aCl
 
 }
 
-void SR_CommandList_Vk::SetShaderState(SR_ShaderState* /*aShaderState*/)
+void SR_CommandList_Vk::SetShaderState(SR_ShaderState* aShaderState)
 {
+	VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+
+	if (aShaderState->IsRaytracingShader())
+		bindPoint = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR;
+	else if (aShaderState->IsComputeShader())
+		bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
+
+	VkPipeline pipeline;
+	vkCmdBindPipeline(mCommandBuffer, bindPoint, pipeline);
 }
 
 void SR_CommandList_Vk::SetRootSignature(SR_RootSignature* /*aRootSignature*/)
@@ -106,7 +121,6 @@ void SR_CommandList_Vk::SetPrimitiveTopology(const SR_PrimitiveTopology& /*aPrim
 
 void SR_CommandList_Vk::SetRootConstant()
 {
-
 }
 
 void SR_CommandList_Vk::SetRootConstantBuffer(SR_BufferResource* /*aConstantBuffer*/, uint32 /*aSlot*/)
@@ -211,12 +225,18 @@ SR_Buffer* SR_CommandList_Vk::GetBuffer()
 
 void SR_CommandList_Vk::SetViewport(const SR_Rect& /*aRect*/, float /*aMinDepth*/ /*= 0.0f*/, float /*aMaxDepth*/ /*= 1.0f*/)
 {
-
+	VkViewport viewport;
+	vkCmdSetViewport(mCommandBuffer, 0, 1, &viewport);
 }
 
 void SR_CommandList_Vk::SetScissorRect(const SR_Rect& /*aRect*/)
 {
+	VkRect2D scissorRect;	
+	vkCmdSetScissor(mCommandBuffer, 0, 1, &scissorRect);
+}
 
+void SR_CommandList_Vk::SetResources()
+{
 }
 
 #endif

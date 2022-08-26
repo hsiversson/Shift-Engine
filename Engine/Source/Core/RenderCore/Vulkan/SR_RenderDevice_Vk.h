@@ -3,6 +3,7 @@
 
 #if SR_ENABLE_VULKAN
 
+class SR_DirectXShaderCompiler;
 class SR_RenderDevice_Vk final : public SR_RenderDevice
 {
 public:
@@ -42,10 +43,17 @@ public:
 
 private:
 	bool Init(void* aWindowHandle) override;
+
+	bool SelectPhysicalDevice();
+	bool SetupLogicalDevice();
+
 	void GatherSupportCaps();
 
-	VkPhysicalDevice mPhysicalDevice;
-	VkDevice mLogicalDevice;
+	SC_UniquePtr<SR_DirectXShaderCompiler> mDirectXShaderCompiler;
+
+	VkPhysicalDevice mVkPhysicalDevice;
+	VkDevice mVkLogicalDevice;
+	VkInstance mVkInstance;
 };
 
 #endif

@@ -1,4 +1,5 @@
 #include "SR_RenderDevice_Vk.h"
+#include "RenderCore/ShaderCompiler/SR_DirectXShaderCompiler.h"
 
 #if SR_ENABLE_VULKAN
 
@@ -118,7 +119,52 @@ SC_SizeT SR_RenderDevice_Vk::GetUsedVRAM() const
 
 bool SR_RenderDevice_Vk::Init(void* /*aWindowHandle*/)
 {
+
+	VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
+	appInfo.apiVersion = VK_API_VERSION_1_3;
+	appInfo.pEngineName = "Shift Engine";
+	appInfo.engineVersion = 1;
+	appInfo.pApplicationName = "Example Game";
+	appInfo.applicationVersion = 1;
+
+	SC_Array<const char*> extensions;
+	SC_Array<const char*> layers;
+
+	VkInstanceCreateInfo instanceCreateInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
+	instanceCreateInfo.pApplicationInfo = &appInfo;
+	instanceCreateInfo.enabledExtensionCount = extensions.Count();
+	instanceCreateInfo.ppEnabledExtensionNames = extensions.GetBuffer();
+	instanceCreateInfo.enabledLayerCount = layers.Count();
+	instanceCreateInfo.ppEnabledLayerNames = layers.GetBuffer();
+
+	VkResult result = vkCreateInstance(&instanceCreateInfo, nullptr, &mVkInstance);
+	if (result != VK_SUCCESS)
+	{
+		SC_ERROR("Failed to create VkInstance.");
+		return false;
+	}
+
+	if (!SelectPhysicalDevice())
+		return false;
+
+	GatherSupportCaps();
+
+	if (!SetupLogicalDevice())
+		return false;
+
+	mDirectXShaderCompiler = SC_MakeUnique<SR_DirectXShaderCompiler>(SR_DirectXShaderCompiler::Backend::SPIRV);
+
 	return true;
+}
+
+bool SR_RenderDevice_Vk::SelectPhysicalDevice()
+{
+	return false;
+}
+
+bool SR_RenderDevice_Vk::SetupLogicalDevice()
+{
+	return false;
 }
 
 void SR_RenderDevice_Vk::GatherSupportCaps()
