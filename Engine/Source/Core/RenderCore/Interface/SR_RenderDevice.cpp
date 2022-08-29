@@ -215,7 +215,7 @@ void SR_RenderDevice::GarbageCollect()
 	}
 }
 
-SC_Ref<SR_CommandList> SR_RenderDevice::CreateCommandList(const SR_CommandListType& /*aType*/)
+SC_Ref<SR_CommandList> SR_RenderDevice::CreateCommandList(const SR_CommandListType& /*aType*/, const char* /*aDebugName*/)
 {
 	SC_ASSERT(false, "Not implemented yet!");
 	return nullptr;
@@ -543,13 +543,18 @@ SR_QueueManager* SR_RenderDevice::GetQueueManager() const
 	return mQueueManager.get();
 }
 
-SC_Ref<SR_CommandList> SR_RenderDevice::GetTaskCommandList()
+SC_Ref<SR_CommandList> SR_RenderDevice::GetTaskCommandList(const char* aDebugName)
 {
 	if (!mQueueManager)
 		return nullptr;
 
 	if (!SR_RenderThread::gCurrentCommandList)
+	{
 		SR_RenderThread::gCurrentCommandList = mQueueManager->GetCommandList(SR_RenderThread::gCurrentContextType);
+
+		if (aDebugName)
+			SR_RenderThread::gCurrentCommandList->SetDebugName(aDebugName);
+	}
 
 	return SR_RenderThread::gCurrentCommandList;
 }

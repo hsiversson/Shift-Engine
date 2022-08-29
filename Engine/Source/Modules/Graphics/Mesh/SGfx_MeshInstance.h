@@ -29,17 +29,14 @@ public:
 
 #if SR_ENABLE_RAYTRACING
 	bool IncludeInRaytracingScene() const;
-	const SR_RaytracingInstanceData& GetRaytracingData();
+	SR_RaytracingInstanceProperties GetRaytracingInstanceProperties();
+	SR_RaytracingInstanceData GetRaytracingInstanceData() const;
 #endif
 
 	uint32 GetInstanceDataOffset() const;
 
 private:
 	void CalculateBoundingBox();
-
-#if SR_ENABLE_RAYTRACING
-	void UpdateRaytracingData();
-#endif
 
 private:
 	SC_Matrix mTransform;
@@ -48,10 +45,6 @@ private:
 
 	SC_Ref<SGfx_Mesh> mMeshTemplate;
 	SC_Ref<SGfx_MaterialInstance> mMaterialInstance;
-
-#if SR_ENABLE_RAYTRACING
-	SR_RaytracingInstanceData mRaytracingData;
-#endif
 
 	uint32 mInstanceDataOffset;
 };

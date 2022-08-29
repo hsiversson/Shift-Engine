@@ -12,6 +12,7 @@ class SED_WorldHierarchyWindow;
 class SED_PropertiesWindow;
 class SED_MaterialEditor;
 class SED_MetricsWindow;
+class SED_GraphicsSettingsWindow;
 
 class SED_Editor : public SAF_AppCallbacks
 {
@@ -34,6 +35,9 @@ private:
 	SC_Ref<SED_MetricsWindow> mMetricsWindow;
 	
 	SC_UniquePtr<SED_MaterialEditor> mMaterialEditor;
+
+	// TEMP
+	SC_Ref<SED_GraphicsSettingsWindow> mGraphicsSettings;
 
 	// Current world
 	SC_Ref<SGF_World> mActiveWorld;

@@ -29,18 +29,12 @@ public:
 	bool IsEmpty() const;
 
 private:
-	struct InstanceData
+	struct alignas(16) InstanceData
 	{
 		SC_Matrix mTransform;
 		SC_Matrix mPrevTransform;
-		uint32 mNormalBufferDescriptorIndex;
-		uint32 mVertexStride;
-		uint32 mIndexBufferDescriptorIndex;
-		uint32 mIndexStride;
-		uint32 mNumVertices;
-		uint32 mVertexNormalOffset;
 		uint32 mMaterialIndex;
-		uint32 _pad;
+		uint32 __pad[3];
 	};
 
 	void Sort();

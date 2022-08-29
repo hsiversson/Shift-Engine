@@ -98,7 +98,19 @@ void SGfx_MaterialGPUDataBuffer::UpdateBuffer()
 	SC_MutexLock lock(mMutex);
 
 	SC_PROFILER_FUNCTION();
-	mBufferResource->UpdateData(0, mMaterialGPUDatas.GetBuffer(), mMaterialGPUDatas.GetByteSize());
+	bool createBuffer = true;// !mBuffer || (mBuffer->GetProperties().mElementCount < mData.GetByteSize());
+	if (createBuffer)
+	{
+		SR_BufferResourceProperties resourceProps = {};
+		resourceProps.mBindFlags = SR_BufferBindFlag_Buffer;
+		resourceProps.mDebugName = "MaterialGPUDataBuffer";
+		resourceProps.mElementSize = mMaterialGPUDatas.ElementStride();
+		resourceProps.mElementCount = mMaterialGPUDatas.Count();
+		mBufferResource = SR_RenderDevice::gInstance->CreateBufferResource(resourceProps, mMaterialGPUDatas.GetBuffer());
+	}
+	//else
+	//	mBufferResource->UpdateData(0, mData.GetBuffer(), mData.GetByteSize());
+
 
 	SR_BufferProperties bufferProperties;
 	bufferProperties.mElementCount = mMaterialGPUDatas.Count();

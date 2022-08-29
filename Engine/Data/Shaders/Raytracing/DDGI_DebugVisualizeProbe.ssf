@@ -1,0 +1,40 @@
+#include "../SceneConstants.ssh"
+#include "DDGI.ssh"
+
+struct VertexInput
+{
+	float3 mPosition : POSITION;
+	float3 mNormal : NORMAL;
+};
+
+struct PixelShaderInput
+{
+    float4 mClipPosition : SV_POSITION;
+    float3 mWorldPosition : WORLD_POSITION;
+    float3 mNormal : NORMAL;
+    nointerpolation uint mProbeIndex : PROBE_INDEX;
+};
+
+PixelShaderInput MainVS(in VertexInput aInput, uint aProbeIndex : SV_InstanceId)
+{
+    PixelShaderInput output = (PixelShaderInput)0;
+
+    float3 probePosition = GetProbeWorldPos(aProbeIndex);
+    float3 worldPos = aInput.mPosition + probePosition.xyz;
+    output.mClipPosition = mul(SR_ViewConstants.mWorldToClip, float4(worldPos, 1.0f));
+    output.mWorldPosition = worldPos;
+    output.mNormal = normalize(aInput.mNormal);
+    output.mProbeIndex = aProbeIndex;
+
+    return output;
+}
+
+float4 MainPS(in PixelShaderInput aInput) : SV_Target0
+{
+    //return float4(GetProbeDebugColor(aInput.mProbeIndex), 1.0f);
+
+    //return float4(aInput.mWorldPosition, 1.0f);
+    //return float4(aInput.mNormal, 1.0f);
+    float3 viewDirection = normalize(SR_ViewConstants.mCameraPosition - aInput.mWorldPosition);
+    return float4(SampleIrradiance(aInput.mWorldPosition, aInput.mNormal, viewDirection), 1.0f);
+}

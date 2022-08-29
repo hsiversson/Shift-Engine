@@ -3,6 +3,7 @@
 struct FilterConstants
 {
     float4 mTargetResolutionAndRcp;
+    
     float mThreshold;
     float mSoftThreshold;
     uint mInputTextureDescriptorIndex;

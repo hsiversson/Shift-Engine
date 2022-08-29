@@ -1,0 +1,50 @@
+#pragma once
+#include "Raytracing.ssh"
+
+struct SR_RayDesc
+{
+    float3 mOrigin;
+    float3 mDirection;
+    float mMinDistance;
+    float mMaxDistance;
+};
+
+/* Returns 0.0f if the ray hit any opaque geometry. */
+float TraceRayVisibility(const SR_RayDesc aRay)
+{
+    RayQuery<RAY_FLAG_CULL_NON_OPAQUE|RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES|RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> rayQuery;
+    
+    RayDesc ray;
+    ray.Origin = aRay.mOrigin;
+    ray.Direction = aRay.mDirection;
+    ray.TMin = aRay.mMinDistance;
+    ray.TMax = aRay.mMaxDistance;
+
+    rayQuery.TraceRayInline(SR_GetRaytracingScene(), 0, ~0, ray);
+    rayQuery.Proceed();
+
+    if (rayQuery.CommittedStatus() == COMMITTED_TRIANGLE_HIT)
+        return 0.0f;
+    
+    return 1.0f;
+}
+
+/* Returns the distance between ray origin and the ray hit. If ray misses it will return aRay.mMaxDistance. */
+float TraceRayDistance(const SR_RayDesc aRay)
+{
+    RayQuery<RAY_FLAG_CULL_NON_OPAQUE|RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES|RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH> rayQuery;
+    
+    RayDesc ray;
+    ray.Origin = aRay.mOrigin;
+    ray.Direction = aRay.mDirection;
+    ray.TMin = aRay.mMinDistance;
+    ray.TMax = aRay.mMaxDistance;
+
+    rayQuery.TraceRayInline(SR_GetRaytracingScene(), 0, ~0, ray);
+    rayQuery.Proceed();
+
+    if (rayQuery.CommittedStatus() == COMMITTED_TRIANGLE_HIT)
+        return rayQuery.CommittedRayT();
+    
+    return aRay.mMaxDistance;
+}

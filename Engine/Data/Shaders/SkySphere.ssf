@@ -18,11 +18,11 @@ PixelInput MainVS(VertexInput aInput)
     PixelInput output;
 
     float3 worldPos = aInput.mPosition + SR_ViewConstants.mCameraPosition;
-    float4 clipPos = mul(gSceneConstants.mViewConstants.mWorldToClip, float4(worldPos, 1.0f));
+    float4 clipPos = mul(SR_ViewConstants.mWorldToClip, float4(worldPos, 1.0f));
 
     output.mClipPosition = clipPos.xyww;
     output.mClipPosition.z = 0.0f;
-    output.mViewDirection = normalize(worldPos - gSceneConstants.mViewConstants.mCameraPosition);
+    output.mViewDirection = normalize(worldPos - SR_ViewConstants.mCameraPosition);
     return output;
 }
 

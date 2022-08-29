@@ -4,7 +4,7 @@
 #include "LightsCommon.ssh"
 #include "LightCullingCommon.ssh"
 #include "Shadows.ssh"
-#include "RTShadows.ssh"
+#include "Raytracing/RTShadows.ssh"
 
 #define DEBUG_CASCADE_COLOR     (0)
 #define DEBUG_LIGHT_CULLING     (0)
@@ -15,10 +15,9 @@
 
 float3 CalculateDirectionalLightContribution(in const MaterialData aMaterialData, in const float3 aWorldPosition, in const float3 aViewDirection, in float aPixelDepth)
 {
-    const EnvironmentConstants environmentConstants = gSceneConstants.mEnvironmentConstants;
-    float3 lightDirection = environmentConstants.mSunLightDirection;
-    float3 lightColor = environmentConstants.mSunLightColor;
-    float lightRadiance = environmentConstants.mSunLightIntensity;
+    float3 lightDirection = SR_EnvironmentConstants.mSunLightDirection;
+    float3 lightColor = SR_EnvironmentConstants.mSunLightColor;
+    float lightRadiance = SR_EnvironmentConstants.mSunLightIntensity;
 
     float3 lighting = (float3)0.0f;
     float shadowFactor = 1.0f;
@@ -49,7 +48,7 @@ float3 CalculateDirectionalLightContribution(in const MaterialData aMaterialData
 
 float GetInverseSquareFalloff(float aDistanceSqr, float aRange)
 {
-	return Squared(saturate(1.0f - Squared(aDistanceSqr * Squared(aRange))));
+	return Square(saturate(1.0f - Square(aDistanceSqr * Square(aRange))));
 }
 
 /** 
@@ -64,7 +63,7 @@ float GetSpotAttenuationMask(float3 L, float3 aSpotDirection, float2 aSpotAngles
 }
 float GetSpotAttenuation(float3 L, float3 aSpotDirection, float2 aSpotAngles)
 {
-	float coneAngleFalloff = Squared(GetSpotAttenuationMask(L, aSpotDirection, aSpotAngles));
+	float coneAngleFalloff = Square(GetSpotAttenuationMask(L, aSpotDirection, aSpotAngles));
 	return coneAngleFalloff;
 }
 
@@ -169,7 +168,7 @@ float3 CalculateDirectLighting(in MaterialData aMaterialData, in const float3 aW
     // Should we only support one directional light?
     result += CalculateDirectionalLightContribution(aMaterialData, aWorldPosition, aViewDirection, aPixelDepth);
 
-    const SR_TileData tileData = GetTileData(aMaterialData.mClipPosition.xy);
+    const SR_TileData tileData = GetTileData(aMaterialData.mSvPosition.xy);
     for (uint i = 0; i < tileData.mNumLights; ++i)
     {
         const SR_LocalLight light = GetLocalLight(tileData.mLightIndices[i]);

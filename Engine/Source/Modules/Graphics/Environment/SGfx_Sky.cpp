@@ -87,18 +87,10 @@ void SGfx_Sky::ComputeSkyAtmosphereLUTs(SR_CommandList* aCmdList)
 		constants.mMultiScatteringLUTDescriptorIndex = SGfx_DefaultTextures::GetBlack1x1()->GetDescriptorHeapIndex();
 		constants.mOutputTextureDescriptorIndex = mTransmittanceLUT.mTextureRW->GetDescriptorHeapIndex();
 
-		if (!mTransmittanceLUTConstantBuffer)
-		{
-			SR_BufferResourceProperties cbDesc;
-			cbDesc.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
-			cbDesc.mElementCount = 1;
-			cbDesc.mElementSize = sizeof(Constants);
-			mTransmittanceLUTConstantBuffer = SR_RenderDevice::gInstance->CreateBufferResource(cbDesc);
-		}
+		uint64 cbOffset = 0;
+		SR_BufferResource* cb = aCmdList->GetBufferResource(cbOffset, SR_BufferBindFlag_ConstantBuffer, sizeof(constants), &constants, 1);
 
-		mTransmittanceLUTConstantBuffer->UpdateData(0, &constants, sizeof(constants));
-
-		aCmdList->SetRootConstantBuffer(mTransmittanceLUTConstantBuffer, 0);
+		aCmdList->SetRootConstantBuffer(cb, cbOffset, 0);
 		aCmdList->TransitionBarrier(SR_ResourceState_UnorderedAccess, mTransmittanceLUT.mResource);
 		aCmdList->Dispatch(mComputeTransmittanceLUTShader, targetSize.x, targetSize.y);
 		aCmdList->TransitionBarrier(SR_ResourceState_Read, mTransmittanceLUT.mResource);
@@ -106,7 +98,6 @@ void SGfx_Sky::ComputeSkyAtmosphereLUTs(SR_CommandList* aCmdList)
 		aCmdList->EndEvent();
 	}
 	{
-
 		aCmdList->BeginEvent("SkyView LUT");
 
 		SC_IntVector targetSize = mSkyViewLUT.GetResourceProperties().mSize;
@@ -117,18 +108,10 @@ void SGfx_Sky::ComputeSkyAtmosphereLUTs(SR_CommandList* aCmdList)
 		constants.mMultiScatteringLUTDescriptorIndex = SGfx_DefaultTextures::GetBlack1x1()->GetDescriptorHeapIndex();
 		constants.mOutputTextureDescriptorIndex = mSkyViewLUT.mTextureRW->GetDescriptorHeapIndex();
 
-		if (!mSkyViewLUTConstantBuffer)
-		{
-			SR_BufferResourceProperties cbDesc;
-			cbDesc.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
-			cbDesc.mElementCount = 1;
-			cbDesc.mElementSize = sizeof(Constants);
-			mSkyViewLUTConstantBuffer = SR_RenderDevice::gInstance->CreateBufferResource(cbDesc);
-		}
+		uint64 cbOffset = 0;
+		SR_BufferResource* cb = aCmdList->GetBufferResource(cbOffset, SR_BufferBindFlag_ConstantBuffer, sizeof(constants), &constants, 1);
 
-		mSkyViewLUTConstantBuffer->UpdateData(0, &constants, sizeof(constants));
-
-		aCmdList->SetRootConstantBuffer(mSkyViewLUTConstantBuffer, 0);
+		aCmdList->SetRootConstantBuffer(cb, cbOffset, 0);
 		aCmdList->TransitionBarrier(SR_ResourceState_UnorderedAccess, mSkyViewLUT.mResource);
 		aCmdList->Dispatch(mComputeSkyViewLUTShader, targetSize.x, targetSize.y);
 		aCmdList->TransitionBarrier(SR_ResourceState_Read, mSkyViewLUT.mResource);

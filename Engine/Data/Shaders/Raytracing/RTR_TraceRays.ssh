@@ -1,0 +1,110 @@
+#pragma once 
+#include "../SceneConstants.ssh"
+#include "../MaterialData.ssh"
+#include "../AtmosphereCommon.ssh"
+#include "../DirectLighting.ssh"
+#include "Raytracing.ssh"
+#include "DDGI.ssh"
+
+#define RTR_SIMPLE_REFLECTIONS 0
+
+#define RTR_MIRROR_REFLECTIONS_ROUGHNESS_THRESHOLD 0.05f
+#define DDGI_REFLECTIONS_ROUGHNESS_THRESHOLD 0.75f
+
+
+float3 RTR_CalculateGlobalIllumination(in MaterialData aMaterialData, in const float3 aWorldPosition, in const float3 aViewDirection)
+{
+    float nDotV = saturate(dot(aMaterialData.mWorldNormal, aViewDirection));
+    float3 F = F_Schlick(aMaterialData.mSpecularColor, nDotV);
+    float3 kd = lerp(1.0f - F, 0.0f, aMaterialData.mMetallic);
+
+    float3 diffuse = (float3)0;
+    if (SR_GIConstants.mDiffuseEnabled)
+    {
+        float3 irradiance = SampleIrradiance(aWorldPosition, aMaterialData.mWorldNormal, aViewDirection);
+        diffuse = aMaterialData.mDiffuseColor * irradiance;
+    }
+
+    return diffuse;
+}
+
+
+float3 RTR_CalculateShadingRayHit(uint aHitInstanceIndex, uint aHitTriangleIndex, float3 aViewDirection, float3 aBarycentrics)
+{
+    const SR_RaytracingInstanceData instanceData = SR_LoadRaytracingInstanceData(aHitInstanceIndex);
+    const uint3 vertexIndices = SR_GetTriangleIndices(instanceData, aHitTriangleIndex);
+    const SR_RaytracingVertex vertex = SR_GetInterpolatedRaytracingVertex(instanceData, vertexIndices, aBarycentrics);
+    
+    float4 worldPos = mul(instanceData.mTransform, float4(vertex.mPosition, 1.0f));
+    float4 clipPos = mul(SR_ViewConstants.mWorldToClip, float4(worldPos.xyz, 1.0f));
+
+    float3x3 transform33 = (float3x3)instanceData.mTransform;
+    float3 transformedNormal = normalize(mul(transform33, vertex.mNormal));
+    float3 transformedTangent = normalize(mul(transform33, vertex.mTangent));
+    float3 transformedBitangent = normalize(mul(transform33, vertex.mBitangent));
+
+    float3x3 tangentToWorld = float3x3(
+        transformedTangent.x, transformedBitangent.x, transformedNormal.x,
+        transformedTangent.y, transformedBitangent.y, transformedNormal.y,
+        transformedTangent.z, transformedBitangent.z, transformedNormal.z
+    );
+
+    MaterialData materialData = BuildMaterialData(instanceData.mMaterialIndex, vertex.mUV, clipPos, tangentToWorld);
+    return CalculateDirectLighting(materialData, worldPos.xyz, aViewDirection, 0.0f) + RTR_CalculateGlobalIllumination(materialData, worldPos.xyz, aViewDirection);
+}
+
+float3 TraceReflections(in MaterialData aMaterialData, float3 aWorldPosition, float3 aViewDirection, float aRayBias = 0.25f)
+{
+    RayDesc ray;
+    ray.Origin = aWorldPosition + (aMaterialData.mWorldNormal * aRayBias);
+    ray.TMin = 0.001f;
+    ray.TMax = 10000.f;
+
+    uint rayFlags = 0;
+
+#if RTR_SIMPLE_REFLECTIONS
+    ray.Direction = reflect(-aViewDirection, aMaterialData.mWorldNormal);
+#else
+    if (aMaterialData.mRoughness > DDGI_REFLECTIONS_ROUGHNESS_THRESHOLD)
+    {
+        float3 reflectionVector = reflect(-aViewDirection, aMaterialData.mWorldNormal);
+        return SampleIrradiance(aWorldPosition, aMaterialData.mWorldNormal, aViewDirection);
+    }
+    else if (aMaterialData.mRoughness < RTR_MIRROR_REFLECTIONS_ROUGHNESS_THRESHOLD)
+    {
+        ray.Direction = reflect(-aViewDirection, aMaterialData.mWorldNormal);
+    }
+    else
+    {
+	    float a = aMaterialData.mRoughness * aMaterialData.mRoughness;
+	    float a2 = a * a;
+        float noise = InterleavedGradientNoise(aMaterialData.mSvPosition.xy, SR_SceneConstants.mFrameIndex);
+	    uint2 random = uint2(asuint(noise), 0x1813 * noise);
+		float3x3 tangentBasis = GetTangentBasis(aMaterialData.mWorldNormal);
+		float3 tangentV = mul(tangentBasis, aViewDirection);
+        
+		float2 E = Hammersley16(0, 1, random);
+		float3 H = mul(ImportanceSampleVisibleGGX(UniformSampleDisk(E), a2, tangentV ).xyz, tangentBasis);
+		ray.Direction = normalize(2.0f * dot(aViewDirection, H) * H - aViewDirection);
+    }
+#endif
+
+    RayQuery<RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES | RAY_FLAG_FORCE_OPAQUE> rayQuery;
+    rayQuery.TraceRayInline(SR_GetRaytracingScene(), rayFlags, ~0, ray);
+    rayQuery.Proceed();
+
+    float hitDistance = ray.TMax;
+    float3 L = (float3)0;
+    if (rayQuery.CommittedStatus() == COMMITTED_TRIANGLE_HIT)
+    {
+        hitDistance = ray.TMin + rayQuery.CommittedRayT();
+        //L = float3(0.0f, 1.0f, 0.0f);
+        L = RTR_CalculateShadingRayHit(rayQuery.CommittedInstanceID(), rayQuery.CommittedPrimitiveIndex(), -ray.Direction, SR_ConvertBarycentricsFromCommitted(rayQuery.CommittedTriangleBarycentrics()));
+    }
+    else
+    {
+        L = SampleAtmosphereColor(ray.Direction);
+    }
+
+    return L;
+}

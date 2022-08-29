@@ -77,7 +77,7 @@ void SR_QueueManager::Flush()
 	action.mSemaphore->Acquire();
 }
 
-SC_Ref<SR_CommandList> SR_QueueManager::GetCommandList(const SR_CommandListType& aQueueType)
+SC_Ref<SR_CommandList> SR_QueueManager::GetCommandList(const SR_CommandListType& aQueueType, const char* aDebugName)
 {
 	const uint32 contextIndex = static_cast<uint32>(aQueueType);
 	SC_RingArray<SC_Ref<SR_CommandList>>& freeCmdLists = mFreeCommandListsPerContext[contextIndex];
@@ -93,7 +93,7 @@ SC_Ref<SR_CommandList> SR_QueueManager::GetCommandList(const SR_CommandListType&
 	}
 
 	if (!cmdList)
-		cmdList = SR_RenderDevice::gInstance->CreateCommandList(aQueueType);
+		cmdList = SR_RenderDevice::gInstance->CreateCommandList(aQueueType, aDebugName);
 
 	cmdList->Begin();
 	return cmdList;

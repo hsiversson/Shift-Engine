@@ -55,8 +55,8 @@ bool SGF_World::LoadLevel(const char* /*aLevel*/)
 	SED_AssimpScene scene;
 	SED_AssimpImporter importer;
 	//importer.ImportScene(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shapes/ShaderBall.fbx", scene);
-	//importer.ImportScene(SC_EnginePaths::Get().GetGameDataDirectory() + "/Models/SponzaPBR/sponzaPBR.obj", scene, 0.01f);
-	importer.ImportScene(SC_EnginePaths::Get().GetGameDataDirectory() + "/Models/SunTemple/SunTemple.fbx", scene);
+	importer.ImportScene(SC_EnginePaths::Get().GetGameDataDirectory() + "/Models/SponzaPBR/sponzaPBR.obj", scene, 0.01f);
+	//importer.ImportScene(SC_EnginePaths::Get().GetGameDataDirectory() + "/Models/SunTemple/SunTemple.fbx", scene);
 
 	scene.ConvertToLevelAndSave(*level);
 	//level->Save(SC_EnginePaths::Get().GetGameDataDirectory() + "/Levels/Sponza.slvl");
@@ -69,7 +69,7 @@ bool SGF_World::LoadLevel(const char* /*aLevel*/)
 	entity.AddComponent<SGF_EntityNameComponent>()->mName = "Light";
 
 	SGF_TransformComponent* transform = entity.AddComponent<SGF_TransformComponent>();
-	transform->mPosition = SC_Vector(0.f, 4.0f, -6.0f);
+	transform->mPosition = SC_Vector(4.f, 2.0f, 0.0f);
 
 	SGF_PointLightComponent* lightComp = entity.AddComponent<SGF_PointLightComponent>();
 	lightComp->mColor = SC_Color(128, 128, 255, 255);

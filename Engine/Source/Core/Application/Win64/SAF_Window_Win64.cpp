@@ -93,6 +93,11 @@ void SAF_Window_Win64::ApplyMode()
 	monitorInfo.cbSize = sizeof(MONITORINFOEX);
 	::GetMonitorInfo(monitor, &monitorInfo);
 
+	DEVMODE devMode;
+	ZeroMemory(&devMode, sizeof(devMode));
+	devMode.dmSize = sizeof(devMode);
+	::EnumDisplaySettings(monitorInfo.szDevice, ENUM_CURRENT_SETTINGS, &devMode);
+
 	if ((mCurrentWindowState.mStatus == State::Status_Minimized) && ::IsIconic(mWindowHandle))
 		ShowWindow(mWindowHandle, SW_MINIMIZE);
 
@@ -101,6 +106,30 @@ void SAF_Window_Win64::ApplyMode()
 	//
 	//if (!mCurrentWindowState.mAllowExclusiveMode)
 	//	mCurrentWindowState.mExclusiveMode = false;
+
+	DWORD style = WS_VISIBLE | GetWindowStyle(mCurrentWindowState);
+
+	if (mCurrentWindowState.mFullscreen)
+	{
+		// fullscreen - resize our borderless window to fill closest monitor
+		SC_IntVector2 pos(
+			monitorInfo.rcMonitor.left,
+			monitorInfo.rcMonitor.top);
+
+		SC_IntVector2 size(
+			devMode.dmPelsWidth ? devMode.dmPelsWidth : (monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left),
+			devMode.dmPelsHeight ? devMode.dmPelsHeight : (monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top));
+
+		//SC_LOG("ApplyMode: Borderless, pos:%i,%i size:%i,%i style:%08x", pos.x, pos.y, size.x, size.y);
+
+		// Hack to fix taskbar covering our window in fake fullscreen mode
+		// Remove the WS_VISIBLE bit, then we set the window visible again (below with SWP_SHOWWINDOW).
+		// Apparently this causes Windows to re-evaluate whether or not the window is "fullscreen",
+		// and specifically, whether the taskbar should be behind our window or not.
+		::SetWindowLongPtrW(mWindowHandle, GWL_STYLE, style & ~WS_VISIBLE);
+		::SetWindowPos(mWindowHandle, 0, pos.x, pos.y, size.x, size.y, SWP_NOZORDER | SWP_NOOWNERZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+	}
+
 
 	if (::IsIconic(mWindowHandle))
 		ShowWindow(mWindowHandle, SW_RESTORE);
@@ -223,6 +252,12 @@ void SAF_WindowThread_Win64::Stop(bool /*aWaitForFinish*/)
 {
 	SC_Thread::Stop();
 	SetEvent(mWakeFromSleepEvent);
+}
+
+bool SAF_WindowThread_Win64::SetWindowState(SAF_Window_Win64* aWindow, const SAF_Window_Win64::State& aState)
+{
+	SendMessageToWindowThread(SAF_WindowThreadMsg_SetState, (WPARAM)&aState, 0, aWindow ? aWindow->GetHWND() : nullptr);
+	return true;
 }
 
 const wchar_t* SAF_WindowThread_Win64::GetWndClassName() const
@@ -540,6 +575,19 @@ LRESULT CALLBACK SAF_WindowThread_Win64::WndProc(HWND aHwnd, UINT aMsg, WPARAM a
 		}
 		break;
 	}
+
+	case SAF_WindowThreadMsg_SetState:
+	{
+		SAF_Window_Win64::State* state = (SAF_Window_Win64::State*)aWPARAM;
+
+		if (window->mCurrentWindowState.mStatus != state->mStatus)
+			window->SetStatus((SAF_Window_Win64::State::Status)state->mStatus);
+
+		window->mCurrentWindowState = *state;
+		window->ApplyMode();
+	}
+	return 0;
+
 	default:
 		//SInput::WndProc(aHwnd, aMsg, aWPARAM, aLPARAM);
 		break;

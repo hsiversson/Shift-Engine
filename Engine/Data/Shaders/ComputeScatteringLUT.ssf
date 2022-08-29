@@ -4,9 +4,11 @@
 struct ConstantsStruct
 {
     float4 mTargetSizeAndInvSize;
+
     uint mTransmittanceLUTDescriptorIndex;
     uint mMultiScatteringLUTDescriptorIndex;
     uint mOutputTextureDescriptorIndex;
+    uint _unused;
 };
 ConstantBuffer<ConstantsStruct> Constants : register(b0);
 

@@ -62,10 +62,7 @@ bool SR_CommandList_DX12::Init(const char* aDebugName)
 		return false;
 	}
 
-	if (aDebugName)
-	{
-		mD3D12CommandList->SetName(SC_UTF8ToUTF16(aDebugName).c_str());
-	}
+	SetDebugName(aDebugName);
 
 	mD3D12CommandList.As(&mD3D12CommandList6);
 
@@ -169,37 +166,37 @@ SC_Ref<SR_BufferResource> SR_CommandList_DX12::CreateAccelerationStructure(const
 	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs = {};
 	inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
 
-	SC_Array<D3D12_RAYTRACING_INSTANCE_DESC> instanceDatas;
-	SC_Array<D3D12_RAYTRACING_GEOMETRY_DESC> geometryDescs;
+	SC_Array<D3D12_RAYTRACING_INSTANCE_DESC> instanceProperties;
+	SC_Array<D3D12_RAYTRACING_GEOMETRY_DESC> geometryProperties;
 	if (aInputs.mIsTopLevel)
 	{
 		inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
 
-		instanceDatas.Reserve(aInputs.mInstanceData->Count());
-		for (const SR_RaytracingInstanceData& instance : (*aInputs.mInstanceData))
+		instanceProperties.Reserve(aInputs.mInstanceProperties->Count());
+		for (const SR_RaytracingInstanceProperties& instance : (*aInputs.mInstanceProperties))
 		{
-			D3D12_RAYTRACING_INSTANCE_DESC& instanceData = instanceDatas.Add();
-			SC_ZeroMemory(&instanceData, sizeof(D3D12_RAYTRACING_INSTANCE_DESC));
+			D3D12_RAYTRACING_INSTANCE_DESC& props = instanceProperties.Add();
+			SC_ZeroMemory(&props, sizeof(D3D12_RAYTRACING_INSTANCE_DESC));
 
-			instanceData.AccelerationStructure = instance.mAccelerationStructureGPUAddress;
-			instanceData.InstanceMask = instance.mInstanceMask;
-			instanceData.InstanceID = instance.mInstanceId;
-			instanceData.InstanceContributionToHitGroupIndex = instance.mHitGroup;
+			props.AccelerationStructure = instance.mAccelerationStructureGPUAddress;
+			props.InstanceMask = instance.mInstanceMask;
+			props.InstanceID = instance.mInstanceId;
+			props.InstanceContributionToHitGroupIndex = instance.mHitGroup;
 
 			for (uint32 row = 0; row < 3; ++row)
 				for (uint32 col = 0; col < 4; ++col)
-					instanceData.Transform[row][col] = instance.mTransform.m44[col][row];
+					props.Transform[row][col] = instance.mTransform.m44[col][row];
 
 			if (instance.mIsOpaque)
-				instanceData.Flags |= D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_OPAQUE;
+				props.Flags |= D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_OPAQUE;
 
 			switch (instance.mFaceCullingMode)
 			{
 			case SR_CullMode::Front:
-				instanceData.Flags |= D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
+				props.Flags |= D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
 				break;
 			case SR_CullMode::None:
-				instanceData.Flags |= D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_CULL_DISABLE;
+				props.Flags |= D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_CULL_DISABLE;
 				break;
 			case SR_CullMode::Back:
 			default:
@@ -208,9 +205,9 @@ SC_Ref<SR_BufferResource> SR_CommandList_DX12::CreateAccelerationStructure(const
 		}
 
 		uint64 bufferOffset = 0;
-		SR_BufferResource* instanceDataBuffer = GetBufferResource(bufferOffset, SR_BufferBindFlag_Staging, instanceDatas.GetByteSize(), instanceDatas.GetBuffer(), 1);
+		SR_BufferResource* instanceDataBuffer = GetBufferResource(bufferOffset, SR_BufferBindFlag_Staging, instanceProperties.GetByteSize(), instanceProperties.GetBuffer(), 1);
 		inputs.InstanceDescs = instanceDataBuffer->GetGPUAddressStart() + bufferOffset;
-		inputs.NumDescs = instanceDatas.Count();
+		inputs.NumDescs = instanceProperties.Count();
 	}
 	else
 	{
@@ -218,7 +215,7 @@ SC_Ref<SR_BufferResource> SR_CommandList_DX12::CreateAccelerationStructure(const
 
 		for (const SR_RaytracingGeometryData& geoData : (*aInputs.mGeometryData))
 		{
-			D3D12_RAYTRACING_GEOMETRY_DESC& geometryDesc = geometryDescs.Add();
+			D3D12_RAYTRACING_GEOMETRY_DESC& geometryDesc = geometryProperties.Add();
 			SC_ZeroMemory(&geometryDesc, sizeof(D3D12_RAYTRACING_GEOMETRY_DESC));
 
 			geometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
@@ -232,8 +229,8 @@ SC_Ref<SR_BufferResource> SR_CommandList_DX12::CreateAccelerationStructure(const
 			geometryDesc.Triangles.IndexCount = geoData.mIndexBuffer->GetProperties().mElementCount;
 		}
 
-		inputs.pGeometryDescs = geometryDescs.GetBuffer();
-		inputs.NumDescs = geometryDescs.Count();
+		inputs.pGeometryDescs = geometryProperties.GetBuffer();
+		inputs.NumDescs = geometryProperties.Count();
 	}
 
 	if (aInputs.mFlags & SR_AccelerationStructureInputs::BuildFlag_AllowUpdate)
@@ -284,7 +281,7 @@ SC_Ref<SR_BufferResource> SR_CommandList_DX12::CreateAccelerationStructure(const
 	}
 
 	mD3D12CommandList6->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
-	//UnorderedAccessBarrier();
+	UnorderedAccessBarrier(bufferResource);
 
 	return bufferResource;
 }
@@ -680,6 +677,12 @@ void SR_CommandList_DX12::SetScissorRect(const SR_Rect& aRect)
 	scissorRect.bottom = aRect.mBottom;
 
 	mD3D12CommandList->RSSetScissorRects(1, &scissorRect);
+}
+
+void SR_CommandList_DX12::SetDebugName(const char* aDebugName)
+{
+	if (aDebugName)
+		mD3D12CommandList->SetName(SC_UTF8ToUTF16(aDebugName).c_str());
 }
 
 ID3D12GraphicsCommandList* SR_CommandList_DX12::GetD3D12CommandList() const

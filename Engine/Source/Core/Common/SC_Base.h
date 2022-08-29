@@ -18,6 +18,7 @@
 #include "InputOutput/Json/SC_Json.h"
 
 // Common
+#include "Common/Random/SC_Random.h"
 #include "Common/Logging/SC_Logger.h"
 #include "Common/ThreadPool/SC_ThreadPool.h"
 #include "Common/Configuration/SC_CommandLine.h"

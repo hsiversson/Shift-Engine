@@ -5,6 +5,7 @@ struct ConstantsStruct
 {
     uint mDepthBufferDescriptorIndex;
     uint mTileGridRWDescriptorIndex;
+    uint2 _unused;
 };
 ConstantBuffer<ConstantsStruct> Constants : register(b0);
 

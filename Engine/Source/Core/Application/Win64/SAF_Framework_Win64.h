@@ -23,6 +23,7 @@ private:
 	bool CreateConsole();
 
 	void SyncWindowState();
+	void ApplyWindowStateChanges();
 
 	SC_MessageQueue* mMessageQueue;
 };

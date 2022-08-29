@@ -1,7 +1,7 @@
 #pragma once
 #include "SGfx_Light.h"
 
-struct SGfx_LightCullingConstants
+struct alignas(16) SGfx_LightCullingConstants
 {
 	SGfx_LightCullingConstants()
 		: mTotalNumLights(0)
@@ -12,8 +12,8 @@ struct SGfx_LightCullingConstants
 
 	SC_Vector2u mNumTiles;
 	uint32 mTotalNumLights;
-
 	uint32 mTileGridDescriptorIndex;
+
 	uint32 mLightBufferDescriptorIndex;
 	uint32 _unused0[3];
 };

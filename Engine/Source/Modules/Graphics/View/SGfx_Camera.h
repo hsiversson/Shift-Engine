@@ -26,7 +26,6 @@ struct alignas(16) SGfx_ViewConstants
 
 	SC_Vector4 mViewportPosAndInvSize;
 	SC_Vector4 mViewportSizeAndScale;
-
 	SC_Vector4 mRenderTargetSizeAndInvSize;
 
 	SC_Vector mCameraPosition;

@@ -116,11 +116,11 @@ SC_Ref<SR_BufferResource> SR_CommandList::CreateAccelerationStructure(const SR_A
 	return nullptr;
 }
 
-SC_Ref<SR_Buffer> SR_CommandList::BuildRaytracingBuffer(const SC_Array<SR_RaytracingInstanceData>& aInstances, SR_Buffer* aExistingBuffer)
+SC_Ref<SR_Buffer> SR_CommandList::BuildRaytracingBuffer(const SC_Array<SR_RaytracingInstanceProperties>& aInstances, SR_Buffer* aExistingBuffer)
 {
 	SR_AccelerationStructureInputs inputs;
 	inputs.mIsTopLevel = true;
-	inputs.mInstanceData = &aInstances;
+	inputs.mInstanceProperties = &aInstances;
 
 	SR_BufferResource* existingBufferResource = (aExistingBuffer) ? aExistingBuffer->GetResource() : nullptr;
 	SC_Ref<SR_BufferResource> buffer = CreateAccelerationStructure(inputs, existingBufferResource);
@@ -186,6 +186,13 @@ void SR_CommandList::SetRootConstantBuffer(SR_BufferResource* /*aConstantBuffer*
 
 void SR_CommandList::SetRootConstantBuffer(SR_BufferResource* /*aConstantBuffer*/, uint64 /*aBufferOffset*/, uint32 /*aSlot*/)
 {
+}
+
+void SR_CommandList::SetRootConstantBuffer(uint32 aByteSize, void* aData, uint32 aSlot)
+{
+	uint64 cbOffset = 0;
+	SR_BufferResource* cb = GetBufferResource(cbOffset, SR_BufferBindFlag_ConstantBuffer, aByteSize, aData, 1);
+	SetRootConstantBuffer(cb, cbOffset, aSlot);
 }
 
 void SR_CommandList::SetResourceInfo(uint8* /*aData*/, uint32 /*aSize*/)
@@ -324,6 +331,10 @@ void SR_CommandList::SetViewport(const SR_Rect& /*aRect*/, float /*aMinDepth = 0
 }
 
 void SR_CommandList::SetScissorRect(const SR_Rect& /*aRect*/)
+{
+}
+
+void SR_CommandList::SetDebugName(const char* /*aDebugName*/)
 {
 }
 

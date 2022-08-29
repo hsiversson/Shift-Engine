@@ -21,6 +21,7 @@ class SGfx_AmbientOcclusion;
 class SGfx_PostEffects;
 class SGfx_PrimitiveRenderer;
 class SGfx_Environment;
+class SGfx_DDGI;
 
 /**
  * 
@@ -58,6 +59,7 @@ public:
 	SGfx_LightCulling* GetLightCulling() const;
 	SGfx_ShadowSystem* GetShadowMapSystem() const;
 	SGfx_AmbientOcclusion* GetAmbientOcclusion() const;
+	SGfx_DDGI* GetRTGI() const;
 
 	const SC_Ref<SR_Texture>& GetScreenColor() const;
 	SR_Texture* GetAoTex() const;
@@ -84,9 +86,13 @@ private:
 	void RenderShadows(SGfx_View* aView);
 	void RenderPrePass(SGfx_View* aView); // Depth, Visibility Buffer
 
+	void RenderGBuffer(SGfx_View* aView);
+
 	void ComputeHierarchicalZ(SGfx_View* aView); // Generate HZB Chain
 	void ComputeLightCulling(SGfx_View* aView);
 	void ComputeAmbientOcclusion(SGfx_View* aView);
+
+	void RenderGI(SGfx_View* aView);
 
 	void RenderOpaque(SGfx_View* aView);
 
@@ -110,11 +116,8 @@ private:
 	SGfx_Environment* mEnvironment;
 
 	// Temp
-	SC_Ref<SR_ShaderState> mShader;
-	SC_Array<SC_Ref<SR_BufferResource>> mDrawInfoBuffers[2];
 	SC_Ref<SR_BufferResource> mViewConstantsBuffer;
 
-	SC_Array<SC_Ref<SR_BufferResource>> mPostEffectCBuffers;
 	SC_Ref<SR_ShaderState> mTonemapShader;
 	SC_Ref<SR_ShaderState> mTAAResolveShader;
 	SC_Ref<SR_ShaderState> mCopyShader;

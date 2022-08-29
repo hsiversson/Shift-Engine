@@ -1,6 +1,10 @@
 #pragma once
 
+#pragma warning(push)
+#pragma warning(disable:26800)
+#pragma warning(disable:26819)
 #include "json.hpp"
+#pragma warning(pop)
 
 #include <fstream>
 #include <iomanip>

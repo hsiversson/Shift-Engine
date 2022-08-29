@@ -28,6 +28,8 @@ public:
 	virtual void* GetNativeWindowHandle() const;
 	virtual float GetWindowDPI() const;
 
+	void SetFullscreen(bool aValue);
+
 	static SAF_Framework* Create(const SAF_FrameworkCreateParams& aCreateParams);
 	static SAF_Framework* Get();
 	static void Destroy();
@@ -40,6 +42,7 @@ protected:
 
 	SAF_AppCallbacks* mCallbacks;
 
+	bool mIsFullscreen;
 private:
 
 	void MainLoop();

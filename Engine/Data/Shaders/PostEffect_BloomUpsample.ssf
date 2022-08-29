@@ -14,6 +14,7 @@ struct UpsampleConstants
 
     uint mInput1TextureDescriptorIndex;
     uint mOutputTextureDescriptorIndex;
+	uint2 _unused;
 };
 ConstantBuffer<UpsampleConstants> Constants : register(b0);
 

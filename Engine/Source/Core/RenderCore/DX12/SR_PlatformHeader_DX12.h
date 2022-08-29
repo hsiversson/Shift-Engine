@@ -14,7 +14,10 @@
 		#define USE_PIX_RETAIL (1)
 	#endif
 
+	#pragma warning(push)
+	#pragma warning(disable:6101)
 	#include "WinPixEventRuntime/pix3.h"
+	#pragma warning(pop)
 #endif
 
 // For COM interface (ComPtr)

@@ -116,7 +116,7 @@ float D_GGX_Aniso(float ax, float ay, float nDotH, float xDotH, float yDotH)
 	float a2 = ax * ay;
 	float3 v = float3(ay * xDotH, ax * yDotH, a2 * nDotH);
 	float s = dot(v, v);
-	return (1.0f / PI) * a2 * Squared(a2 / s);
+	return (1.0f / PI) * a2 * Square(a2 / s);
 }
 
 

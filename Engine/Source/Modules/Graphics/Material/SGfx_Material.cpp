@@ -94,76 +94,17 @@ bool SGfx_Material::Init(const SGfx_MaterialProperties& aProperties)
 
 	SR_ShaderCompileArgs args;
 	args.mEntryPoint = "Main";
-	args.mDefines.Add(SC_Pair<std::string, std::string>("PIXEL_SHADER", "1"));
 	args.mType = SR_ShaderType::Pixel;
 
-	std::string depthShaderCode;
 	if (aProperties.mUseAlphaTesting)
-	{
-		depthShaderCode =
-			"#include \"Common.ssh\" \n"
-			"#include \"MaterialCommon.ssh\" \n"
-			"#include \"MotionVector.ssh\" \n"
-			"struct PixelShaderInput\n"
-			"{\n"
-			"   float4 mClipPosition : SV_POSITION;\n"
-			"   float3 mViewPosition : View_POSITION;\n"
-			"   float3 mWorldPosition : WORLD_POSITION;\n"
-			"   float3 mPrevWorldPosition : PREV_WORLD_POSITION;\n"
-			"   float3 mNormal : NORMAL0;\n"
-			"   float3 mTangent : TANGENT;\n"
-			"   float3 mBitangent : BITANGENT;"
-			"   float2 mUV : UV0;\n"
-			"   nointerpolation uint mMeshletIndex : MESHLET_INDEX0;\n"
-			"   nointerpolation uint mMaterialIndex : MATERIAL_INDEX;\n"
-			"};\n";
-
-		if (aProperties.mOutputVelocity)
-			depthShaderCode += "float2 Main(const PixelShaderInput aInput) : SV_TARGET0\n";
-		else
-			depthShaderCode += "void Main(const PixelShaderInput aInput)\n";
-
-		depthShaderCode +=
-			"{\n"
-			"   SR_MaterialInfo materialInfo = SR_GetMaterialInfo(aInput.mMaterialIndex);\n"
-			"   Texture2D<float> alphaMask = GetTexture2D<float>(materialInfo.mTextureIndices[4]);\n"
-			"   if (alphaMask.Sample(gBilinearClamp, aInput.mUV).r < 0.5f)\n"
-			"       discard;\n";
-
-		if (aProperties.mOutputVelocity)
-			depthShaderCode += "   return CalculateMotionVector(aInput.mWorldPosition, aInput.mPrevWorldPosition);\n";
-
-		depthShaderCode += "}\n";
-	}
+		args.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/PixelShaderDepth_AlphaTest.ssf";
 	else
-	{
-		if (aProperties.mOutputVelocity)
-		{
-			depthShaderCode +=
-				"#include \"MotionVector.ssh\" \n"
-				"struct PixelShaderInput\n"
-				"{\n"
-				"   float4 mClipPosition : SV_POSITION;\n"
-				"   float3 mViewPosition : View_POSITION;\n"
-				"   float3 mWorldPosition : WORLD_POSITION;\n"
-				"   float3 mPrevWorldPosition : PREV_WORLD_POSITION;\n"
-				"   float3 mNormal : NORMAL0;\n"
-				"   float3 mTangent : TANGENT;\n"
-				"   float3 mBitangent : BITANGENT;"
-				"   float2 mUV : UV0;\n"
-				"   nointerpolation uint mMeshletIndex : MESHLET_INDEX0;\n"
-				"   nointerpolation uint mMaterialIndex : MATERIAL_INDEX;\n"
-				"};\n"
-				"float2 Main(const PixelShaderInput aInput) : SV_TARGET0\n"
-				"{\n"
-				"   return CalculateMotionVector(aInput.mWorldPosition, aInput.mPrevWorldPosition);\n"
-				"}\n";
-		}
-		else
-			depthShaderCode = "void Main() {}";
+		args.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/PixelShaderDepth.ssf";
 
-	}
-	SR_RenderDevice::gInstance->CompileShader(depthShaderCode, args, mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::Depth)].mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Pixel)]);
+	if (aProperties.mOutputVelocity)
+		args.mDefines.Add(SC_Pair<std::string, std::string>("OUTPUT_VELOCITY", "1"));
+
+	SR_RenderDevice::gInstance->CompileShader(args, mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::Depth)].mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Pixel)]);
 
 	mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::DefaultMeshlet)] = mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::Default)];
 	mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::DepthMeshlet)] = mShaderStateProperties[static_cast<uint32>(SGfx_MaterialShaderType::Depth)];
@@ -281,12 +222,11 @@ SR_ShaderState* SGfx_Material::GetShaderState(const SR_VertexLayout& aVertexLayo
 #if SR_ENABLE_MESH_SHADERS
             if (SR_RenderDevice::gInstance->GetSupportCaps().mEnableMeshShaders && SGfx_IsMeshletMaterialShaderType(aType))
 			{
-				std::ifstream t((SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/DefaultMeshShader.ssf").GetAbsolutePath());
+				std::ifstream t((SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/MeshShaderDefault.ssf").GetAbsolutePath());
 				shaderCodeBuffer = std::string((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
 
 				SR_ShaderCompileArgs meshShaderCompileArgs;
-                meshShaderCompileArgs.mDefines.Add(SC_Pair<std::string, std::string>("MESH_SHADER", "1"));
-                meshShaderCompileArgs.mEntryPoint = "MainMS";
+                meshShaderCompileArgs.mEntryPoint = "Main";
                 meshShaderCompileArgs.mType = SR_ShaderType::Mesh;
 
                 std::string meshShaderCode(vertexLayoutCode.str() + shaderCodeBuffer);
@@ -295,7 +235,7 @@ SR_ShaderState* SGfx_Material::GetShaderState(const SR_VertexLayout& aVertexLayo
             else
 #endif
 			{
-				std::ifstream t((SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/DefaultVertexShader.ssf").GetAbsolutePath());
+				std::ifstream t((SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/VertexShaderDefault.ssf").GetAbsolutePath());
 				shaderCodeBuffer = std::string((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
 
 				SR_ShaderCompileArgs vertexShaderCompileArgs;
@@ -323,7 +263,7 @@ bool SGfx_Material::SaveToFile(const SC_FilePath& aFilePath) const
 {
     SC_Json saveData;
 
-    saveData["MainShader"] = (SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/DefaultMeshShader.ssf").GetStr();
+    saveData["MainShader"] = (SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/MeshShaderDefault.ssf").GetStr();
 
     for (const SC_Ref<SR_Texture>& tex : mTextures)
     {

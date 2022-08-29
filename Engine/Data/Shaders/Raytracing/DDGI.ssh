@@ -1,0 +1,203 @@
+#pragma once
+#include "../Common.ssh"
+#include "../SceneConstants.ssh"
+#include "Raytracing.ssh"
+
+#define LINEAR_BLENDING
+
+#define DEBUG_PROBES 0
+
+#if DEBUG_PROBES
+static float3 gProbeDebugColors[10] =
+{
+    float3(1.0f, 0.0f, 0.0f),
+    float3(1.0f, 1.0f, 0.0f),
+    float3(0.0f, 1.0f, 0.0f),
+    float3(0.0f, 1.0f, 1.0f),
+    float3(0.0f, 0.0f, 1.0f),
+    float3(1.0f, 0.0f, 1.0f),
+    float3(1.0f, 1.0f, 1.0f),
+    float3(0.5f, 1.0f, 1.0f),
+    float3(1.0f, 0.5f, 1.0f),
+    float3(1.0f, 1.0f, 0.5f),
+};
+
+float3 GetProbeDebugColor(uint aProbeIndex)
+{
+    return gProbeDebugColors[aProbeIndex % 10];
+}
+#endif // DEBUG_PROBES
+
+int3 GetBaseGridCoord(in float3 aWorldPosition) 
+{
+    return clamp(int3((aWorldPosition - SR_GIConstants.mGridStartPosition) / SR_GIConstants.mGridStep), int3(0, 0, 0), int3(SR_GIConstants.mNumProbes) - int3(1, 1, 1));
+}
+
+float3 GridCoordToPosition(in int3 aGridCoordinate)
+{
+    return SR_GIConstants.mGridStep * (float3)aGridCoordinate + SR_GIConstants.mGridStartPosition;
+}
+
+uint2 GridCoordToPixelPosition(in uint3 aGridCoordinate, uint aTextureWidth, uint aProbeSideLength)
+{
+    uint fullSideLength = aProbeSideLength + 2;
+    return aGridCoordinate.xz * fullSideLength + uint2(aGridCoordinate.y * aTextureWidth * fullSideLength, 0) + 1;
+}
+
+uint GetProbeId(float2 aCurrentPixel, uint aTextureWidth, uint aProbeSideLength)
+{
+    uint probeSideInclBorder = aProbeSideLength + 2;
+    uint probesPerSide = (aTextureWidth - 2) / probeSideInclBorder;
+    return uint(aCurrentPixel.x / probeSideInclBorder) + probesPerSide * uint(aCurrentPixel.y / probeSideInclBorder);
+}
+
+int GridCoordToProbeIndex(in int3 aProbeGridCoordinate) 
+{
+    return int(aProbeGridCoordinate.x + aProbeGridCoordinate.y * SR_GIConstants.mNumProbes.x + aProbeGridCoordinate.z * SR_GIConstants.mNumProbes.x * SR_GIConstants.mNumProbes.y);
+}
+
+int3 ProbeIndexToGridCoord(int aProbeIndex)
+{
+    int3 pos;
+
+    pos.x = aProbeIndex % SR_GIConstants.mNumProbes.x;
+    pos.y = (aProbeIndex % (SR_GIConstants.mNumProbes.x * SR_GIConstants.mNumProbes.y)) / SR_GIConstants.mNumProbes.x;
+    pos.z = aProbeIndex / (SR_GIConstants.mNumProbes.x * SR_GIConstants.mNumProbes.y);
+
+    return pos;
+}
+
+float3 GetProbeWorldPos(int aProbeIndex)
+{
+    int3 gridCoord = ProbeIndexToGridCoord(aProbeIndex);
+    return GridCoordToPosition(gridCoord);
+}
+
+float SignNonZero(in float k)
+{
+    return (k >= 0.0f) ? 1.0f : -1.0f;
+}
+
+float2 SignNonZero(in float2 v)
+{
+    return float2(SignNonZero(v.x), SignNonZero(v.y));
+}
+
+float2 EncodeOctahedron(in float3 v) 
+{
+    float l1norm = abs(v.x) + abs(v.y) + abs(v.z);
+    float2 result = v.xy * (1.0f / l1norm);
+    if (v.z < 0.0f)
+        result = (1.0f - abs(result.yx)) * SignNonZero(result.xy);
+    return result;
+}
+
+float3 DecodeOctahedron(float2 o)
+{
+    float3 v = float3(o.x, o.y, 1.0f - abs(o.x) - abs(o.y));
+
+    if (v.z < 0.0f)
+        v.xy = (1.0f - abs(v.yx)) * SignNonZero(v.xy);
+
+    return normalize(v);
+}
+
+float2 UVFromDirection(float3 aDirection, int aProbeIndex, int2 aTextureDimensions, int aProbeSideLength) 
+{
+    float2 encodedOctCoord = EncodeOctahedron(normalize(aDirection));
+    float2 normalizedOctCoord = (encodedOctCoord + (float2)1.0f) * 0.5f;
+
+    float probeLengthWithBorder = float(aProbeSideLength) + 2.0f;
+
+    float2 normalizedOctCoordToTexDimension = (normalizedOctCoord * float(aProbeSideLength)) / float2(float(aTextureDimensions.x), float(aTextureDimensions.y));
+
+    int probesPerRow = (aTextureDimensions.x - 2) / int(probeLengthWithBorder);
+
+    float2 topLeftProbe = float2((aProbeIndex % probesPerRow) * probeLengthWithBorder,
+        (aProbeIndex / probesPerRow) * probeLengthWithBorder) + float2(2.0f, 2.0f);
+
+    float2 topLeft = float2(topLeftProbe) / float2(float(aTextureDimensions.x), float(aTextureDimensions.y));
+
+    return float2(topLeft + normalizedOctCoordToTexDimension);
+}
+
+float3 SampleIrradiance(in float3 aWorldPosition, in float3 aNormal, in float3 aViewDirection)
+{
+    int3 baseGridCoord = GetBaseGridCoord(aWorldPosition);
+    float3 baseProbePosition = GridCoordToPosition(baseGridCoord);
+
+    float3 irradianceResult = (float3)0;
+    float totalWeight = 0.0f;
+
+    float3 alpha = saturate((aWorldPosition - baseProbePosition) / SR_GIConstants.mGridStep);
+
+    [unroll(8)]
+    for (uint i = 0; i < 8; ++i)
+    {
+        uint3 offset = int3(i, i >> 1, i >> 2) & 1;
+        uint3 probeGridCoord = clamp(baseGridCoord + offset, 0, SR_GIConstants.mNumProbes - 1);
+
+        uint probeIndex = GridCoordToProbeIndex(probeGridCoord);
+        float3 probePosition = GridCoordToPosition(probeGridCoord);
+
+        float3 probeToPoint = aWorldPosition - probePosition + (aNormal + 3.0f * aViewDirection) * SR_GIConstants.mNormalBias;
+        float3 direction = normalize(-probeToPoint);
+
+        float3 trilinear = lerp(1.0f - alpha, alpha, offset);
+        float weight = 1.0f;
+
+        float3 directionToProbe = normalize(probePosition - aWorldPosition);
+		weight *= Square(max(0.0001f, (dot(directionToProbe, aNormal) + 1.0f) * 0.5f)) + 0.2f;
+		//weight *= saturate(dot(direction, aNormal));
+
+        if (SR_GIConstants.mEnableVisibilityTesting)
+        {
+            float2 uv = UVFromDirection(-direction, probeIndex, SR_GIConstants.mDepthTextureDimensions, SR_GIConstants.mDepthProbeSideLength);
+            float distanceToProbe = length(probeToPoint);
+
+            Texture2D<float2> depthTexture = GetTexture2D<float2>(SR_GIConstants.mDepthTextureDescriptorIndex);
+            float2 depthSample = depthTexture.SampleLevel(gBilinearClamp, uv, 0);
+            float mean = depthSample.x;
+            float variance = abs(Square(depthSample.x) - depthSample.y);
+
+            float chebyshevWeight = variance / (variance + Square(max(distanceToProbe - mean, 0.0f)));
+            chebyshevWeight = max(Pow3(chebyshevWeight), 0.0f);
+
+            weight *= (distanceToProbe <= mean) ? 1.0f : chebyshevWeight;
+        }
+        
+        weight = max(0.000001f, weight);
+
+        float3 irradianceDirection = aNormal;
+        float2 uv = UVFromDirection(normalize(irradianceDirection), probeIndex, SR_GIConstants.mIrradianceTextureDimensions, SR_GIConstants.mIrradianceProbeSideLength);
+        
+        Texture2D irradianceTexture = GetTexture2D(SR_GIConstants.mIrradianceTextureDescriptorIndex);
+        float3 irradianceSample = irradianceTexture.SampleLevel(gBilinearClamp, uv, 0).rgb;
+
+        const float crushThreshold = 0.2f;
+        if (weight < crushThreshold)
+            weight *= weight * weight * (1.0f / Square(crushThreshold)); 
+
+        weight *= trilinear.x * trilinear.y * trilinear.z;
+
+#ifndef LINEAR_BLENDING
+        irradianceSample = sqrt(irradianceSample);
+#endif
+        
+        irradianceResult += weight * irradianceSample;
+        totalWeight += weight;
+    }
+
+    if (totalWeight > FLT_VERY_SMALL_VALUE)
+    {
+        float3 finalIrradiance = irradianceResult * rcp(totalWeight);
+
+#ifndef LINEAR_BLENDING
+        finalIrradiance = Square(finalIrradiance);
+#endif
+        finalIrradiance *= SR_GIConstants.mEnergyConservation;
+        return PI * finalIrradiance * 0.5f;
+    }
+
+    return (float3)0;
+}

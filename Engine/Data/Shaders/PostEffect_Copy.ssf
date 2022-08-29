@@ -17,6 +17,7 @@ PixelInput MainVS(uint aVertexId : SV_VertexID)
 struct CopyInfoStruct
 {
     uint mInputTextureDescriptorIndex;
+    uint3 _unused;
 };
 ConstantBuffer<CopyInfoStruct> CopyInfo : register(b0);
 

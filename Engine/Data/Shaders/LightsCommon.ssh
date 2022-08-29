@@ -23,7 +23,7 @@ struct SR_LocalLight
 
 	uint mCastShadow;
 	uint mShadowMapDescriptorIndex;
-	float _unused0[2];
+	float2 _unused0;
 };
 
 struct SR_AreaLight

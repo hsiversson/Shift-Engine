@@ -86,6 +86,8 @@ public:
 	void SetViewport(const SR_Rect& aRect, float aMinDepth = 0.0f, float aMaxDepth = 1.0f) override;
 	void SetScissorRect(const SR_Rect& aRect) override;
 
+	void SetDebugName(const char* aDebugName) override;
+
 	ID3D12GraphicsCommandList* GetD3D12CommandList() const;
 
 private:

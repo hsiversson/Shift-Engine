@@ -63,6 +63,7 @@ typedef HRESULT(__stdcall* DxcCreateInstanceProc)(
 	_Out_ LPVOID* ppv
 	);
 
+class SR_DxcIncludeHandler;
 class SR_DirectXShaderCompiler
 {
 public:
@@ -77,7 +78,7 @@ public:
 	~SR_DirectXShaderCompiler();
 
 	bool CompileFromFile(const SR_ShaderCompileArgs& aArgs, SR_ShaderByteCode& aOutResult, SR_ShaderMetaData* aOutMetaData = nullptr);
-	bool CompileFromString(const std::string& aShadercode, const SR_ShaderCompileArgs& aArgs, SR_ShaderByteCode& aOutResult, SR_ShaderMetaData* aOutMetaData = nullptr);
+	bool CompileFromString(const std::string& aShadercode, const SR_ShaderCompileArgs& aArgs, SR_ShaderByteCode& aOutResult, SR_ShaderMetaData* aOutMetaData = nullptr, const SC_FilePath& aBaseDirectory = SC_FilePath());
 
 private:
 	void SetupArgs(SC_Array<LPCWSTR>& aOutArgs, uint32 aCompilerFlags);

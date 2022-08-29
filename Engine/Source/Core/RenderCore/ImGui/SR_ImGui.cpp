@@ -6,7 +6,9 @@
 #include "RenderCore/DX12/SR_RootSignature_DX12.h"
 #endif
 
+#pragma warning(push, 3)
 #include "imgui.h"
+#pragma warning(pop)
 
 static const char* GetVertexShaderCode()
 {

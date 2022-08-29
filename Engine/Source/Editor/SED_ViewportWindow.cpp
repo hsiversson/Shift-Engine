@@ -94,9 +94,9 @@ SED_ViewportWindow::SED_ViewportWindow(SGfx_World* aGfxWorld, const char* aId)
 	mView->SetMainView(true);
 
 	mEditorCamera.SetPerspectiveProjection({ 1920.f, 1080.f }, 0.01f, 10000.f, 90.0f);
-	mEditorCamera.SetPosition({ -8.0f, 6.0f, 0.0f });
-	mEditorCamera.LookAt({ 0.f, 5.f, 0.f });
-	mEditorCamera.SetPivot({ 0.f, 5.f, 0.f });
+	mEditorCamera.SetPosition({ 0.0f, 0.0f, -4.0f });
+	mEditorCamera.LookAt({ 0.f, 0.f, 0.f });
+	mEditorCamera.SetPivot({ 0.f, 0.f, 0.f });
 	mActiveCamera = &mEditorCamera;
 }
 

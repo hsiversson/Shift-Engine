@@ -76,11 +76,11 @@ SR_RenderDevice_DX12::~SR_RenderDevice_DX12()
 {
 }
 
-SC_Ref<SR_CommandList> SR_RenderDevice_DX12::CreateCommandList(const SR_CommandListType& aType)
+SC_Ref<SR_CommandList> SR_RenderDevice_DX12::CreateCommandList(const SR_CommandListType& aType, const char* aDebugName)
 {
 	SC_Ref<SR_CommandList_DX12> cmdList = SC_MakeRef<SR_CommandList_DX12>(aType);
 
-	if (!cmdList->Init())
+	if (!cmdList->Init(aDebugName))
 	{
 		return nullptr;
 	}
@@ -248,7 +248,7 @@ ID3D12Device6* SR_RenderDevice_DX12::GetD3D12Device6() const
 	return mD3D12Device6.Get();
 }
 
-#if SR_ENABLE_DRED
+#if 0//SR_ENABLE_DRED
 const char* DREDGetBreadcrumbOp(const D3D12_AUTO_BREADCRUMB_OP& aOP)
 {
 	switch (aOP)
@@ -482,6 +482,11 @@ bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 		SR_ComPtr<ID3D12Debug> debugger;
 		D3D12GetDebugInterface(IID_PPV_ARGS(&debugger));
 		debugger->EnableDebugLayer();
+
+		SR_ComPtr<ID3D12Debug6> debugger6; 
+		debugger->QueryInterface(IID_PPV_ARGS(&debugger6));
+		if (debugger6)
+			debugger6->SetEnableAutoName(true);
 	}
 
 	if (mEnableGpuValidation)
@@ -490,6 +495,7 @@ bool SR_RenderDevice_DX12::Init(void* /*aWindowHandle*/)
 		SR_ComPtr<ID3D12Debug1> debugger;
 		D3D12GetDebugInterface(IID_PPV_ARGS(&debugger));
 		debugger->SetEnableGPUBasedValidation(true);
+		debugger->SetEnableSynchronizedCommandQueueValidation(true);
 
 	}
 

@@ -6,6 +6,7 @@ struct RTAOConstants
 {
 	SC_Vector4 mTargetSizeAndInvSize;
 	uint32 mNumRaysPerPixel;
+	float mNumRaysPerPixelRcp;
 	float mRadius;
 	uint32 mDepthBufferDescriptorIndex;
 	uint32 mOutputTextureDescriptorIndex;
@@ -36,21 +37,16 @@ bool SGfx_AmbientOcclusion::Init()
 	SR_ShaderStateProperties shaderProps;
 	SR_ShaderCompileArgs compileArgs;
 	compileArgs.mEntryPoint = "Main";
-	compileArgs.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/RTAO.ssf";
-	compileArgs.mType = SR_ShaderType::Raytracing;
-	if (!SR_RenderDevice::gInstance->CompileShader(compileArgs, shaderProps.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Raytracing)], &shaderProps.mShaderMetaDatas[static_cast<uint32>(SR_ShaderType::Raytracing)]))
+	compileArgs.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/Raytracing/RTAO_TraceRays.ssf";
+	compileArgs.mType = SR_ShaderType::Compute;
+	if (!SR_RenderDevice::gInstance->CompileShader(compileArgs, shaderProps.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Compute)], &shaderProps.mShaderMetaDatas[static_cast<uint32>(SR_ShaderType::Compute)]))
 		return false;
-
-	SR_ShaderStateProperties::RTHitGroup& hitGroup = shaderProps.mHitGroups.Add();
-	hitGroup.myHasClosestHit = true;
-	hitGroup.myHasAnyHit = false;
-	hitGroup.myHasIntersection = false;
 
 	mRTAOShader = SR_RenderDevice::gInstance->CreateShaderState(shaderProps);
 
 	SR_ShaderStateProperties shaderProps2;
 	compileArgs.mEntryPoint = "Main";
-	compileArgs.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/RTAODenoise.ssf";
+	compileArgs.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/Raytracing/RTAO_Denoise.ssf";
 	compileArgs.mType = SR_ShaderType::Compute;
 	if (!SR_RenderDevice::gInstance->CompileShader(compileArgs, shaderProps2.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Compute)], &shaderProps2.mShaderMetaDatas[static_cast<uint32>(SR_ShaderType::Compute)]))
 		return false;
@@ -146,6 +142,7 @@ void SGfx_AmbientOcclusion::RenderRTAO(SR_CommandList* aCmdList, const SC_Ref<SR
 	RTAOConstants constants;
 	constants.mTargetSizeAndInvSize = SC_Vector4((float)targetSize.x, (float)targetSize.y, 1.0f / (float)targetSize.x, 1.0f / (float)targetSize.y);
 	constants.mNumRaysPerPixel = mRTAOSettings.mNumRaysPerPixel;
+	constants.mNumRaysPerPixelRcp = 1.0f / mRTAOSettings.mNumRaysPerPixel;
 	constants.mRadius = mRTAOSettings.mRadius;
 	constants.mDepthBufferDescriptorIndex = aDepthBuffer->GetDescriptorHeapIndex();
 	constants.mOutputTextureDescriptorIndex = mRawOutputRWTexture->GetDescriptorHeapIndex();
@@ -153,8 +150,7 @@ void SGfx_AmbientOcclusion::RenderRTAO(SR_CommandList* aCmdList, const SC_Ref<SR
 	mConstantBuffer->UpdateData(0, &constants, sizeof(RTAOConstants));
 
 	aCmdList->SetRootConstantBuffer(mConstantBuffer, 0);
-	aCmdList->SetShaderState(mRTAOShader);
-	aCmdList->DispatchRays(SC_IntVector(constants.mTargetSizeAndInvSize.XY() * aRenderData.mSceneConstants.mViewConstants.mViewportSizeAndScale.ZW(), 1));
+	aCmdList->Dispatch(mRTAOShader, SC_IntVector(constants.mTargetSizeAndInvSize.XY() * aRenderData.mSceneConstants.mViewConstants.mViewportSizeAndScale.ZW(), 1));
 
 	aCmdList->EndEvent();
 

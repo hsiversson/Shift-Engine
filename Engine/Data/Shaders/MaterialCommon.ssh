@@ -12,15 +12,13 @@
 #define SR_MaterialShadingModel_Eye         5
 #define SR_MaterialShadingModel_Cloth       6
 
-
 struct SR_MaterialInfo
 {
-    uint mTextureIndices[MAX_MATERIAL_TEXTURE_COUNT]; 
-    float colorMultiplier;
+    uint mTextureIndices[MAX_MATERIAL_TEXTURE_COUNT];
 };
 
 SR_MaterialInfo SR_GetMaterialInfo(uint aMaterialIndex)
 {
-    StructuredBuffer<SR_MaterialInfo> materialInfoBuffer = GetStructuredBuffer<SR_MaterialInfo>(gSceneConstants.mMaterialInfoBufferIndex);
+    StructuredBuffer<SR_MaterialInfo> materialInfoBuffer = GetStructuredBuffer<SR_MaterialInfo>(SR_SceneConstants.mMaterialInfoBufferIndex);
     return materialInfoBuffer[aMaterialIndex];
 }

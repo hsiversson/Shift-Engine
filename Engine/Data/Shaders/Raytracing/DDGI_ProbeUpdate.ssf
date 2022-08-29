@@ -1,0 +1,138 @@
+#include "../Common.ssh"
+#include "DDGI.ssh"
+
+#ifdef PROBE_DEPTH_UPDATE
+    #define NUM_THREADS 16
+#else
+    #define NUM_THREADS 8
+#endif
+
+#define CACHE_SIZE (NUM_THREADS*NUM_THREADS)
+
+struct UpdateConstants
+{
+    float2 mTextureSize;
+    float mProbeSideLength;
+    uint mTextureDescriptorIndex;
+
+    uint mDirectionDepthDescriptorIndex;
+    uint mRadianceDescriptorIndex;
+    uint2 _unused;
+};
+ConstantBuffer<UpdateConstants> Constants : register(b0);
+
+groupshared float4 LDSRayDirectionDepth[CACHE_SIZE];
+
+#ifndef PROBE_DEPTH_UPDATE
+groupshared float3 LDSRayHitRadiance[CACHE_SIZE];
+#endif
+
+void PopulateCache(int aRelativeProbeId, uint aOffset, uint aNumRays, uint aGroupIndex)
+{
+    if (aGroupIndex < aNumRays)
+    {
+        int2 loadCoord = int2(aOffset + aGroupIndex, aRelativeProbeId);
+
+        Texture2D<float4> inputDirectionDepth = GetTexture2D<float4>(Constants.mDirectionDepthDescriptorIndex);
+        LDSRayDirectionDepth[aGroupIndex] = inputDirectionDepth.Load(int3(loadCoord, 0));
+
+#ifndef PROBE_DEPTH_UPDATE
+        Texture2D<float4> inputRadiance = GetTexture2D<float4>(Constants.mRadianceDescriptorIndex);
+        LDSRayHitRadiance[aGroupIndex] = inputRadiance.Load(int3(loadCoord, 0)).rgb;
+#endif
+    }
+}
+
+float2 GetNormalizedOctahedronCoord(uint2 aCurrentPixel, uint aProbeSideLength)
+{
+    uint totalProbeSize = aProbeSideLength + 2; // borders are 1px wide, and we have 2 borders.
+
+    float2 octahedronCoord;
+    octahedronCoord.x = (aCurrentPixel.x - 2) % totalProbeSize;
+    octahedronCoord.y = (aCurrentPixel.y - 2) % totalProbeSize;
+
+    return (octahedronCoord + 0.5f) * (2.0f / (float)aProbeSideLength) - (float2)1.0f;
+}
+
+void GatherRays(uint2 aCurrentPixel, uint aNumRays, inout float3 aResult, inout float aTotalWeight)
+{
+    const float energyConservation = 0.95f;
+
+    for (uint rayIdx = 0; rayIdx < aNumRays; ++rayIdx)
+    {
+        float4 rayDirDepth = LDSRayDirectionDepth[rayIdx];
+        float3 rayDir = rayDirDepth.xyz;
+
+#ifdef PROBE_DEPTH_UPDATE 
+        float rayProbeDistance = min(SR_GIConstants.mMaxDistance, rayDirDepth.w - 0.01f);
+        if (rayProbeDistance == -1.0f)
+            rayProbeDistance = SR_GIConstants.mMaxDistance;
+#else
+        float3 rayHitRadiance = LDSRayHitRadiance[rayIdx] * energyConservation; 
+#endif
+
+        float3 texelDir = DecodeOctahedron(GetNormalizedOctahedronCoord(aCurrentPixel, Constants.mProbeSideLength));
+
+        float weight = max(0.0f, dot(texelDir, rayDir));
+#ifdef PROBE_DEPTH_UPDATE 
+        weight = pow(weight, SR_GIConstants.mDepthSharpness);
+#endif
+
+        if (weight >= FLT_VERY_SMALL_VALUE)
+        {
+#ifdef PROBE_DEPTH_UPDATE 
+            aResult += float3(rayProbeDistance * weight, Square(rayProbeDistance) * weight, 0.0f);
+#else
+            aResult += float3(rayHitRadiance * weight); 
+#endif
+            aTotalWeight += weight;
+        }
+    }
+}
+
+[numthreads(NUM_THREADS, NUM_THREADS, 1)]
+void Main(uint3 aDispatchThreadId : SV_DispatchThreadId, uint aGroupIndex : SV_GroupIndex, uint3 aGroupId : SV_GroupId)
+{
+    const uint2 currentPixel = uint2(aDispatchThreadId.xy) + (aGroupId.xy * 2) + 2;
+    const uint relativeProbeId = GetProbeId(currentPixel, Constants.mTextureSize.x, Constants.mProbeSideLength);
+
+    float3 result = (float3)0;
+    float totalWeight = 0.0f;
+
+    uint remainingRays = SR_GIConstants.mRaysPerProbe;
+    uint offset = 0;
+
+    while (remainingRays > 0)
+    {
+        uint numRays = min(remainingRays, CACHE_SIZE);
+
+        PopulateCache(relativeProbeId, offset, numRays, aGroupIndex);
+	    SR_GroupMemoryBarrierSynced();
+
+        GatherRays(currentPixel, numRays, result, totalWeight);
+	    SR_GroupMemoryBarrierSynced();
+
+        remainingRays -= numRays;
+        offset += numRays;
+    }
+
+    if (totalWeight > FLT_VERY_SMALL_VALUE)
+        result *= rcp(totalWeight);
+
+#ifdef PROBE_DEPTH_UPDATE 
+    RWTexture2D<float2> outputTexture = GetRWTexture2D<float2>(Constants.mTextureDescriptorIndex);
+    float2 previousResult = outputTexture[currentPixel];
+    if (SR_GIConstants.mForceUpdate == 0)
+        result.rg = lerp(result.rg, previousResult, SR_GIConstants.mHistoryFactor);
+
+    outputTexture[currentPixel] = clamp(result.rg, (float2)0, (float2)10000.0f);
+#else
+    RWTexture2D<float3> outputTexture = GetRWTexture2D<float3>(Constants.mTextureDescriptorIndex);
+    float3 previousResult = outputTexture[currentPixel];
+    if (SR_GIConstants.mForceUpdate == 0)
+        result = lerp(result, previousResult, SR_GIConstants.mHistoryFactor);
+
+    outputTexture[currentPixel] = clamp(result, (float3)0, (float3)10000.0f);
+#endif
+    
+}

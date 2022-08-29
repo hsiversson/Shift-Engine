@@ -1,0 +1,102 @@
+#include "../AtmosphereCommon.ssh"
+#include "../MaterialData.ssh"
+#include "../Lighting.ssh"
+#include "Raytracing.ssh"
+
+struct DebugConstants
+{
+    uint mOutputTextureDescriptorIndex;
+    uint3 _unused;
+};
+ConstantBuffer<DebugConstants> Constants : register(b0);
+
+static float3 colors[7] =
+{
+    float3(1.0f, 0.0f, 0.0f),
+    float3(1.0f, 1.0f, 0.0f),
+    float3(0.0f, 1.0f, 0.0f),
+    float3(0.0f, 1.0f, 1.0f),
+    float3(0.0f, 0.0f, 1.0f),
+    float3(1.0f, 0.0f, 1.0f),
+    float3(1.0f, 1.0f, 1.0f),
+};
+
+float3 CalculateShadingRayHit(uint aHitInstanceIndex, uint aHitTriangleIndex, float3 aViewDirection, float3 aBarycentrics)
+{
+    const SR_RaytracingInstanceData instanceData = SR_LoadRaytracingInstanceData(aHitInstanceIndex);
+    const uint3 vertexIndices = SR_GetTriangleIndices(instanceData, aHitTriangleIndex);
+    const SR_RaytracingVertex vertex = SR_GetInterpolatedRaytracingVertex(instanceData, vertexIndices, aBarycentrics);
+    
+    float4 worldPos = mul(instanceData.mTransform, float4(vertex.mPosition, 1.0f));
+    float4 clipPos = mul(SR_ViewConstants.mWorldToClip, float4(worldPos.xyz, 1.0f));
+
+    float3x3 transform33 = (float3x3)instanceData.mTransform;
+    float3 transformedNormal = normalize(mul(transform33, vertex.mNormal));
+    float3 transformedTangent = normalize(mul(transform33, vertex.mTangent));
+    float3 transformedBitangent = normalize(mul(transform33, vertex.mBitangent));
+
+    float3x3 tangentToWorld = float3x3(
+        transformedTangent.x, transformedBitangent.x, transformedNormal.x,
+        transformedTangent.y, transformedBitangent.y, transformedNormal.y,
+        transformedTangent.z, transformedBitangent.z, transformedNormal.z
+    );
+
+    MaterialData materialData = BuildMaterialData(instanceData.mMaterialIndex, vertex.mUV, clipPos, tangentToWorld);
+    return CalculateLighting(materialData, worldPos.xyz, aViewDirection, 0.0f);
+}
+
+inline void GenerateCameraRay(uint2 index, out float3 origin, out float3 direction)
+{
+    float2 xy = index + 0.5f; // center in the middle of the pixel.
+    float2 screenPos = xy / SR_ViewConstants.mViewportSizeAndScale.xy * 2.0 - 1.0;
+
+    // Invert Y for DirectX-style coordinates.
+    screenPos.y = -screenPos.y;
+
+    // Unproject the pixel coordinate into a ray.
+    float4 world = mul(SR_ViewConstants.mClipToWorld, float4(screenPos, 0, 1));
+
+    world.xyz /= world.w;
+    origin = SR_ViewConstants.mCameraPosition;
+    direction = normalize(world.xyz - origin);
+}
+
+[numthreads(8, 8, 1)]
+void Main(int3 aThreadIndex : SV_DispatchThreadId)
+{
+    RWTexture2D<float4> outTexture = GetRWTexture2D<float4>(Constants.mOutputTextureDescriptorIndex);
+    RaytracingAccelerationStructure raytracingScene = SR_GetRaytracingScene();
+
+    float3 origin;
+    float3 direction;
+    GenerateCameraRay(aThreadIndex.xy, origin, direction);
+
+    RayDesc ray;
+    ray.Origin = origin;
+
+    ray.TMin = 0.001f;
+    ray.TMax = 10000.0f;
+    ray.Direction = direction;
+
+    uint rayFlags = 0;
+
+    RayQuery<RAY_FLAG_CULL_NON_OPAQUE> rayQuery;
+    rayQuery.TraceRayInline(raytracingScene, rayFlags, ~0, ray);
+    rayQuery.Proceed();
+
+    float3 L = (float3)0.0f;
+    float hitDistance = ray.TMax;
+    if (rayQuery.CommittedStatus() == COMMITTED_TRIANGLE_HIT)
+    {
+        //uint index = (rayQuery.CommittedInstanceID() / 112) % 7;
+        //L = colors[index];
+        L = CalculateShadingRayHit(rayQuery.CommittedInstanceID(), rayQuery.CommittedPrimitiveIndex(), -ray.Direction, SR_ConvertBarycentricsFromCommitted(rayQuery.CommittedTriangleBarycentrics()));
+        hitDistance = rayQuery.CommittedRayT();
+    }
+    else
+    {
+        L = SampleAtmosphereColor(ray.Direction);
+    }
+
+    outTexture[aThreadIndex.xy] = float4(L, hitDistance);
+}

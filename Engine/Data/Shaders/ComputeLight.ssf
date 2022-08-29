@@ -1,0 +1,39 @@
+#include "Common.ssh"
+#include "SceneConstants.ssh"
+#include "Lighting.ssh"
+
+struct DispatchInfo
+{
+    float4 mTargetResolutionAndRcp;
+
+    uint mOutputDescriptorIndex;
+    uint3 _unused;
+};
+ConstantBuffer<DispatchInfo> Constants : register(b0);
+
+[numthreads(8, 8, 1)]
+void Main(uint3 aDispatchThreadId : SV_DispatchThreadId)
+{
+    uint pixelCoord = aDispatchThreadId.xy;
+    const float2 uv = (pixelCoord + 0.5f) * DispatchInfo.mTargetResolutionAndRcp.zw;
+
+    Texture2D<float> depthTexture = SR_GetDepthBuffer();
+    float depth;
+    if (depth > 0)
+    {
+        float3 worldPosition;
+        float3 viewDirection;
+
+        Texture2D<float2> normalTexture = SR_GetNormalBuffer();
+        float3 worldNormal;
+
+        Texture2D<float4> materialTexture = SR_GetMaterialBuffer();
+        float4 materialProperties;
+        MaterialData materialData;
+
+        float3 result = CalculateLighting(materialData, worldPosition, viewDirection, depth);
+        
+        RWTexture2D outputTexture = GetRWTexture2D(Constants.mOutputDescriptorIndex);
+        outputTexture[pixelCoord] = float4(result, 1.0f);
+    }
+}

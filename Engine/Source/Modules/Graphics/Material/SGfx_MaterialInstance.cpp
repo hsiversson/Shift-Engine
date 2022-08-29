@@ -27,9 +27,8 @@ SC_Ref<SGfx_MaterialInstance> SGfx_MaterialInstance::GetDefault()
 		materialProps.mShaderProperties.mDepthStencilProperties.mDepthComparisonFunc = SR_ComparisonFunc::Equal;
 
 		SR_ShaderCompileArgs args;
-		args.mEntryPoint = "MainPS";
-		args.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/DefaultMeshShader.ssf";
-		args.mDefines.Add(SC_Pair<std::string, std::string>("PIXEL_SHADER", "1"));
+		args.mEntryPoint = "Main";
+		args.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/PixelShaderDefault.ssf";
 		args.mType = SR_ShaderType::Pixel;
 		SR_RenderDevice::gInstance->CompileShader(args, materialProps.mShaderProperties.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Pixel)]);
 
@@ -77,7 +76,6 @@ void SGfx_MaterialInstance::OverrideTexture(const SC_Ref<SR_Texture>& aTexture, 
 void SGfx_MaterialInstance::UpdateGPUData()
 {
 	SGfx_MaterialGPUData gpuData;
-	gpuData.multiplier = 1.0f;
 
 	uint32 i = 0;
 	for (const SC_Ref<SR_Texture>& tex : mTextureOverrides)

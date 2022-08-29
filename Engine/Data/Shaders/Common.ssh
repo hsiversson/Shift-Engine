@@ -1,10 +1,12 @@
 #pragma once 
 #define PI 3.14159265359
+#define FLT_SMALL_VALUE 0.0001f
+#define FLT_VERY_SMALL_VALUE 0.00000001f
 
-float  Squared(float  aX)    { return aX*aX; }
-float2 Squared(float2 aX)    { return aX*aX; }
-float3 Squared(float3 aX)    { return aX*aX; }
-float4 Squared(float4 aX)    { return aX*aX; }
+float  Square(float  aX)    { return aX*aX; }
+float2 Square(float2 aX)    { return aX*aX; }
+float3 Square(float3 aX)    { return aX*aX; }
+float4 Square(float4 aX)    { return aX*aX; }
 float  Pow2(float  aX)       { return aX*aX; }
 float2 Pow2(float2 aX)       { return aX*aX; }
 float3 Pow2(float3 aX)       { return aX*aX; }

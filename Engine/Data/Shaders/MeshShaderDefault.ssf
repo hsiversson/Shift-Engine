@@ -1,0 +1,95 @@
+#include "Common.ssh"
+#include "SceneConstants.ssh"
+#include "MeshShaderCommon.ssh"
+#include "InstanceData.ssh"
+
+struct DrawInfoStruct
+{
+	uint mVertexBufferDescriptorIndex;
+	uint mMeshletBufferDescriptorIndex;
+	uint mPrimitiveIndexBufferDescriptorIndex;
+	uint mVertexIndexBufferDescriptorIndex;
+
+	uint mBaseInstanceDataOffset;
+	uint mInstanceDataByteSize;
+	uint mNumInstances;
+	uint mInstanceOffset;
+
+	uint mNumMeshlets;
+	uint3 pad;
+};
+ConstantBuffer<DrawInfoStruct> DrawInfo : register(b0);
+
+struct PixelShaderInput
+{
+    float4 mClipPosition : SV_POSITION;
+    float3 mViewPosition : View_POSITION;
+    float3 mWorldPosition : WORLD_POSITION;
+    float3 mPrevWorldPosition : PREV_WORLD_POSITION;
+    float3 mNormal : NORMAL0;
+    float3 mTangent : TANGENT;
+    float3 mBitangent : BITANGENT;
+    float2 mUV : UV0;
+    nointerpolation uint mMaterialIndex : MATERIAL_INDEX;
+};
+
+[outputtopology("triangle")]
+[numthreads(SR_MAX_PRIMITIVES,1,1)]
+void Main(in uint groupId : SV_GroupID, in uint groupThreadId : SV_GroupThreadID, out vertices PixelShaderInput outVertices[SR_MAX_VERTICES], out indices uint3 outIndices[SR_MAX_PRIMITIVES])
+{
+    const uint meshletIndex = groupId / DrawInfo.mNumInstances;
+
+    StructuredBuffer<SR_Meshlet> meshlets = GetStructuredBuffer<SR_Meshlet>(DrawInfo.mMeshletBufferDescriptorIndex);
+    SR_Meshlet meshlet = meshlets[meshletIndex];
+
+    uint startInstance = groupId % DrawInfo.mNumInstances;
+    uint instanceCount = 1;
+
+    uint vertCount = meshlet.mVertexCount * instanceCount;
+    uint primCount = meshlet.mPrimitiveCount * instanceCount;
+    SetMeshOutputCounts(vertCount, primCount);
+
+    if (groupThreadId < vertCount)
+    {
+        StructuredBuffer<SR_VertexLayout> vertices = GetStructuredBuffer<SR_VertexLayout>(DrawInfo.mVertexBufferDescriptorIndex);
+        Buffer<uint> vertexIndices = GetBuffer<uint>(DrawInfo.mVertexIndexBufferDescriptorIndex);
+
+        uint readIndex = (groupThreadId % meshlet.mVertexCount) + meshlet.mVertexOffset;
+        uint instanceId = groupThreadId / meshlet.mVertexCount;
+
+        uint vertexIndex = vertexIndices[readIndex];
+        uint instanceIndex = startInstance + instanceId;
+
+        const SR_VertexLayout vertex = vertices[vertexIndex];
+        const SR_InstanceData instanceData = SR_LoadInstanceData(DrawInfo.mBaseInstanceDataOffset + (DrawInfo.mInstanceDataByteSize * (DrawInfo.mInstanceOffset + instanceIndex)));
+
+        float3x3 transform33 = (float3x3)instanceData.mTransform;
+
+        float4 worldPos = mul(instanceData.mTransform, float4(vertex.mPosition, 1.0f));
+        outVertices[groupThreadId].mWorldPosition = worldPos.xyz;
+        outVertices[groupThreadId].mViewPosition = mul(SR_ViewConstants.mWorldToCamera, float4(worldPos.xyz, 1.0f)).xyz;
+        outVertices[groupThreadId].mClipPosition = mul(SR_ViewConstants.mWorldToClip, float4(worldPos.xyz, 1.0f));
+
+        outVertices[groupThreadId].mNormal = normalize(mul(transform33, vertex.mNormal));
+        outVertices[groupThreadId].mTangent = normalize(mul(transform33, vertex.mTangent));
+        outVertices[groupThreadId].mBitangent = normalize(mul(transform33, vertex.mBitangent));
+
+        outVertices[groupThreadId].mUV = vertex.mUV;
+
+        outVertices[groupThreadId].mMaterialIndex = instanceData.mMaterialIndex;
+
+        float4 prevWorldPos = mul(instanceData.mPrevTransform, float4(vertex.mPosition, 1.0f));
+        outVertices[groupThreadId].mPrevWorldPosition = prevWorldPos.xyz;
+    }
+
+    if (groupThreadId < primCount)
+    {
+        StructuredBuffer<uint> primitiveIndices = GetStructuredBuffer<uint>(DrawInfo.mPrimitiveIndexBufferDescriptorIndex);
+
+        uint readIndex = groupThreadId % meshlet.mPrimitiveCount;
+        uint instanceId = groupThreadId / meshlet.mPrimitiveCount;
+
+        uint packedIndices = primitiveIndices[meshlet.mPrimitiveOffset + readIndex];
+        outIndices[groupThreadId] = UnpackPrimitive(packedIndices) + (meshlet.mVertexCount * instanceId);
+    }
+}

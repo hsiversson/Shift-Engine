@@ -17,28 +17,61 @@
 #include <filesystem>
 #include <fstream>
 
+void GetMTLTextureMapping(SC_Array<uint32>& aOutTextureMappings)
+{
+	aOutTextureMappings.Add(aiTextureType_DIFFUSE); // BaseColor (map_Kd)
+	aOutTextureMappings.Add(aiTextureType_HEIGHT);	// Normal (map_bump)
+	aOutTextureMappings.Add(aiTextureType_SHININESS);// Roughness (map_Ns)
+	aOutTextureMappings.Add(aiTextureType_AMBIENT); // Metallic (map_Ka)
+	aOutTextureMappings.Add(aiTextureType_SPECULAR); // Metallic (map_Ka)
+	aOutTextureMappings.Add(aiTextureType_EMISSIVE); // Emissive
+	//aOutTextureMappings.Add(aiTextureType_OPACITY); // Opacity (Mask) (map_d)
+}
+
+void GetFBXTextureMapping(SC_Array<uint32>& aOutTextureMappings)
+{
+	aOutTextureMappings.Add(aiTextureType_DIFFUSE); // BaseColor (map_Kd)
+	aOutTextureMappings.Add(aiTextureType_HEIGHT);	// Normal (map_bump)
+	aOutTextureMappings.Add(aiTextureType_SHININESS);// Roughness (map_Ns)
+	aOutTextureMappings.Add(aiTextureType_AMBIENT); // Metallic (map_Ka)
+	aOutTextureMappings.Add(aiTextureType_SPECULAR); // Metallic (map_Ka)
+	aOutTextureMappings.Add(aiTextureType_EMISSIVE); // Emissive
+	//aOutTextureMappings.Add(aiTextureType_OPACITY); // Opacity (Mask) (map_d)
+}
+
 SED_AssimpMaterial::SED_AssimpMaterial(aiMaterial* aMaterial, const SC_FilePath& aSourceFile)
 	: mImportedMaterial(aMaterial)
 	, mSourceDir(aSourceFile.GetParentDirectory())
 {
 	bool useAlphaTesting = false;
 
-	const uint32 validTextureTypes[] = {
-		//aiTextureType_BASE_COLOR,
-		aiTextureType_DIFFUSE,
-		aiTextureType_NORMALS,
-		//aiTextureType_NORMAL_CAMERA,
-		aiTextureType_DIFFUSE_ROUGHNESS,
-		aiTextureType_METALNESS,
-		aiTextureType_AMBIENT_OCCLUSION,
-		aiTextureType_SPECULAR,
-		aiTextureType_OPACITY,
-		aiTextureType_EMISSIVE,
-		//aiTextureType_EMISSION_COLOR,
-	};
+	SC_Array<uint32> validTextureTypes;
+	GetMTLTextureMapping(validTextureTypes);
+	//const uint32 validTextureTypes[] = {
+	//	//aiTextureType_BASE_COLOR,
+	//	aiTextureType_DIFFUSE,
+	//
+	//	//aiTextureType_NORMALS,
+	//	aiTextureType_HEIGHT, // FOR OBJ-MTL FILES
+	//	//aiTextureType_NORMAL_CAMERA,
+	//	// 
+	//	//aiTextureType_DIFFUSE_ROUGHNESS,
+	//	aiTextureType_SPECULAR, // FOR OBJ-MTL FILES
+	//
+	//	//aiTextureType_METALNESS,
+	//	aiTextureType_AMBIENT, // FOR OBJ-MTL FILES
+	//
+	//	aiTextureType_AMBIENT_OCCLUSION,
+	//
+	//	//aiTextureType_SPECULAR,
+	//
+	//	aiTextureType_OPACITY,
+	//	aiTextureType_EMISSIVE,
+	//	//aiTextureType_EMISSION_COLOR,
+	//};
 
 	aiString path;
-	for (uint32 i = 0; i < SC_ARRAY_SIZE(validTextureTypes); ++i)
+	for (uint32 i = 0; i < validTextureTypes.Count(); ++i)
 	{
 		const uint32 currentTextureType = validTextureTypes[i];
 		const aiTextureType texType = (aiTextureType)currentTextureType;
@@ -62,13 +95,16 @@ SED_AssimpMaterial::SED_AssimpMaterial(aiMaterial* aMaterial, const SC_FilePath&
 			case aiTextureType_BASE_COLOR:
 			case aiTextureType_DIFFUSE:
 			case aiTextureType_DIFFUSE_ROUGHNESS:
+			case aiTextureType_SHININESS:
 				mMaterialProperties.mTextures.Add(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Grey_1x1.dds");
 				break;
 			case aiTextureType_NORMALS:
 			case aiTextureType_NORMAL_CAMERA:
+			case aiTextureType_HEIGHT:
 				mMaterialProperties.mTextures.Add(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Normal_1x1.dds");
 				break;
 			case aiTextureType_METALNESS:
+			case aiTextureType_AMBIENT:
 				mMaterialProperties.mTextures.Add(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Black_1x1.dds");
 				break;
 			case aiTextureType_EMISSIVE:
@@ -98,11 +134,10 @@ SED_AssimpMaterial::SED_AssimpMaterial(aiMaterial* aMaterial, const SC_FilePath&
 
 	SR_DirectXShaderCompiler compiler;
 	SR_ShaderCompileArgs args;
-	args.mEntryPoint = "MainPS";
-	args.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/DefaultMeshShader.ssf";
-	args.mDefines.Add(SC_Pair<std::string, std::string>("PIXEL_SHADER", "1"));
+	args.mEntryPoint = "Main";
+	args.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/PixelShaderDefault.ssf";
 
-	args.mDefines.Add(SC_Pair<std::string, std::string>("USE_PACKED_NORMALMAP", "1"));
+	//args.mDefines.Add(SC_Pair<std::string, std::string>("USE_PACKED_NORMALMAP", "1"));
 
 	args.mType = SR_ShaderType::Pixel;
 	compiler.CompileFromFile(args, mMaterialProperties.mShaderProperties.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Pixel)]);

@@ -6,7 +6,9 @@ struct ConstantsStruct
     uint mOutputTexture;
     uint mDepthBufferTexture;
     uint _pad;
+
     float2 mBlurDirection;
+    uint2 _unused;
 };
 ConstantBuffer<ConstantsStruct> Constants : register(b0);
 
@@ -51,7 +53,7 @@ void Main(uint3 aDispatchThreadId : SV_DispatchThreadId)
     float3 worldPosition = SR_ClipToWorld(float3(clipPos, depthSample));
     float3 normal = ReconstructNormalFromDepth(depthBuffer, fullscreenCoord, worldPosition);
 
-    float4 viewNormal = mul(gSceneConstants.mViewConstants.mWorldToCamera, float4(normal, 0.0f));
+    float4 viewNormal = mul(SR_ViewConstants.mWorldToCamera, float4(normal, 0.0f));
     float viewNormalZ = abs(viewNormal.z);
 
     [unroll]

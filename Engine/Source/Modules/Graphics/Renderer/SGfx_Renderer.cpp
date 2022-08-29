@@ -33,12 +33,6 @@ bool SGfx_Renderer::Init(SGfx_Environment* aEnvironment)
 
 	const SC_IntVector2& backbufferResolution = SR_RenderDevice::gInstance->GetSwapChain()->GetProperties().mSize;
 
-	SR_BufferResourceProperties cbDesc;
-	cbDesc.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
-	cbDesc.mElementCount = 1;
-	cbDesc.mElementSize = sizeof(SGfx_SceneConstants);
-	mViewConstantsBuffer = SR_RenderDevice::gInstance->CreateBufferResource(cbDesc);
-
 	SR_TextureResourceProperties depthStencilResourceProps;
 	depthStencilResourceProps.mSize = SC_IntVector(backbufferResolution);
 	depthStencilResourceProps.mFormat = SR_Format::D32_FLOAT;
@@ -65,13 +59,8 @@ bool SGfx_Renderer::Init(SGfx_Environment* aEnvironment)
 
 	SR_ShaderCompileArgs compileArgs;
 	compileArgs.mEntryPoint = "Main";
-	compileArgs.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/PostEffect_Tonemap.ssf";
 	compileArgs.mType = SR_ShaderType::Compute;
-
-	//SC_FilePath watchEntry = compileArgs.mShaderFile;
-	//watchEntry.MakeAbsolute();
-	//watchEntry = SC_FilePath::Normalize(watchEntry);
-	//AddWatchEntry(watchEntry);
+	compileArgs.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/PostEffect_Tonemap.ssf";
 
 	SR_ShaderStateProperties tonemapShaderProps;
 	if (!SR_RenderDevice::gInstance->CompileShader(compileArgs, tonemapShaderProps.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Compute)], &tonemapShaderProps.mShaderMetaDatas[static_cast<uint32>(SR_ShaderType::Compute)]))
@@ -105,8 +94,6 @@ bool SGfx_Renderer::Init(SGfx_Environment* aEnvironment)
 	copyShaderProps.mPrimitiveTopology = SR_PrimitiveTopology::TriangleList;
 	mCopyShader = SR_RenderDevice::gInstance->CreateShaderState(copyShaderProps);
 
-	mPostEffectCBuffers.Respace(4);
-
 	mLightCulling = SC_MakeUnique<SGfx_LightCulling>();
 	if (!mLightCulling->Init())
 		return false;
@@ -114,6 +101,10 @@ bool SGfx_Renderer::Init(SGfx_Environment* aEnvironment)
 	mShadowMapSystem = SC_MakeUnique<SGfx_ShadowSystem>();
 	SGfx_CascadedShadowMap::Settings csmSettings;
 	mShadowMapSystem->GetCSM()->Init(csmSettings);
+
+	mRaytracingSystem = SC_MakeUnique<SGfx_Raytracing>();
+	if (!mRaytracingSystem->Init())
+		return false;
 
 	mReflectionProbe = SC_MakeRef<SGfx_ReflectionProbe>();
 
@@ -136,8 +127,6 @@ bool SGfx_Renderer::Init(SGfx_Environment* aEnvironment)
 void SGfx_Renderer::RenderView(SGfx_View* aView)
 {
 	SGfx_ViewData& prepareData = aView->GetPrepareData();
-	std::string tag = SC_FormatStr("SGfx_Renderer::RenderView (frame: {})", prepareData.mFrameIndex);
-	SC_PROFILER_EVENT_START(tag.c_str());
 	//SC_PROFILER_FUNCTION();
 
 	aView->StartRender();
@@ -152,9 +141,10 @@ void SGfx_Renderer::RenderView(SGfx_View* aView)
 
 	prepareData.mPrePassEvent = SubmitGraphicsTask(std::bind(&SGfx_Renderer::RenderPrePass, this, SC_Placeholder::Arg1), aView);
 
+	prepareData.mAmbientOcclusionEvent = SubmitGraphicsTask(std::bind(&SGfx_Renderer::ComputeAmbientOcclusion, this, SC_Placeholder::Arg1), aView);
 	prepareData.mLightCullingEvent = SubmitGraphicsTask(std::bind(&SGfx_Renderer::ComputeLightCulling, this, SC_Placeholder::Arg1), aView);
+	prepareData.mRenderGIEvent = SubmitGraphicsTask(std::bind(&SGfx_Renderer::RenderGI, this, SC_Placeholder::Arg1), aView);
 
-	//SubmitComputeTask(std::bind(&SGfx_Renderer::ComputeAmbientOcclusion, this), prepareData.mAmbientOcclusionEvent);
 
 	//SubmitGraphicsTask(std::bind(&SGfx_Renderer::RenderShadows, this), prepareData.mShadowsEvent);
 
@@ -214,6 +204,14 @@ SGfx_ShadowSystem* SGfx_Renderer::GetShadowMapSystem() const
 SGfx_AmbientOcclusion* SGfx_Renderer::GetAmbientOcclusion() const
 {
 	return mAmbientOcclusion.get();
+}
+
+SGfx_DDGI* SGfx_Renderer::GetRTGI() const
+{
+	if (mRaytracingSystem)
+		return mRaytracingSystem->GetDDGI();
+
+	return nullptr;
 }
 
 const SC_Ref<SR_Texture>& SGfx_Renderer::GetScreenColor() const
@@ -288,14 +286,26 @@ void SGfx_Renderer::PreRenderUpdates(SGfx_View* aView)
 #endif
 
 	SC_PROFILER_FUNCTION();
-	SR_Buffer* instanceDataBuffer = renderData.mInstanceData->GetBuffer();
 
 	mLightCulling->Prepare(renderData);
 
-	SGfx_MaterialGPUDataBuffer::Get().UpdateBuffer();
+	mRaytracingSystem->GetDDGI()->GetConstants(renderData);
+
+	SGfx_MaterialGPUDataBuffer& materialGpuBuffer = SGfx_MaterialGPUDataBuffer::Get();
+	materialGpuBuffer.UpdateBuffer();
 	renderData.mSceneConstants.mMaterialInfoBufferIndex = SGfx_MaterialGPUDataBuffer::Get().GetBufferDescriptorIndex();
-	renderData.mSceneConstants.mInstanceDataBufferIndex = (instanceDataBuffer) ? instanceDataBuffer->GetDescriptorHeapIndex() : 0;
-	mViewConstantsBuffer->UpdateData(0, &renderData.mSceneConstants, sizeof(SGfx_SceneConstants));
+
+	SR_Buffer* instanceDataBuffer = renderData.mInstanceData->GetBuffer();
+	renderData.mSceneConstants.mInstanceDataBufferIndex = instanceDataBuffer->GetDescriptorHeapIndex();
+
+	SR_Buffer* rtInstanceDataBuffer = renderData.mRaytracingInstanceData->GetBuffer();
+	renderData.mSceneConstants.mRaytracingInstanceDataBufferIndex = rtInstanceDataBuffer->GetDescriptorHeapIndex();
+
+	SR_BufferResourceProperties cbDesc;
+	cbDesc.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
+	cbDesc.mElementCount = 1;
+	cbDesc.mElementSize = sizeof(SGfx_SceneConstants);
+	mViewConstantsBuffer = SR_RenderDevice::gInstance->CreateBufferResource(cbDesc, &renderData.mSceneConstants);
 
 	cmdList->SetRootConstantBuffer(mViewConstantsBuffer, 1);
 	mEnvironment->ComputeSkyAtmosphereLUTs(cmdList);
@@ -374,6 +384,10 @@ void SGfx_Renderer::RenderPrePass(SGfx_View* aView)
 	cmdList->EndEvent(); // Render PrePass
 }
 
+void SGfx_Renderer::RenderGBuffer(SGfx_View* /*aView*/)
+{
+}
+
 void SGfx_Renderer::ComputeLightCulling(SGfx_View* aView)
 {
 	SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
@@ -389,7 +403,7 @@ void SGfx_Renderer::ComputeLightCulling(SGfx_View* aView)
 void SGfx_Renderer::ComputeAmbientOcclusion(SGfx_View* aView)
 {
 	SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
-	const SGfx_ViewData& renderData = aView->GetRenderData();
+	SGfx_ViewData& renderData = aView->GetMutableRenderData();
 
 #if SR_ENABLE_RAYTRACING
 	if (renderData.mRaytracingInstances.IsEmpty())
@@ -403,8 +417,24 @@ void SGfx_Renderer::ComputeAmbientOcclusion(SGfx_View* aView)
 
 	cmdList->SetRootConstantBuffer(mViewConstantsBuffer, 1);
 	mAmbientOcclusion->Render(cmdList, mDepthStencilSRV, renderData);
+	renderData.mSceneConstants.mAmbientOcclusionDescriptorIndex = mAmbientOcclusion->GetTexture()->GetDescriptorHeapIndex();
+
+	cmdList->UpdateBuffer(mViewConstantsBuffer, 0, &renderData.mSceneConstants, sizeof(renderData.mSceneConstants));
 
 	cmdList->EndEvent(); // Ambient Occlusion
+}
+
+void SGfx_Renderer::RenderGI(SGfx_View* aView)
+{
+	SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
+	const SGfx_ViewData& renderData = aView->GetRenderData();
+	cmdList->WaitFor(renderData.mAmbientOcclusionEvent);
+	cmdList->WaitFor(renderData.mLightCullingEvent);
+
+	SC_PROFILER_FUNCTION();
+
+	cmdList->SetRootConstantBuffer(mViewConstantsBuffer, 1);
+	mRaytracingSystem->GetDDGI()->RenderDiffuse(aView);
 }
 
 void SGfx_Renderer::RenderOpaque(SGfx_View* aView)
@@ -413,8 +443,7 @@ void SGfx_Renderer::RenderOpaque(SGfx_View* aView)
 	const SGfx_ViewData& renderData = aView->GetRenderData();
 
 	cmdList->WaitFor(renderData.mPrePassEvent);
-	cmdList->WaitFor(renderData.mLightCullingEvent);
-	//cmdList->WaitFor(renderData.mAmbientOcclusionEvent);
+	cmdList->WaitFor(renderData.mRenderGIEvent);
 
 	SC_PROFILER_FUNCTION();
 	cmdList->BeginEvent("Render Opaque");
@@ -442,6 +471,12 @@ void SGfx_Renderer::RenderOpaque(SGfx_View* aView)
 	if (renderData.mSky)
 		renderData.mSky->Render(cmdList);
 
+	if (mRaytracingSystem->GetDDGI()->mProbeGridProperties.mVisualizeProbes)
+	{
+		cmdList->TransitionBarrier(SR_ResourceState_DepthWrite, mDepthStencil->GetResource());
+		mRaytracingSystem->GetDDGI()->DebugRenderProbes(aView);
+		cmdList->TransitionBarrier(SR_ResourceState_DepthRead, mDepthStencil->GetResource());
+	}
 	cmdList->EndEvent(); // Render Opaque
 }
 
@@ -496,12 +531,15 @@ void SGfx_Renderer::ComputePostEffects(SGfx_View* aView)
 		cmdList->TransitionBarrier(SR_ResourceState_UnorderedAccess, mSceneColor2.mResource);
 		struct TAAConstants
 		{
+			SC_Vector4 mTargetResolutionAndRcp;
+
 			uint32 mTextureDescriptorIndex;
 			uint32 mHistoryTextureDescriptorIndex;
 			uint32 mMotionVectorTextureDescriptorIndex;
 			uint32 mDepthStencilTextureDescriptorIndex;
+
 			uint32 mOutputTextureDescriptorIndex;
-			SC_Vector4 mTargetResolutionAndRcp;
+			uint32 _unused[3];
 		} taaConstants = {};
 		taaConstants.mTextureDescriptorIndex = mSceneColor.mTexture->GetDescriptorHeapIndex();
 		taaConstants.mHistoryTextureDescriptorIndex = mHistoryBuffer.mTexture->GetDescriptorHeapIndex();
@@ -510,16 +548,10 @@ void SGfx_Renderer::ComputePostEffects(SGfx_View* aView)
 		taaConstants.mOutputTextureDescriptorIndex = mSceneColor2.mTextureRW->GetDescriptorHeapIndex();
 		taaConstants.mTargetResolutionAndRcp = SC_Vector4((float)mSceneColor2.mResource->GetProperties().mSize.x, (float)mSceneColor2.mResource->GetProperties().mSize.y, 1.0f / mSceneColor2.mResource->GetProperties().mSize.x, 1.0f / mSceneColor2.mResource->GetProperties().mSize.y);
 
-		if (!mPostEffectCBuffers[1])
-		{
-			SR_BufferResourceProperties cbDesc;
-			cbDesc.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
-			cbDesc.mElementCount = 1;
-			cbDesc.mElementSize = sizeof(TAAConstants);
-			mPostEffectCBuffers[1] = SR_RenderDevice::gInstance->CreateBufferResource(cbDesc);
-		}
-		mPostEffectCBuffers[1]->UpdateData(0, &taaConstants, sizeof(TAAConstants));
-		cmdList->SetRootConstantBuffer(mPostEffectCBuffers[1], 0);
+		uint64 cbOffset = 0;
+		SR_BufferResource* cb = cmdList->GetBufferResource(cbOffset, SR_BufferBindFlag_ConstantBuffer, sizeof(taaConstants), &taaConstants, 1);
+
+		cmdList->SetRootConstantBuffer(cb, cbOffset, 0);
 		cmdList->Dispatch(mTAAResolveShader, SC_IntVector(screenRect.mRight, screenRect.mBottom, 1));
 
 		SC_Array<SC_Pair<uint32, SR_TrackedResource*>> barriers;
@@ -561,17 +593,10 @@ void SGfx_Renderer::ComputePostEffects(SGfx_View* aView)
 	dispatchInfo.mDebugTargetTextureDescriptorIndex = mDebugTarget.mTexture->GetDescriptorHeapIndex();
 	dispatchInfo.mOutputTextureDescriptorIndex = mScreenColor.mTextureRW->GetDescriptorHeapIndex();
 
-	if (!mPostEffectCBuffers[0])
-	{
-		SR_BufferResourceProperties cbDesc;
-		cbDesc.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
-		cbDesc.mElementCount = 1;
-		cbDesc.mElementSize = sizeof(DispatchInfo);
-		mPostEffectCBuffers[0] = SR_RenderDevice::gInstance->CreateBufferResource(cbDesc);
-	}
+	uint64 cbOffset = 0;
+	SR_BufferResource* cb = cmdList->GetBufferResource(cbOffset, SR_BufferBindFlag_ConstantBuffer, sizeof(dispatchInfo), &dispatchInfo, 1);
 
-	mPostEffectCBuffers[0]->UpdateData(0, &dispatchInfo, sizeof(DispatchInfo));
-	cmdList->SetRootConstantBuffer(mPostEffectCBuffers[0], 0);
+	cmdList->SetRootConstantBuffer(cb, cbOffset, 0);
 	cmdList->Dispatch(mTonemapShader, SC_IntVector(screenRect.mRight, screenRect.mBottom, 1));
 
 	cmdList->TransitionBarrier(SR_ResourceState_Read, mScreenColor.mResource);

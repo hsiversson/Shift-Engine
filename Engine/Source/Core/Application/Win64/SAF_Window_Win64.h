@@ -119,6 +119,8 @@ public:
 
 	void Stop(bool aWaitForFinish = false) override;
 
+	bool SetWindowState(SAF_Window_Win64* aWindow, const SAF_Window_Win64::State& aState);
+
 	SAF_Window_Win64* GetMainWindow() const { return mMainWindow; }
 	HWND GetMainWindowHandle() const { return mMainWindow->GetHWND(); }
 	const wchar_t* GetWndClassName() const;

@@ -65,9 +65,9 @@ void SGfx_RenderQueue::Prepare(SGfx_ViewData& aPrepareData)
 				}
 
 				InstanceData& instanceData = instanceDatas.Add();
-				instanceData.mTransform = firstItem.mTransform;
-				instanceData.mPrevTransform = firstItem.mPrevTransform;
-				instanceData.mMaterialIndex = firstItem.mMaterialIndex;
+				instanceData.mTransform = nextItem.mTransform;
+				instanceData.mPrevTransform = nextItem.mPrevTransform;
+				instanceData.mMaterialIndex = nextItem.mMaterialIndex;
 				++numInstances;
 			}
 		}
@@ -119,7 +119,6 @@ void SGfx_RenderQueue::Render(SR_CommandList* aCmdList) const
 					drawInfo.mMeshletBufferDescriptorIndex = item.mMeshletData.mMeshletBuffer->GetDescriptorHeapIndex();
 					drawInfo.mVertexIndexBufferDescriptorIndex = item.mMeshletData.mVertexIndexBuffer->GetDescriptorHeapIndex();
 					drawInfo.mPrimitiveIndexBufferDescriptorIndex = item.mMeshletData.mPrimitiveIndexBuffer->GetDescriptorHeapIndex();
-					drawInfo.mMaterialIndex = item.mMaterialIndex;
 					drawInfo.mBaseInstanceDataOffset = item.mBaseInstanceDataOffset;
 					drawInfo.mInstanceDataByteSize = sizeof(InstanceData);
 					drawInfo.mNumInstances = instanceCount;
@@ -148,7 +147,6 @@ void SGfx_RenderQueue::Render(SR_CommandList* aCmdList) const
 				SGfx_VertexShadingDrawInfoStruct constants;
 				constants.mBaseInstanceDataOffset = item.mBaseInstanceDataOffset;
 				constants.mInstanceDataByteSize = sizeof(InstanceData);
-				constants.mMaterialIndex = item.mMaterialIndex;
 				constants.mInstanceOffset = 0;
 
 				uint64 cbOffset = 0;

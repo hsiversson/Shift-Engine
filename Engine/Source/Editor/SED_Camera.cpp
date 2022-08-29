@@ -117,12 +117,12 @@ void SED_Camera::UpdateArcBall()
 	SC_Vector pivot = GetPivot();
 
 	SC_Vector2 deltaAngles = SC_Vector2(2.0f * SC_Math::PI) / mParentViewport->GetViewportSize();
+
+	//float cosAngle = GetForward().Dot(SC_Vector::UpVector());
+	//if (cosAngle * SC_Math::Sign(deltaAngles.y) > 0.99f)
+	//	deltaAngles.y = 0.0f;
+
 	SC_Vector2 angles = mouseMoveDelta * deltaAngles;
-
-	float cosAngle = GetForward().Dot(SC_Vector::UpVector());
-	if (cosAngle * SC_Math::Sign(deltaAngles.y) > 0.99f)
-		deltaAngles.y = 0.0f;
-
 	SC_Matrix rotateX = SC_Matrix::CreateRotation(SC_Vector::UpVector(), angles.x);
 	SC_Matrix rotateY = SC_Matrix::CreateRotation(GetRight(), angles.y);
 

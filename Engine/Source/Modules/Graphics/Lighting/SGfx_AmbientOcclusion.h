@@ -18,7 +18,7 @@ public:
 
 	struct RTAOSettings
 	{
-		RTAOSettings() : mNumRaysPerPixel(2), mRadius(6.0f), mUseDenoiser(true), mAOType(Type::RTAO) {}
+		RTAOSettings() : mNumRaysPerPixel(2), mRadius(1.0f), mUseDenoiser(true), mAOType(Type::RTAO) {}
 
 		int32 mNumRaysPerPixel;
 		float mRadius;

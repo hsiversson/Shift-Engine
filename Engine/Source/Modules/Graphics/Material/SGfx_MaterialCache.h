@@ -6,13 +6,11 @@ class SGfx_Material;
 struct SGfx_MaterialGPUData
 {
 	SGfx_MaterialGPUData()
-		: multiplier(1.0f)
 	{
 		SC_Fill(mTextureIndices, SGfx_MaxMaterialTextureCount, SC_UINT32_MAX);
 	}
 
 	uint32 mTextureIndices[SGfx_MaxMaterialTextureCount];
-	float multiplier;
 };
 
 class SGfx_MaterialCache

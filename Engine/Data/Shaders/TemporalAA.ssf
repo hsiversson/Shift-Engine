@@ -6,12 +6,15 @@
 
 struct TAAConstantsStruct
 {
+    float4 mTargetResolutionAndRcp;
+
     uint mTextureDescriptorIndex;
     uint mHistoryTextureDescriptorIndex;
     uint mMotionVectorTextureDescriptorIndex;
     uint mDepthStencilTextureDescriptorIndex;
+
     uint mOutputTextureDescriptorIndex;
-    float4 mTargetResolutionAndRcp;
+	uint3 _unused;
 };
 ConstantBuffer<TAAConstantsStruct> Constants : register(b0);
 
@@ -54,7 +57,7 @@ void TAAResolve(uint3 aThreadIndex : SV_DispatchThreadId, uint3 aGroupThreadInde
 		gTileColorLDS[t] = PackRG11B10_FLOAT(color);
 		gTileDepthLDS[t] = depth;
 	}
-	GroupMemoryBarrierWithGroupSync();
+	SR_GroupMemoryBarrierSynced();
 
 	int2 bestOffset = 0;
 	for (int x = -1; x <= 1; ++x)
@@ -114,9 +117,9 @@ void TAAResolve(uint3 aThreadIndex : SV_DispatchThreadId, uint3 aGroupThreadInde
 	const float2 pixelMotion = motionVectorTexture[bestPixel].xy;
 #endif //USE_LDS 
 
-	float2 viewportMaxUV = float2(gSceneConstants.mViewConstants.mViewportSizeAndScale.xy / Constants.mTargetResolutionAndRcp.xy);
+	float2 viewportMaxUV = float2(SR_ViewConstants.mViewportSizeAndScale.xy / Constants.mTargetResolutionAndRcp.xy);
 
-	const float2 prevUV = uv + (pixelMotion * gSceneConstants.mViewConstants.mViewportPosAndInvSize.zw);
+	const float2 prevUV = uv + (pixelMotion * SR_ViewConstants.mViewportPosAndInvSize.zw);
     float3 history = historyTexture.SampleLevel(gBilinearClamp, prevUV, 0).rgb;
     history.rgb = clamp(history.rgb, neighborhoodMin, neighborhoodMax);
 

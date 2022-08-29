@@ -1,12 +1,12 @@
 #pragma once 
-#include "MaterialCommon.ssh"
+#include "MaterialTemplate.ssh"
 
 #define TANGENT_SPACE_NORMAL (1)
 #define ENABLE_GEOMETRIC_ROUGHNESS_AA (1)
 
 struct MaterialData
 {
-    float4 mClipPosition;
+    float4 mSvPosition;
     float3 mColor;
     float mAlpha;    
     float3 mWorldNormal;
@@ -32,14 +32,14 @@ float3 ComputeF0(float3 aBaseColor, float aMetallic, float aSpecular)
 	return lerp(DielectricSpecularToF0(aSpecular).xxx, aBaseColor, aMetallic.xxx);
 }
 
-MaterialData BuildMaterialData(float4 aClipPosition, float4 aBaseColor, float3 aWorldNormal, float4 aRMAS, float3 aEmissive)
+MaterialData BuildMaterialData(float4 aSvPosition, float4 aBaseColor, float3 aWorldNormal, float4 aRMAS, float3 aEmissive)
 {
     MaterialData materialData;
-    materialData.mClipPosition = aClipPosition;
+    materialData.mSvPosition = aSvPosition;
     materialData.mColor = aBaseColor.rgb;
     materialData.mAlpha = aBaseColor.a;
     materialData.mWorldNormal = aWorldNormal;
-    materialData.mRoughness = aRMAS.r;
+    materialData.mRoughness = aRMAS.r * SR_GIConstants.mGlobalRoughnessMultiplier;
     materialData.mMetallic = aRMAS.g;
     materialData.mAmbientOcclusion = aRMAS.b;
     materialData.mSpecular = aRMAS.a;
@@ -61,6 +61,43 @@ MaterialData BuildMaterialData(float4 aClipPosition, float4 aBaseColor, float3 a
 #endif //ENABLE_GEOMETRIC_ROUGHNESS_AA
 
     return materialData;
+}
+
+#ifdef USE_PACKED_NORMALMAP
+float3 UnpackNormal(in float2 aPackedNormal)
+{
+    float z = sqrt(1.0f -saturate(Pow2(aPackedNormal.x) + Pow2(aPackedNormal.y)));
+    return float3(aPackedNormal.x, aPackedNormal.y, z);
+}
+#endif
+
+MaterialData BuildMaterialData(uint aMaterialIndex, float2 aUV, float4 aSvPosition, float3x3 aTBN)
+{
+    const SR_MaterialInfo materialInfo = SR_GetMaterialInfo(aMaterialIndex);
+    Texture2D<float4> baseColorMap = GetTexture2D<float4>(materialInfo.mTextureIndices[0]);
+    Texture2D<float3> normalMap = GetTexture2D<float3>(materialInfo.mTextureIndices[1]);
+    Texture2D<float> roughnessMap = GetTexture2D<float>(materialInfo.mTextureIndices[2]);
+    Texture2D<float> metallicMap = GetTexture2D<float>(materialInfo.mTextureIndices[3]);
+    //Texture2D<float> aoMap = GetTexture2D<float>(materialInfo.mTextureIndices[4]);
+    Texture2D<float2> specularMap = GetTexture2D<float2>(materialInfo.mTextureIndices[5]);
+    //Texture2D<float> opacityMap = GetTexture2D<float>(materialInfo.mTextureIndices[6]);
+    Texture2D<float3> emissiveMap = GetTexture2D<float3>(materialInfo.mTextureIndices[7]);
+
+    float4 baseColorSample = baseColorMap.Sample(gAnisotropicWrap, aUV);
+    
+#ifdef USE_PACKED_NORMALMAP
+    float3 normalSample = normalize(UnpackNormal(normalMap.Sample(gAnisotropicWrap, aUV).rg) * 2.0f - 1.0f); // Remap to -1 -> 1 range (NormalMaps are stored in 0 -> 1 range)
+#else
+    float3 normalSample = normalize(normalMap.Sample(gAnisotropicWrap, aUV).rgb * 2.0f - 1.0f); // Remap to -1 -> 1 range (NormalMaps are stored in 0 -> 1 range)
+#endif
+    normalSample = mul(aTBN, normalSample);
+
+    float roughnessSample = roughnessMap.Sample(gAnisotropicWrap, aUV).r;
+    float metallicSample = metallicMap.Sample(gAnisotropicWrap, aUV).r;
+    float specularSample = 1.0f;//specularMap.Sample(gAnisotropicWrap, aUV).g;
+    float3 emissiveSample = emissiveMap.Sample(gAnisotropicWrap, aUV).rgb;
+
+    return BuildMaterialData(aSvPosition, float4(baseColorSample.rgb, 1.0f), normalSample, float4(roughnessSample, metallicSample, 1.0f, specularSample), emissiveSample * 100.f);
 }
 
 //MaterialData GatherMaterialDataFromTriangle(uint aMaterialIndex, )

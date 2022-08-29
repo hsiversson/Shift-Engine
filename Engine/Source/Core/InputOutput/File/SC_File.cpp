@@ -40,7 +40,13 @@ void SC_FilePath::RemoveExtension()
 std::string SC_FilePath::GetAbsolutePath(const SC_FilePath& aPath)
 {
 	std::filesystem::path p(aPath.mPath.c_str());
-	return SC_UTF16ToUTF8(std::filesystem::absolute(p).c_str());
+
+	std::error_code error;
+	std::filesystem::path absoluteP = std::filesystem::absolute(p, error);
+	if (error)
+		SC_ASSERT(false, "Filesystem error: {}", error.message().c_str());
+
+	return SC_UTF16ToUTF8(absoluteP.c_str());
 }
 
 std::string SC_FilePath::GetAbsolutePath() const
@@ -64,9 +70,19 @@ SC_FilePath SC_FilePath::Normalize(const SC_FilePath& aPath, bool aAbsolute)
 	std::filesystem::path p(aPath.mPath.c_str());
 
 	if (aAbsolute)
-		p = std::filesystem::canonical(p);
+	{
+		std::error_code error;
+		p = std::filesystem::canonical(p, error);
+		if (error)
+			SC_ASSERT(false, "Filesystem error: {}", error.message().c_str());
+	}
 	else
-		p = std::filesystem::weakly_canonical(p);
+	{
+		std::error_code error;
+		p = std::filesystem::weakly_canonical(p, error);
+		if (error)
+			SC_ASSERT(false, "Filesystem error: {}", error.message().c_str());
+	}
 
 	return SC_UTF16ToUTF8(p.c_str()).c_str();
 }
@@ -108,6 +124,7 @@ bool SC_FilePath::IsAbsolutePath() const
 void SC_FilePath::MakeAbsolute()
 {
 	mPath = GetAbsolutePath(*this);
+	FixSlashes();
 }
 
 const char* SC_FilePath::GetStr() const

@@ -5,6 +5,7 @@
 struct DispatchInfoStruct
 {
     float4 mTargetResolutionAndRcp;
+    
     uint mSceneColorDescriptorIndex;
 	uint mBloomTextureDescriptorIndex;
 	uint mDebugTargetTextureDescriptorIndex;

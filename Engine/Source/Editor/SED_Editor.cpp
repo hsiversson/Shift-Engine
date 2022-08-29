@@ -18,11 +18,39 @@
 #include "Graphics/Renderer/SGfx_Renderer.h"
 #include "Graphics/Lighting/SGfx_AmbientOcclusion.h"
 #include "Graphics/Lighting/Shadows/SGfx_ShadowSystem.h"
+#include "Graphics/Lighting/Raytracing/SGfx_Raytracing.h"
 
 #include "Platform/Time/SC_Time.h"
 #include "RenderCore/Interface/SR_RenderDevice.h"
 #include "SED_MetricsWindow.h"
 #include "SED_Widgets.h"
+
+class SED_GraphicsSettingsWindow : public SED_Window
+{
+public:
+	SED_GraphicsSettingsWindow() : mIsFullscreen(false) {}
+	~SED_GraphicsSettingsWindow() {}
+
+	const char* GetWindowName() const override { return "Graphics Settings"; }
+
+protected:
+	void OnUpdate() override
+	{
+
+	}
+
+	void OnDraw() override
+	{
+		if (SED_Checkbox("Fullscreen", mIsFullscreen))
+		{
+			SAF_Framework::Get()->SetFullscreen(mIsFullscreen);
+		}
+	}
+
+private:
+	bool mIsFullscreen;
+};
+
 
 SED_Editor::SED_Editor()
 	: mIsDemoWindowOpen(false)
@@ -57,6 +85,9 @@ bool SED_Editor::Init()
 
 	mMetricsWindow = SC_MakeRef<SED_MetricsWindow>();
 	mWindows.Add(mMetricsWindow);
+
+	mGraphicsSettings = SC_MakeRef<SED_GraphicsSettingsWindow>();
+	mWindows.Add(mGraphicsSettings);
 
 	//auto WorldLoadingTask = [&]()
 	//{
@@ -136,6 +167,8 @@ bool SED_Editor::Render()
 				mIsDemoWindowOpen = true;
 			if (ImGui::MenuItem("Metrics Window"))
 				mMetricsWindow->Open();
+			if (ImGui::MenuItem("Graphics Settings"))
+				mMetricsWindow->Open();
 
 			ImGui::EndMenu();
 		}
@@ -143,13 +176,10 @@ bool SED_Editor::Render()
 		if (ImGui::BeginMenu("Renderer"))
 		{
 			SGfx_Renderer* renderer = mActiveWorld->GetGraphicsWorld()->GetRenderer();
+			SGfx_DDGI* rtgi = renderer->GetRTGI();
+			SGfx_DDGI::ProbeGridProperties& probeGridProperties = rtgi->mProbeGridProperties;
 			SGfx_Renderer::Settings& rendererSettings = renderer->GetSettings();
 			SED_Checkbox("Enable TAA", rendererSettings.mEnableTemporalAA);
-			SED_Checkbox("Draw Grid", rendererSettings.mDrawGridHelper);
-
-			SED_FloatField("Sun Direction", mActiveWorld->GetGraphicsWorld()->GetEnvironment()->GetSunDirection(), 0.1f, 1.0f, 0.01f); // temp
-			SED_ColorPickerRGB("Sun Color", mActiveWorld->GetGraphicsWorld()->GetEnvironment()->GetSunColor());
-			SED_FloatField("Sun Intensity", mActiveWorld->GetGraphicsWorld()->GetEnvironment()->GetSunIntensity());
 
 			if (ImGui::BeginMenu("Ambient Occlusion"))
 			{
@@ -178,6 +208,32 @@ bool SED_Editor::Render()
 					SED_FloatSlider("Radius", aoSettings.mRadius, 0.1f, 25.0f);
 					SED_Checkbox("Denoise", aoSettings.mUseDenoiser);
 				}
+				ImGui::EndMenu();
+			}
+			if (ImGui::BeginMenu("Global Illumination"))
+			{
+				SED_Checkbox("DDGI Enabled", probeGridProperties.mDiffuseEnabled);
+				SED_Checkbox("RTR Enabled", probeGridProperties.mSpecularEnabled);
+				SED_FloatSlider("Energy Conservation", probeGridProperties.mEnergyConservation, 0.0f, 1.0f);
+				SED_UintSlider("Num Rays Per Probe", probeGridProperties.mRaysPerProbe, 1, 1024);
+				SED_FloatSlider("History Factor", probeGridProperties.mHistoryFactor, 0.0f, 1.0f);
+				SED_FloatSlider("Normal Bias", probeGridProperties.mNormalBias, 0.0001f, 0.5f);
+				SED_FloatSlider("Depth Sharpness", probeGridProperties.mDepthSharpness, 0.0f, 100.f);
+				SED_FloatSlider("Global Roughness Multiplier", probeGridProperties.mGlobalRoughnessMultiplier, 0.0f, 1.0f);
+				SED_Checkbox("Visualize Probes", probeGridProperties.mVisualizeProbes);
+				SED_Checkbox("Force Metallic", probeGridProperties.mForceMetallic);
+				ImGui::EndMenu();
+			}
+			if (ImGui::BeginMenu("TEMP Sun"))
+			{
+				SED_FloatField("Sun Direction", mActiveWorld->GetGraphicsWorld()->GetEnvironment()->GetSunDirection(), 0.1f, 1.0f, 0.01f); // temp
+				SED_ColorPickerRGB("Sun Color", mActiveWorld->GetGraphicsWorld()->GetEnvironment()->GetSunColor());
+				SED_FloatField("Sun Intensity", mActiveWorld->GetGraphicsWorld()->GetEnvironment()->GetSunIntensity());
+				ImGui::EndMenu();
+			}
+			if (ImGui::BeginMenu("Utility"))
+			{
+				SED_Checkbox("Draw Grid", rendererSettings.mDrawGridHelper);
 				ImGui::EndMenu();
 			}
 

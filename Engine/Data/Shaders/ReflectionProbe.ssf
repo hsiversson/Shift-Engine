@@ -3,6 +3,7 @@
 struct ReflectionProbeConstantsStruct
 {
     uint mReflectionCubeFaceOutputDescriptorIndex;
+    uint3 _unused;
 };
 
 ConstantBuffer<ReflectionProbeConstantsStruct> ReflectionProbeConstants : register(b1);
@@ -15,7 +16,7 @@ void ReflectionProbe(uint3 aThreadIndex : SV_DispatchThreadId)
 	int3 pixelLocation = int3(aThreadIndex.xy, 0);
     float2 uv = SR_PixelToUV();
     float3 worldPosition = SR_PixelToWorld();
-    float3 viewDir = normalize(worldPosition - gSceneConstants.mViewConstants.mCameraPosition);
+    float3 viewDir = normalize(worldPosition - SR_ViewConstants.mCameraPosition);
 
     float4 outColor = (float4)0;
     outColor.rgb = SampleSky(viewDir);

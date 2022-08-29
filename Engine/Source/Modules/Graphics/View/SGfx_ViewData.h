@@ -6,6 +6,7 @@
 #include "Graphics/Environment/SGfx_Environment.h"
 #include "Graphics/View/SGfx_RenderQueue.h"
 #include "Graphics/Mesh/SGfx_InstanceData.h"
+#include "Graphics/Lighting/Raytracing/SGfx_Raytracing.h"
 #include "RenderCore/RenderTasks/SR_TaskEvent.h"
 #include "RenderCore/Interface/SR_RaytracingStructs.h"
 #include "Platform/Async/SC_Future.h"
@@ -38,6 +39,14 @@ struct SGfx_RenderObject
 	bool mOutputVelocity;
 };
 
+struct SGfx_VisibilityBufferConstants
+{
+	uint32 mDepthDescriptorIndex; // D32_FLOAT
+	uint32 mNormalsDescriptorIndex; // RG16_FLOAT
+	uint32 mMaterialsDescriptorIndex; // RGBA16_FLOAT
+	uint32 _unused;
+};
+
 struct SGfx_LightRenderData
 {
 	SGfx_Light::LocalLightShaderData mGPUData;
@@ -53,16 +62,21 @@ struct alignas(16) SGfx_SceneConstants
 	}
 
 	SGfx_ViewConstants mViewConstants;
+	SGfx_VisibilityBufferConstants mVisibilityBufferConstants;
 	SGfx_EnvironmentConstants mEnvironmentConstants;
 	SGfx_ShadowConstants mShadowConstants;
 	SGfx_LightCullingConstants mLightCullingConstants;
+	SGfx_DDGI::Constants mGIConstants;
 
 	uint32 mInstanceDataBufferIndex;
 	uint32 mMaterialInfoBufferIndex;
 	uint32 mRaytracingSceneDescriptorIndex;
+	uint32 mRaytracingInstanceDataBufferIndex;
+
+	uint32 mAmbientOcclusionDescriptorIndex;
 	uint32 mFrameIndex;
 	float mFrameTimeDelta;
-	uint32 pad[3];
+	uint32 pad;
 };
 
 struct SGfx_ViewRenderSettings
@@ -115,7 +129,10 @@ public:
 	SGfx_ViewData()
 	{
 		SC_ZeroMemory(this, sizeof(SGfx_ViewData));
-		mInstanceData = SC_MakeUnique<SGfx_InstanceData>();
+		mInstanceData = SC_MakeUnique<SGfx_InstanceData>("Mesh InstanceData");
+#if SR_ENABLE_RAYTRACING
+		mRaytracingInstanceData = SC_MakeUnique<SGfx_InstanceData>("Raytracing InstanceData");
+#endif
 	}
 
 	void Clear()
@@ -145,6 +162,7 @@ public:
 		mPreRenderUpdatesEvent.Reset();
 		mPrePassEvent.Reset();
 		mLightCullingEvent.Reset();
+		mRenderGIEvent.Reset();
 		mShadowsEvent.Reset();
 		mAmbientOcclusionEvent.Reset();
 		mRenderOpaqueEvent.Reset();
@@ -152,10 +170,9 @@ public:
 		mPostEffectsEvent.Reset();
 
 		mInstanceData->Clear();
-
-		mFrameIndex = 0;
-		mDeltaTime = 0.0f;
-		mElapsedTime = 0.0f;
+#if SR_ENABLE_RAYTRACING
+		mRaytracingInstanceData->Clear();
+#endif
 	}
 
 	SGfx_Sky* mSky;
@@ -173,7 +190,7 @@ public:
 	SC_Array<SC_Ref<SGfx_View>> mCSMViews;
 
 #if SR_ENABLE_RAYTRACING
-	SC_Array<SR_RaytracingInstanceData> mRaytracingInstances;
+	SC_Array<SR_RaytracingInstanceProperties> mRaytracingInstances;
 #endif
 
 	// PrepareEvents
@@ -186,6 +203,7 @@ public:
 	SC_Ref<SR_TaskEvent> mPreRenderUpdatesEvent;
 	SC_Ref<SR_TaskEvent> mPrePassEvent;
 	SC_Ref<SR_TaskEvent> mLightCullingEvent;
+	SC_Ref<SR_TaskEvent> mRenderGIEvent;
 	SC_Ref<SR_TaskEvent> mShadowsEvent;
 	SC_Ref<SR_TaskEvent> mAmbientOcclusionEvent;
 	SC_Ref<SR_TaskEvent> mRenderOpaqueEvent;
@@ -193,8 +211,7 @@ public:
 	SC_Ref<SR_TaskEvent> mPostEffectsEvent;
 
 	SC_UniquePtr<SGfx_InstanceData> mInstanceData;
-
-	uint32 mFrameIndex;
-	float mDeltaTime;
-	float mElapsedTime;
+#if SR_ENABLE_RAYTRACING
+	SC_UniquePtr<SGfx_InstanceData> mRaytracingInstanceData;
+#endif
 };

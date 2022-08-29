@@ -88,8 +88,11 @@ struct EnvironmentConstants
 struct ShadowConstants
 {
 	float4x4 mCSMWorldToClip[4];
+
     float4 mCSMSplitPoints;
+
 	int4 mCSMDescriptorIndices;
+
 	float2 mCSMResolutionAndInv;
 	float2 _unused0;
 };
@@ -100,52 +103,105 @@ struct LightCullingConstants
 {
 	uint2 mNumTiles;
 	uint mTotalNumLights;
-
 	uint mTileGridDescriptorIndex;
+
 	uint mLightBufferDescriptorIndex;
 	uint3 _unused0;
+};
+
+struct GIConstants
+{
+	float3 mGridStartPosition;
+	float mMaxDistance;
+
+	float3 mGridStep;
+	float mDepthSharpness;
+
+	uint3 mNumProbes;
+	float mHistoryFactor;
+
+	float mNormalBias;
+	float mEnergyConservation;
+	uint mEnableVisibilityTesting;
+	uint mRaysPerProbe;
+
+	uint2 mIrradianceTextureDimensions;
+	uint mIrradianceProbeSideLength;
+	uint mIrradianceTextureDescriptorIndex;
+
+	uint2 mDepthTextureDimensions;
+	uint mDepthProbeSideLength;
+	uint mDepthTextureDescriptorIndex;
+
+	float mGlobalRoughnessMultiplier;
+	uint mForceUpdate;
+	uint mDiffuseEnabled;
+	uint mSpecularEnabled;
+};
+
+struct VisibilityBufferConstants
+{
+    uint mDepthDescriptorIndex; // D32_FLOAT
+    uint mNormalsDescriptorIndex; // RG16_FLOAT
+    uint mMaterialsDescriptorIndex; // RGBA16_FLOAT
+	uint _unused;
 };
 
 struct SceneConstants
 {
     ViewConstants mViewConstants;
+	VisibilityBufferConstants mVisibilityBufferConstants;
     EnvironmentConstants mEnvironmentConstants;
 	ShadowConstants mShadowConstants;
 	LightCullingConstants mLightCullingConstants;
+	GIConstants mGIConstants;
 
 	uint mInstanceDataBufferIndex;
 	uint mMaterialInfoBufferIndex;
 	uint mRaytracingSceneDescriptorIndex;
+	uint mRaytracingInstanceDataBufferIndex;
+
+	uint mAmbientOcclusionDescriptorIndex;
 	uint mFrameIndex;
 	float mFrameTimeDelta;
-	uint3 _unused0;
+	uint _unused0;
 };
 
 ConstantBuffer<SceneConstants> gSceneConstants : register(b1);
 
 #define SR_SceneConstants			gSceneConstants
 #define SR_ViewConstants			gSceneConstants.mViewConstants
-#define SR_ScatteringConstants  	gSceneConstants.mEnvironmentConstants.mScatteringConstants
 #define SR_EnvironmentConstants 	gSceneConstants.mEnvironmentConstants
+#define SR_ScatteringConstants  	SR_EnvironmentConstants.mScatteringConstants
 #define SR_ShadowConstants			gSceneConstants.mShadowConstants
 #define SR_LightCullingConstants	gSceneConstants.mLightCullingConstants
+#define SR_GIConstants				gSceneConstants.mGIConstants
 
+// Visibility Buffer
+//Texture2D<float> SR_GetDepthBuffer()
+//{
+//    return GetTexture2D<float>(gSceneConstants.mVisibilityBufferConstants.mDepthDescriptorIndex);
+//}
+//
+//Texture2D<float2> SR_GetNormalBuffer()
+//{
+//    return GetTexture2D<float2>(gSceneConstants.mVisibilityBufferConstants.mNormalsDescriptorIndex);
+//}
+//
+//Texture2D<float4> SR_GetMaterialBuffer()
+//{
+//    return GetTexture2D<float4>(gSceneConstants.mVisibilityBufferConstants.mMaterialsDescriptorIndex);
+//}
+
+// Utilities
 float2 SR_PixelToClip(float2 aPixelCoord)
 {
-	return aPixelCoord * gSceneConstants.mViewConstants.mPixelToClipScaleAndOffset.xy + gSceneConstants.mViewConstants.mPixelToClipScaleAndOffset.zw;
+	return aPixelCoord * SR_ViewConstants.mPixelToClipScaleAndOffset.xy + SR_ViewConstants.mPixelToClipScaleAndOffset.zw;
 }
 
-float4 __GetZAxis(float4x4 aMatrix) { return aMatrix._m02_m12_m22_m32; } // ONLY TEMPORARY
-float4 __GetPos(float4x4 aMatrix) { return aMatrix._m03_m13_m23_m33; } // ONLY TEMPORARY
 float3 SR_ClipToCamera(float3 aClipPos)
 {
-	//float4 clip;
-	//clip.xy = aClipPos.xy;
-	//clip.zw = __GetZAxis(gSceneConstants.mViewConstants.mCameraToClip).zw * aClipPos.z + __GetPos(gSceneConstants.mViewConstants.mCameraToClip).zw;
-	//clip.z /= clip.w;
-	//clip.w = 1;
-
-	float4 cameraPos = mul(gSceneConstants.mViewConstants.mClipToCamera, float4(aClipPos, 1.0f));
+	float4 cameraPos = mul(SR_ViewConstants.mClipToCamera, float4(aClipPos, 1.0f));
 	cameraPos /= cameraPos.w;
 	return cameraPos.xyz;
 }
@@ -153,5 +209,5 @@ float3 SR_ClipToCamera(float3 aClipPos)
 float3 SR_ClipToWorld(float3 aClipPos)
 {	
 	float3 cameraPos = SR_ClipToCamera(aClipPos);
-	return mul(gSceneConstants.mViewConstants.mCameraToWorld, float4(cameraPos, 1.0f)).xyz;
+	return mul(SR_ViewConstants.mCameraToWorld, float4(cameraPos, 1.0f)).xyz;
 }

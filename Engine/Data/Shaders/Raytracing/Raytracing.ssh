@@ -1,0 +1,114 @@
+#pragma once 
+#include "../Common.ssh"
+#include "../Random.ssh"
+#include "../ImportanceSampling.ssh"
+#include "../SceneConstants.ssh"
+
+struct SR_RaytracingVertex
+{
+    float3 mPosition;
+    float3 mNormal;
+    float3 mTangent;
+    float3 mBitangent;
+    float2 mUV;
+};
+
+struct SR_RaytracingInstanceData
+{
+	float4x4 mTransform;
+
+	uint mVertexBufferDescriptorIndex;
+	uint mVertexStride;
+	uint mIndexBufferDescriptorIndex;
+	uint mMaterialIndex;
+
+    uint mVertexPositionByteOffset;
+    uint mVertexNormalByteOffset;
+    uint mVertexTangentByteOffset;
+    uint mVertexBitangentByteOffset;
+
+    uint mVertexUVByteOffset;
+    uint3 __pad;
+};
+
+RaytracingAccelerationStructure SR_GetRaytracingScene()
+{
+    return ResourceDescriptorHeap[SR_SceneConstants.mRaytracingSceneDescriptorIndex];
+}
+
+SR_RaytracingInstanceData SR_LoadRaytracingInstanceData(in uint aInstanceOffset)
+{
+    ByteAddressBuffer instanceDataBuffer = GetByteBuffer(SR_SceneConstants.mRaytracingInstanceDataBufferIndex);
+    SR_RaytracingInstanceData instanceData = SR_Load<SR_RaytracingInstanceData>(instanceDataBuffer, aInstanceOffset);
+    return instanceData;
+}
+
+float3 ReconstructNormalFromDepth(Texture2D<float> aDepthBuffer, uint2 aPixelCoordinate, float3 aWorldPosition)
+{
+    uint2 coord1 = aPixelCoordinate + int2(1, 0);
+    uint2 coord2 = aPixelCoordinate + int2(0, 1);
+
+    float d1 = aDepthBuffer.Load(int3(coord1, 0));
+    float d2 = aDepthBuffer.Load(int3(coord2, 0));
+
+    float3 p1 = SR_ClipToWorld(float3(SR_PixelToClip(float2(coord1 + 0.5f)), d1));
+    float3 p2 = SR_ClipToWorld(float3(SR_PixelToClip(float2(coord2 + 0.5f)), d2));
+
+    return normalize(cross(p1 - aWorldPosition, p2 - aWorldPosition));
+}
+
+float3 SR_ConvertBarycentricsFromCommitted(in float2 aCommittedBarycentrics)
+{
+    return float3(1.0f - aCommittedBarycentrics.x - aCommittedBarycentrics.y, aCommittedBarycentrics.x, aCommittedBarycentrics.y);
+}
+
+uint3 SR_GetTriangleIndices(const SR_RaytracingInstanceData aInstanceData, in uint aTriangleIndex)
+{
+    Buffer<uint> indexBuffer = GetBuffer<uint>(aInstanceData.mIndexBufferDescriptorIndex);
+    uint indexOffset = aTriangleIndex * 3;
+    uint3 vertexIndices;
+    vertexIndices.x = indexBuffer.Load(indexOffset);
+    vertexIndices.y = indexBuffer.Load(indexOffset + 1);
+    vertexIndices.z = indexBuffer.Load(indexOffset + 2);
+    return vertexIndices;
+}
+
+template<typename T>
+T SR_InterpolateVertexAttribute(in T aAttributes[3], in float3 aBarycentrics)
+{
+    return aAttributes[0] * aBarycentrics.x + aAttributes[1] * aBarycentrics.y + aAttributes[2] * aBarycentrics.z;
+}
+
+template<typename T>
+T SR_InterpolateVertexAttribute(in T aAttribute0, in T aAttribute1, in T aAttribute2, in float3 aBarycentrics)
+{
+    return aAttribute0 * aBarycentrics.x + aAttribute1 * aBarycentrics.y + aAttribute2 * aBarycentrics.z;
+}
+
+SR_RaytracingVertex SR_GetInterpolatedRaytracingVertex(const SR_RaytracingInstanceData aInstanceData, in uint3 aVertexIndices, in float3 aBarycentrics)
+{
+    ByteAddressBuffer vertexBuffer = GetByteBuffer(aInstanceData.mVertexBufferDescriptorIndex);
+
+    SR_RaytracingVertex vertices[3];
+
+    [unroll(3)]
+    for (uint i = 0; i < 3; ++i)
+    {
+        uint vertexByteOffset = aVertexIndices[i] * aInstanceData.mVertexStride;
+
+        vertices[i].mPosition = SR_Load<float4>(vertexBuffer, vertexByteOffset + aInstanceData.mVertexPositionByteOffset).xyz;
+        vertices[i].mNormal = SR_Load<float4>(vertexBuffer, vertexByteOffset + aInstanceData.mVertexNormalByteOffset).xyz;
+        vertices[i].mTangent = SR_Load<float4>(vertexBuffer, vertexByteOffset + aInstanceData.mVertexTangentByteOffset).xyz;
+        vertices[i].mBitangent = SR_Load<float3>(vertexBuffer, vertexByteOffset + aInstanceData.mVertexBitangentByteOffset);
+        vertices[i].mUV = SR_Load<float2>(vertexBuffer, vertexByteOffset + aInstanceData.mVertexUVByteOffset);
+    }
+
+    SR_RaytracingVertex interpolated = (SR_RaytracingVertex)0;
+    interpolated.mPosition = SR_InterpolateVertexAttribute<float3>(vertices[0].mPosition, vertices[1].mPosition, vertices[2].mPosition, aBarycentrics);
+    interpolated.mNormal = SR_InterpolateVertexAttribute<float3>(vertices[0].mNormal, vertices[1].mNormal, vertices[2].mNormal, aBarycentrics);
+    interpolated.mTangent = SR_InterpolateVertexAttribute<float3>(vertices[0].mTangent, vertices[1].mTangent, vertices[2].mTangent, aBarycentrics);
+    interpolated.mBitangent = SR_InterpolateVertexAttribute<float3>(vertices[0].mBitangent, vertices[1].mBitangent, vertices[2].mBitangent, aBarycentrics);
+    interpolated.mUV = SR_InterpolateVertexAttribute<float2>(vertices[0].mUV, vertices[1].mUV, vertices[2].mUV, aBarycentrics);
+
+    return interpolated;
+}

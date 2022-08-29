@@ -11,6 +11,7 @@ SAF_Framework* SAF_Framework::gInstance = nullptr;
 
 SAF_Framework::SAF_Framework()
 	: mCallbacks(nullptr)
+	, mIsFullscreen(false)
 	, mExitRequested(false)
 {
 
@@ -59,6 +60,11 @@ void* SAF_Framework::GetNativeWindowHandle() const
 float SAF_Framework::GetWindowDPI() const
 {
 	return 1.0f;
+}
+
+void SAF_Framework::SetFullscreen(bool aValue)
+{
+	mIsFullscreen = aValue;
 }
 
 SAF_Framework* SAF_Framework::Create(const SAF_FrameworkCreateParams& aCreateParams)

@@ -4,8 +4,8 @@
 // Outputs relative motion between current frame and previous frame into RG16F.
 float2 CalculateMotionVector(in float3 aWorldPosition, in float3 aPrevWorldPosition)
 {
-    float4 clipPos = mul(gSceneConstants.mViewConstants.mWorldToClip_NoJitter, float4(aWorldPosition, 1.0f));
-    float4 prevClipPos = mul(gSceneConstants.mViewConstants.mPrevWorldToClip_NoJitter, float4(aPrevWorldPosition, 1.0f));
+    float4 clipPos = mul(SR_ViewConstants.mWorldToClip_NoJitter, float4(aWorldPosition, 1.0f));
+    float4 prevClipPos = mul(SR_ViewConstants.mPrevWorldToClip_NoJitter, float4(aPrevWorldPosition, 1.0f));
 
     float2 motionVector = (clipPos.xy / clipPos.w) - (prevClipPos.xy / prevClipPos.w);
     return motionVector;

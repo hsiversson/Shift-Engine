@@ -1,9 +1,6 @@
 #include "SED_NodeGraphTools.h"
 #include "RenderCore/Interface/SR_RenderTypes.h"
 
-#include "imgui.h"
-#include "imgui_internal.h"
-
 namespace SED_NodeGraphTools
 {
 	struct SED_NodeGraphEditorContext

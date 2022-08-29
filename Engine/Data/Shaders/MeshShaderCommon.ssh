@@ -1,0 +1,18 @@
+#pragma once
+
+#define SR_MAX_VERTICES 64
+#define SR_MAX_PRIMITIVES 64
+
+struct SR_Meshlet
+{
+    uint mVertexCount;
+    uint mVertexOffset;
+    uint mPrimitiveCount;
+    uint mPrimitiveOffset;
+};
+
+uint3 UnpackPrimitive(uint aPrimitive)
+{
+    // Unpacks a 10 bits per index triangle from a 32-bit uint.
+    return uint3(aPrimitive & 0x3FF, (aPrimitive >> 10) & 0x3FF, (aPrimitive >> 20) & 0x3FF);
+}

@@ -103,10 +103,43 @@ bool SGfx_MeshInstance::IncludeInRaytracingScene() const
 
 	return false;
 }
-const SR_RaytracingInstanceData& SGfx_MeshInstance::GetRaytracingData()
+SR_RaytracingInstanceProperties SGfx_MeshInstance::GetRaytracingInstanceProperties()
 {
-	UpdateRaytracingData();
-	return mRaytracingData;
+	SR_RaytracingInstanceProperties instanceProperties;
+	instanceProperties.mAccelerationStructureGPUAddress = mMeshTemplate->GetAccelerationStructure()->GetGPUAddressStart();
+	instanceProperties.mTransform = mTransform;
+	instanceProperties.mInstanceId = mInstanceDataOffset;
+	instanceProperties.mInstanceMask = 0xff;
+	instanceProperties.mHitGroup = 0;
+	instanceProperties.mFaceCullingMode = SR_CullMode::Back;
+	instanceProperties.mIsOpaque = true;
+
+	return instanceProperties;
+}
+SR_RaytracingInstanceData SGfx_MeshInstance::GetRaytracingInstanceData() const
+{
+	SC_ASSERT(mMaterialInstance, "No material instance available.");
+
+	SR_RaytracingInstanceData instanceData;
+	instanceData.mTransform = mTransform;
+	instanceData.mMaterialIndex = mMaterialInstance->GetMaterialIndex();
+
+	SR_Buffer* vertexBuffer = mMeshTemplate->GetVertexBuffer();
+	const SR_BufferResourceProperties& vbProperties = vertexBuffer->GetResource()->GetProperties();
+	const SR_VertexLayout& vertexLayout = mMeshTemplate->GetVertexLayout();
+
+	instanceData.mVertexBufferDescriptorIndex = vertexBuffer->GetDescriptorHeapIndex();
+	instanceData.mVertexStride = vbProperties.mElementSize;
+	instanceData.mVertexPositionByteOffset = vertexLayout.GetAttributeByteOffset(SR_VertexAttribute::Position);
+	instanceData.mVertexNormalByteOffset = vertexLayout.GetAttributeByteOffset(SR_VertexAttribute::Normal);
+	instanceData.mVertexTangentByteOffset = vertexLayout.GetAttributeByteOffset(SR_VertexAttribute::Tangent);
+	instanceData.mVertexBitangentByteOffset = vertexLayout.GetAttributeByteOffset(SR_VertexAttribute::Bitangent);
+	instanceData.mVertexUVByteOffset = vertexLayout.GetAttributeByteOffset(SR_VertexAttribute::UV);
+
+	SR_Buffer* indexBuffer = mMeshTemplate->GetIndexBuffer();
+	instanceData.mIndexBufferDescriptorIndex = indexBuffer->GetDescriptorHeapIndex();
+
+	return instanceData;
 }
 #endif
 
@@ -137,21 +170,3 @@ void SGfx_MeshInstance::CalculateBoundingBox()
 
 	mBoundingBox.FromPoints(corners, 8);
 }
-
-#if SR_ENABLE_RAYTRACING
-void SGfx_MeshInstance::UpdateRaytracingData()
-{
-	mRaytracingData.mAccelerationStructureGPUAddress = mMeshTemplate->GetAccelerationStructure()->GetGPUAddressStart();
-	mRaytracingData.mTransform = mTransform;
-	mRaytracingData.mInstanceId = mInstanceDataOffset;
-	mRaytracingData.mInstanceMask = 0xff;
-	mRaytracingData.mHitGroup = 0;
-	mRaytracingData.mFaceCullingMode = SR_CullMode::Back;
-	mRaytracingData.mIsOpaque = true;
-
-
-
-	mMeshTemplate->GetVertexBuffer()->GetDescriptorHeapIndex();
-
-}
-#endif

@@ -9,9 +9,9 @@
 class SR_DxcIncludeHandler : public IDxcIncludeHandler
 {
 public:
-	explicit SR_DxcIncludeHandler(IDxcUtils* aDxcUtils)
+	explicit SR_DxcIncludeHandler(IDxcUtils* aDxcUtils, const SC_FilePath& aBaseDirectory)
 		: mDxcUtils(aDxcUtils)
-		, gBaseDirectory(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders")
+		, gBaseDirectory((!aBaseDirectory.IsEmpty()) ? aBaseDirectory : SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders")
 	{
 	}
 
@@ -44,8 +44,8 @@ public:
 			}
 			else
 			{
-				if (hr == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND))
-					SC_ERROR("File not found: {}", path.GetStr());
+				SC_ERROR("File not found: {}", path.GetStr());
+				return E_FAIL;
 			}
 			return hr;
 		}
@@ -265,17 +265,32 @@ SR_DirectXShaderCompiler::~SR_DirectXShaderCompiler()
 
 bool SR_DirectXShaderCompiler::CompileFromFile(const SR_ShaderCompileArgs& aArgs, SR_ShaderByteCode& aOutResult, SR_ShaderMetaData* aOutMetaData)
 {
-	std::ifstream t(aArgs.mShaderFile.GetAbsolutePath());
-	std::string shaderCodeBuffer((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
-	return CompileFromString(shaderCodeBuffer, aArgs, aOutResult, aOutMetaData);
+	std::string path = aArgs.mShaderFile.GetAbsolutePath();
+	std::ifstream filestream(path);
+	if (!filestream.is_open())
+	{
+		SC_ERROR("Failed to open shader file: [{}]", path.c_str());
+		return false;
+	}
+
+	std::string shaderCodeBuffer((std::istreambuf_iterator<char>(filestream)), std::istreambuf_iterator<char>());
+	return CompileFromString(shaderCodeBuffer, aArgs, aOutResult, aOutMetaData, aArgs.mShaderFile.GetParentDirectory());
 }
 
-bool SR_DirectXShaderCompiler::CompileFromString(const std::string& aShadercode, const SR_ShaderCompileArgs& aArgs, SR_ShaderByteCode& aOutResult, SR_ShaderMetaData* aOutMetaData)
+bool SR_DirectXShaderCompiler::CompileFromString(const std::string& aShadercode, const SR_ShaderCompileArgs& aArgs, SR_ShaderByteCode& aOutResult, SR_ShaderMetaData* aOutMetaData, const SC_FilePath& aBaseDirectory)
 {
 	const std::wstring targetProfile = GetTargetProfile(aArgs.mType);
 
 	std::string shaderCode(aShadercode);
 	shaderCode += SC_FormatStr("// Target: {}\n// ByteCode: {}\n{}", SC_UTF16ToUTF8(targetProfile.c_str()).c_str(), (mCompilerBackend == Backend::DXIL) ? "DXIL" : "SPIR-V", (mDebugShaders) ? "// --DEBUG--\n" : "");
+
+	if (!aArgs.mDefines.IsEmpty())
+	{
+		shaderCode += SC_FormatStr("// DEFINES: [ ");
+		for (uint32 i = 0; i < aArgs.mDefines.Count(); ++i)
+			shaderCode += SC_FormatStr("{}={} ", aArgs.mDefines[i].mFirst, aArgs.mDefines[i].mSecond);
+		shaderCode += SC_FormatStr(" ] \n");
+	}
 
 	uint64 shaderHash;
 	{
@@ -345,9 +360,15 @@ bool SR_DirectXShaderCompiler::CompileFromString(const std::string& aShadercode,
 		//compileArgs.Add(includeDirStr.c_str());
 
 		SR_ComPtr<IDxcResult> compileResults;
-		SR_DxcIncludeHandler includeHandler(dxcUtils.Get());
+		SR_DxcIncludeHandler includeHandler(dxcUtils.Get(), aBaseDirectory);
 
 		result = dxcCompiler->Compile(&sourceBuffer, compileArgs.GetBuffer(), compileArgs.Count(), &includeHandler, IID_PPV_ARGS(&compileResults));
+		if (FAILED(result))
+		{
+			SC_ASSERT(false, "Failed to compile shader.");
+			return false;
+		}
+
 		if (compileResults->HasOutput(DXC_OUT_ERRORS))
 		{
 			SR_ComPtr<IDxcBlobUtf8> errors;

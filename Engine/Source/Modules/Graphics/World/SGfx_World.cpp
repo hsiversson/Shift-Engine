@@ -61,10 +61,6 @@ void SGfx_World::PrepareView(SGfx_View* aView)
 	// Set Generic data such as view constants etc
 	prepareData.Clear();
 
-	prepareData.mFrameIndex = SC_Time::gFrameCounter;
-	prepareData.mDeltaTime = SC_Time::gDeltaTime;
-	prepareData.mElapsedTime = SC_Time::gElapsedTime;
-
 	SC_Vector2 jitter(0.0f);
 	if (mRenderer->GetSettings().mEnableTemporalAA)
 	{
@@ -93,11 +89,7 @@ void SGfx_World::PrepareView(SGfx_View* aView)
 	//mRenderer->GetShadowMapSystem()->GetCSM()->UpdateViews(aView);
 	//prepareData.mSceneConstants.mShadowConstants = mRenderer->GetShadowMapSystem()->GetShadowConstants();
 
-	SGfx_MaterialGPUDataBuffer& materialGpuBuffer = SGfx_MaterialGPUDataBuffer::Get();
-	materialGpuBuffer.UpdateBuffer();
-
 	mSceneGraph->PrepareView(aView);
-
 	//prepareData.mPrepareLightCullingEvent = SC_ThreadPool::Get().SubmitTask([this, aView]() { mRenderer->GetLightCulling()-> });
 	//mRenderer->GetLightCulling()->Prepare(aView->GetPrepareData());
 	prepareData.mSky = mEnvironment->GetSky();

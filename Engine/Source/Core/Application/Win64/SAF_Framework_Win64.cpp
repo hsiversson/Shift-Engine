@@ -151,6 +151,7 @@ bool SAF_Framework_Win64::Update()
 
 	// Sync Window State
 	SyncWindowState();
+	ApplyWindowStateChanges();
 
 	bool result = SAF_Framework::Update();
 	if (result)
@@ -287,6 +288,21 @@ void SAF_Framework_Win64::SyncWindowState()
 					swapChain->Update(props);
 				}
 			}
+		}
+	}
+}
+
+void SAF_Framework_Win64::ApplyWindowStateChanges()
+{
+	SAF_WindowThread_Win64* windowThread = SAF_WindowThread_Win64::Get();
+	if (SAF_Window_Win64* window = windowThread->GetMainWindow())
+	{
+		SAF_Window_Win64::State state = window->GetWindowState_MainThread();
+
+		if (state.mFullscreen != mIsFullscreen)
+		{
+			state.mFullscreen = mIsFullscreen;
+			windowThread->SetWindowState(window, state);
 		}
 	}
 }

@@ -1,7 +1,5 @@
 #include "SED_Window.h"
 
-#include "imgui.h"
-
 SED_Window::SED_Window()
 	: mIsOpen(true)
 	, mSuppressUpdates(false)

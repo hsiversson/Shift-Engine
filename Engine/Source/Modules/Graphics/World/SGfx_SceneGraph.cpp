@@ -60,11 +60,9 @@ void SGfx_SceneGraph::PrepareView(SGfx_View* aView)
 	//	}
 	//}
 
-	if (mMeshes.Count() > 0)
-		prepareData.mPrepareCullMeshesEvent = SC_ThreadPool::Get().SubmitTask([this, aView]() { CullMeshes(aView); });
+	prepareData.mPrepareCullMeshesEvent = SC_ThreadPool::Get().SubmitTask([this, aView]() { CullMeshes(aView); });
+	prepareData.mPrepareCullLightsEvent = SC_ThreadPool::Get().SubmitTask([this, aView]() { CullLights(aView); });
 
-	if (mLights.Count() > 0)
-		prepareData.mPrepareCullLightsEvent = SC_ThreadPool::Get().SubmitTask([this, aView]() { CullLights(aView); });
 	//CullMeshes(aView);
 	//CullLights(aView);
 	//AddRaytracingGeometry(aView);
@@ -388,10 +386,14 @@ void SGfx_SceneGraph::CullMeshes(SGfx_View* aView)
 		const float distanceToCamera = (camera.GetPosition() - boundingBox.GetCenter()).Length();
 
 #if SR_ENABLE_RAYTRACING
-		if (!depthOnly && mesh->IncludeInRaytracingScene() && distanceToCamera < 200.0f) // TODO: FIX THIS CULLING
+		if (!depthOnly && mesh->IncludeInRaytracingScene()) // TODO: FIX THIS CULLING
 		{
-			SR_RaytracingInstanceData& rtInstanceData = prepareData.mRaytracingInstances.Add(mesh->GetRaytracingData());
-			rtInstanceData.mInstanceId = mesh->GetMaterialInstance()->GetMaterialIndex();
+			SR_RaytracingInstanceProperties& rtInstanceData = prepareData.mRaytracingInstances.Add(mesh->GetRaytracingInstanceProperties());
+			const SR_RaytracingInstanceData instanceData = mesh->GetRaytracingInstanceData();
+
+			uint32 rtInstanceDataOffset = 0;
+			prepareData.mRaytracingInstanceData->Add(rtInstanceDataOffset, sizeof(instanceData) / sizeof(SC_Vector4), reinterpret_cast<const SC_Vector4*>(&instanceData));
+			rtInstanceData.mInstanceId = rtInstanceDataOffset;
 		}
 #endif
 
@@ -471,6 +473,9 @@ void SGfx_SceneGraph::CullMeshes(SGfx_View* aView)
 	prepareData.mDepthQueue_MotionVectors.Prepare(prepareData); 
 	prepareData.mOpaqueQueue.Prepare(prepareData);
 	prepareData.mInstanceData->Prepare();
+#if SR_ENABLE_RAYTRACING
+	prepareData.mRaytracingInstanceData->Prepare();
+#endif
 }
 
 void SGfx_SceneGraph::CullLights(SGfx_View* aView)

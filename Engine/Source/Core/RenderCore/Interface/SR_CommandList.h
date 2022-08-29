@@ -58,7 +58,7 @@ public:
 	void DispatchRays(const SC_IntVector& aThreadCounts);
 	virtual void DispatchRays(uint32 aThreadCountX, uint32 aThreadCountY = 1, uint32 aThreadCountZ = 1);
 	virtual SC_Ref<SR_BufferResource> CreateAccelerationStructure(const SR_AccelerationStructureInputs& aInputs, SR_BufferResource* aExistingBufferResource);
-	SC_Ref<SR_Buffer> BuildRaytracingBuffer(const SC_Array<SR_RaytracingInstanceData>& aInstances, SR_Buffer* aExistingBuffer);
+	SC_Ref<SR_Buffer> BuildRaytracingBuffer(const SC_Array<SR_RaytracingInstanceProperties>& aInstances, SR_Buffer* aExistingBuffer);
 #endif
 
 	// Clears
@@ -79,6 +79,7 @@ public:
 	virtual void SetRootConstant();
 	virtual void SetRootConstantBuffer(SR_BufferResource* aConstantBuffer, uint32 aSlot);
 	virtual void SetRootConstantBuffer(SR_BufferResource* aConstantBuffer, uint64 aBufferOffset, uint32 aSlot);
+	void SetRootConstantBuffer(uint32 aByteSize, void* aData, uint32 aSlot);
 	virtual void SetResourceInfo(uint8* aData, uint32 aSize);
 	virtual void SetRootShaderResource();
 	virtual void SetRootUnorderedAccessResource();
@@ -115,6 +116,8 @@ public:
 	// Misc
 	virtual void SetViewport(const SR_Rect& aRect, float aMinDepth = 0.0f, float aMaxDepth = 1.0f);
 	virtual void SetScissorRect(const SR_Rect& aRect);
+
+	virtual void SetDebugName(const char* aDebugName);
 
 	void WaitFor(SR_TaskEvent* aEvent);
 	void WaitFor(const SC_UniquePtr<SR_TaskEvent>& aEvent);

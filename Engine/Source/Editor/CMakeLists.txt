@@ -6,8 +6,10 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${EDITOR_FILES})
 
 target_include_directories(Editor PRIVATE 
 							${ENGINE_SOURCE_DIRECTORY}/Modules 
-							${ENGINE_SOURCE_DIRECTORY}/Core 
+							${ENGINE_SOURCE_DIRECTORY}/Core)
+
+target_include_directories(Editor SYSTEM PRIVATE
 							${IMGUI_INCLUDE_PATH}
 							${ASSIMP_INCLUDE_PATH})
 
-target_precompile_headers(Editor PRIVATE ${ENGINE_SOURCE_DIRECTORY}/Core/Common/SC_Base.h ${ENGINE_SOURCE_DIRECTORY}/Editor/SED_WidgetUtils.h ${ENGINE_SOURCE_DIRECTORY}/Editor/SED_Widgets.h ${IMGUI_INCLUDE_PATH}/imgui.h)
+target_precompile_headers(Editor PRIVATE ${ENGINE_SOURCE_DIRECTORY}/Core/Common/SC_Base.h ${ENGINE_SOURCE_DIRECTORY}/Editor/SED_WidgetUtils.h ${ENGINE_SOURCE_DIRECTORY}/Editor/SED_Widgets.h ${IMGUI_INCLUDE_PATH}/imgui.h ${IMGUI_INCLUDE_PATH}/imgui_internal.h)

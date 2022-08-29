@@ -96,12 +96,6 @@ void SGfx_PostEffects::RenderBloom(SGfx_View* aView, SR_Texture* aScreenColor)
 	constants.mInputTextureDescriptorIndex = aScreenColor->GetDescriptorHeapIndex();
 	constants.mOutputTextureDescriptorIndex = tempTex.mRWTexture->GetDescriptorHeapIndex();
 
-	SR_BufferResourceProperties cbProps;
-	cbProps.mBindFlags = SR_BufferBindFlag_ConstantBuffer;
-	cbProps.mElementCount = sizeof(FilterConstants);
-	cbProps.mElementSize = 1;
-	cbProps.mDebugName = "BloomFilterConstants";
-
 	uint64 cbOffset = 0;
 	SR_BufferResource* cb = cmdList->GetBufferResource(cbOffset, SR_BufferBindFlag_ConstantBuffer, sizeof(FilterConstants), &constants, 1);
 

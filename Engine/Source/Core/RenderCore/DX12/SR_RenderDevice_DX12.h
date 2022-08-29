@@ -28,7 +28,7 @@ public:
 	SR_RenderDevice_DX12();
 	~SR_RenderDevice_DX12();
 
-	SC_Ref<SR_CommandList> CreateCommandList(const SR_CommandListType& aType) override;
+	SC_Ref<SR_CommandList> CreateCommandList(const SR_CommandListType& aType, const char* aDebugName = nullptr) override;
 
 	SC_Ref<SR_Texture> CreateTexture(const SR_TextureProperties& aTextureProperties, const SC_Ref<SR_TextureResource>& aResource) override;
 	SC_Ref<SR_RenderTarget> CreateRenderTarget(const SR_RenderTargetProperties& aRenderTargetProperties, const SC_Ref<SR_TextureResource>& aResource) override;
@@ -161,7 +161,7 @@ inline bool VerifyHRESULT(HRESULT aValue)
 	if (outputDebugData)
 	{
 #if SR_ENABLE_DRED
-		SR_RenderDevice_DX12::gInstance->OutputDredDebugData();
+		//SR_RenderDevice_DX12::gInstance->OutputDredDebugData();
 #endif
 	}
 

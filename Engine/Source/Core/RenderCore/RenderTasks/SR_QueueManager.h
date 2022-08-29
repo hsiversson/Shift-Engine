@@ -24,7 +24,7 @@ public:
 
 	void Flush();
 
-	SC_Ref<SR_CommandList> GetCommandList(const SR_CommandListType& aQueueType);
+	SC_Ref<SR_CommandList> GetCommandList(const SR_CommandListType& aQueueType, const char* aDebugName = nullptr);
 
 protected:
 

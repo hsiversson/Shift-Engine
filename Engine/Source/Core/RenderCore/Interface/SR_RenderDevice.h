@@ -124,7 +124,7 @@ public:
 
 	virtual void GarbageCollect();
 
-	virtual SC_Ref<SR_CommandList> CreateCommandList(const SR_CommandListType& aType);
+	virtual SC_Ref<SR_CommandList> CreateCommandList(const SR_CommandListType& aType, const char* aDebugName = nullptr);
 
 	virtual SC_Ref<SR_Texture> CreateTexture(const SR_TextureProperties& aTextureProperties, const SC_Ref<SR_TextureResource>& aResource);
 	virtual SC_Ref<SR_RenderTarget> CreateRenderTarget(const SR_RenderTargetProperties& aRenderTargetProperties, const SC_Ref<SR_TextureResource>& aResource);
@@ -173,7 +173,7 @@ public:
 	SR_Fence InsertFence(const SR_CommandListType& aContextType);
 
 	SR_QueueManager* GetQueueManager() const;
-	SC_Ref<SR_CommandList> GetTaskCommandList(); // Returns the command list assigned to the current render task. Should only be called inside render tasks.
+	SC_Ref<SR_CommandList> GetTaskCommandList(const char* aDebugName = nullptr); // Returns the command list assigned to the current render task. Should only be called inside render tasks.
 
 	SR_ResourceDelayDestructor* GetDelayDestructor() const;
 

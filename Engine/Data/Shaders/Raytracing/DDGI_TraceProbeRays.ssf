@@ -1,0 +1,107 @@
+#include "../AtmosphereCommon.ssh"
+#include "../MaterialData.ssh"
+#include "../Lighting.ssh"
+#include "DDGI.ssh"
+
+struct TraceConstants
+{
+    float4x4 mRandomOrientation;
+
+    uint mIrradianceTextureDescriptorIndex;
+    uint mDirectionDistDescriptorIndex;
+    uint2 _unused;
+};
+ConstantBuffer<TraceConstants> Constants : register(b0);
+
+float3 DDGI_CalculateGlobalIllumination(in MaterialData aMaterialData, in const float3 aWorldPosition, in const float3 aViewDirection)
+{
+    float nDotV = saturate(dot(aMaterialData.mWorldNormal, aViewDirection));
+    float3 F = F_Schlick(aMaterialData.mSpecularColor, nDotV);
+    float3 kd = lerp(1.0f - F, 0.0f, aMaterialData.mMetallic);
+
+    float3 diffuse = (float3)0;
+    if (SR_GIConstants.mDiffuseEnabled)
+    {
+        float3 irradiance = SampleIrradiance(aWorldPosition, aMaterialData.mWorldNormal, aViewDirection);
+        diffuse = aMaterialData.mDiffuseColor * irradiance;
+    }
+
+    return diffuse;
+}
+
+
+float3 CalculateShadingRayHit(uint aHitInstanceIndex, uint aHitTriangleIndex, float3 aViewDirection, float3 aBarycentrics)
+{
+    const SR_RaytracingInstanceData instanceData = SR_LoadRaytracingInstanceData(aHitInstanceIndex);
+    const uint3 vertexIndices = SR_GetTriangleIndices(instanceData, aHitTriangleIndex);
+    const SR_RaytracingVertex vertex = SR_GetInterpolatedRaytracingVertex(instanceData, vertexIndices, aBarycentrics);
+    
+    float4 worldPos = mul(instanceData.mTransform, float4(vertex.mPosition, 1.0f));
+    float4 clipPos = mul(SR_ViewConstants.mWorldToClip, float4(worldPos.xyz, 1.0f));
+
+    float3x3 transform33 = (float3x3)instanceData.mTransform;
+    float3 transformedNormal = normalize(mul(transform33, vertex.mNormal));
+    float3 transformedTangent = normalize(mul(transform33, vertex.mTangent));
+    float3 transformedBitangent = normalize(mul(transform33, vertex.mBitangent));
+
+    float3x3 tangentToWorld = float3x3(
+        transformedTangent.x, transformedBitangent.x, transformedNormal.x,
+        transformedTangent.y, transformedBitangent.y, transformedNormal.y,
+        transformedTangent.z, transformedBitangent.z, transformedNormal.z
+    );
+
+    MaterialData materialData = BuildMaterialData(instanceData.mMaterialIndex, vertex.mUV, clipPos, tangentToWorld);
+    materialData.mRoughness = max(0.5f, materialData.mRoughness);
+    return CalculateDirectLighting(materialData, worldPos.xyz, aViewDirection, 0.0f) + DDGI_CalculateGlobalIllumination(materialData, worldPos.xyz, aViewDirection);
+}
+
+float3 SphericalFibonacci(float i, float n)
+{
+    const float PHI = sqrt(5) * 0.5 + 0.5;
+#define madfrac(A, B) ((A) * (B)-floor((A) * (B)))
+    float phi       = 2.0 * PI * madfrac(i, PHI - 1);
+    float cos_theta = 1.0 - (2.0 * i + 1.0) * (1.0 / n);
+    float sin_theta = sqrt(clamp(1.0 - cos_theta * cos_theta, 0.0f, 1.0f));
+
+    return float3(cos(phi) * sin_theta, sin(phi) * sin_theta, cos_theta);
+
+#undef madfrac
+}
+
+[numthreads(8, 8, 1)]
+void Main(uint3 aThreadIndex : SV_DispatchThreadId)
+{
+    const uint2 pixelCoord = aThreadIndex.xy;
+    const uint probeId = pixelCoord.y;
+    const uint rayId = pixelCoord.x;
+
+    RayDesc ray;
+    ray.Origin = GetProbeWorldPos(probeId);
+
+    ray.TMin = 0.001f;
+    ray.TMax = 10000.f;
+    ray.Direction = normalize(mul((float3x3)Constants.mRandomOrientation, SphericalFibonacci(rayId, SR_GIConstants.mRaysPerProbe)));
+
+    uint rayFlags = 0;
+
+    RayQuery<RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES | RAY_FLAG_FORCE_OPAQUE> rayQuery;
+    rayQuery.TraceRayInline(SR_GetRaytracingScene(), rayFlags, ~0, ray);
+    rayQuery.Proceed();
+
+    float3 L = (float3)0.0f;
+    float hitDistance = ray.TMax;
+    if (rayQuery.CommittedStatus() == COMMITTED_TRIANGLE_HIT)
+    {
+        hitDistance = ray.TMin + rayQuery.CommittedRayT();
+        L = CalculateShadingRayHit(rayQuery.CommittedInstanceID(), rayQuery.CommittedPrimitiveIndex(), -ray.Direction, SR_ConvertBarycentricsFromCommitted(rayQuery.CommittedTriangleBarycentrics()));
+    }
+    else
+    {
+        L = SampleAtmosphereColor(ray.Direction);
+    }
+
+    RWTexture2D<float4> irradianceTexture = GetRWTexture2D<float4>(Constants.mIrradianceTextureDescriptorIndex);
+    RWTexture2D<float4> directionDistTexture = GetRWTexture2D<float4>(Constants.mDirectionDistDescriptorIndex);
+    irradianceTexture[pixelCoord] = max((float4)0, float4(L, 0.0f));
+    directionDistTexture[pixelCoord] = float4(ray.Direction, hitDistance);
+}

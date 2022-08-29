@@ -36,6 +36,7 @@ struct SSAOConstants
 {
     uint mDepthTextureDescriptorIndex;
     uint mOutputTextureDescriptorIndex;
+    uint2 _unused;
 };
 ConstantBuffer<SSAOConstants> Constants : register(b1);
 

@@ -14,9 +14,9 @@ struct SR_RaytracingGeometryData
 	SR_BufferResource* mIndexBuffer;
 };
 
-struct SR_RaytracingInstanceData
+struct SR_RaytracingInstanceProperties
 {
-	SR_RaytracingInstanceData() 
+	SR_RaytracingInstanceProperties() 
 		: mTransform(SC_Matrix::Identity()) 
 		, mAccelerationStructureGPUAddress(0)
 		, mInstanceId(0)
@@ -55,7 +55,25 @@ struct SR_AccelerationStructureInputs
 	union
 	{
 		const SC_Array<SR_RaytracingGeometryData>* mGeometryData;
-		const SC_Array<SR_RaytracingInstanceData>* mInstanceData;
+		const SC_Array<SR_RaytracingInstanceProperties>* mInstanceProperties;
 	};
+};
+
+struct alignas(16) SR_RaytracingInstanceData
+{
+	SC_Matrix mTransform;
+
+	uint32 mVertexBufferDescriptorIndex;
+	uint32 mVertexStride;
+	uint32 mIndexBufferDescriptorIndex;
+	uint32 mMaterialIndex;
+
+	uint32 mVertexPositionByteOffset;
+	uint32 mVertexNormalByteOffset;
+	uint32 mVertexTangentByteOffset;
+	uint32 mVertexBitangentByteOffset;
+
+	uint32 mVertexUVByteOffset;
+	uint32 __pad[3];
 };
 #endif

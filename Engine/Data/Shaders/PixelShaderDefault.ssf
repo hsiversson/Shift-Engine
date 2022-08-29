@@ -1,0 +1,32 @@
+#include "Common.ssh"
+#include "SceneConstants.ssh"
+#include "Lighting.ssh"
+
+struct PixelShaderInput
+{
+    float4 mClipPosition : SV_POSITION;
+    float3 mViewPosition : View_POSITION;
+    float3 mWorldPosition : WORLD_POSITION;
+    float3 mPrevWorldPosition : PREV_WORLD_POSITION;
+    float3 mNormal : NORMAL0;
+    float3 mTangent : TANGENT;
+    float3 mBitangent : BITANGENT;
+    float2 mUV : UV0;
+    nointerpolation uint mMaterialIndex : MATERIAL_INDEX;
+};
+
+float4 Main(in PixelShaderInput aInput) : SV_TARGET0
+{
+    float3 viewDirection = normalize(SR_ViewConstants.mCameraPosition - aInput.mWorldPosition);
+
+    float3x3 tangentToWorld = float3x3(
+            aInput.mTangent.x, aInput.mBitangent.x, aInput.mNormal.x,
+            aInput.mTangent.y, aInput.mBitangent.y, aInput.mNormal.y,
+            aInput.mTangent.z, aInput.mBitangent.z, aInput.mNormal.z
+        );
+
+    MaterialData materialData = BuildMaterialData(aInput.mMaterialIndex, aInput.mUV, aInput.mClipPosition, tangentToWorld);
+    float3 color = CalculateLighting(materialData, aInput.mWorldPosition, viewDirection, aInput.mViewPosition.z);
+
+    return float4(color, 1.0f);
+}
