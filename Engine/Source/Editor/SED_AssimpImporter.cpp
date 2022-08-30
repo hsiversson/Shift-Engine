@@ -23,7 +23,7 @@ void GetMTLTextureMapping(SC_Array<uint32>& aOutTextureMappings)
 	aOutTextureMappings.Add(aiTextureType_HEIGHT);	// Normal (map_bump)
 	aOutTextureMappings.Add(aiTextureType_SHININESS);// Roughness (map_Ns)
 	aOutTextureMappings.Add(aiTextureType_AMBIENT); // Metallic (map_Ka)
-	aOutTextureMappings.Add(aiTextureType_SPECULAR); // Metallic (map_Ka)
+	aOutTextureMappings.Add(aiTextureType_SPECULAR); // Specular 
 	aOutTextureMappings.Add(aiTextureType_EMISSIVE); // Emissive
 	//aOutTextureMappings.Add(aiTextureType_OPACITY); // Opacity (Mask) (map_d)
 }
@@ -31,10 +31,10 @@ void GetMTLTextureMapping(SC_Array<uint32>& aOutTextureMappings)
 void GetFBXTextureMapping(SC_Array<uint32>& aOutTextureMappings)
 {
 	aOutTextureMappings.Add(aiTextureType_DIFFUSE); // BaseColor (map_Kd)
-	aOutTextureMappings.Add(aiTextureType_HEIGHT);	// Normal (map_bump)
-	aOutTextureMappings.Add(aiTextureType_SHININESS);// Roughness (map_Ns)
-	aOutTextureMappings.Add(aiTextureType_AMBIENT); // Metallic (map_Ka)
-	aOutTextureMappings.Add(aiTextureType_SPECULAR); // Metallic (map_Ka)
+	aOutTextureMappings.Add(aiTextureType_NORMALS);	// Normal (map_bump)
+	aOutTextureMappings.Add(aiTextureType_DIFFUSE_ROUGHNESS);// Roughness (map_Ns)
+	aOutTextureMappings.Add(aiTextureType_METALNESS); // Metallic (map_Ka)
+	aOutTextureMappings.Add(aiTextureType_SPECULAR); // Specular (map_Ka)
 	aOutTextureMappings.Add(aiTextureType_EMISSIVE); // Emissive
 	//aOutTextureMappings.Add(aiTextureType_OPACITY); // Opacity (Mask) (map_d)
 }
@@ -47,28 +47,7 @@ SED_AssimpMaterial::SED_AssimpMaterial(aiMaterial* aMaterial, const SC_FilePath&
 
 	SC_Array<uint32> validTextureTypes;
 	GetMTLTextureMapping(validTextureTypes);
-	//const uint32 validTextureTypes[] = {
-	//	//aiTextureType_BASE_COLOR,
-	//	aiTextureType_DIFFUSE,
-	//
-	//	//aiTextureType_NORMALS,
-	//	aiTextureType_HEIGHT, // FOR OBJ-MTL FILES
-	//	//aiTextureType_NORMAL_CAMERA,
-	//	// 
-	//	//aiTextureType_DIFFUSE_ROUGHNESS,
-	//	aiTextureType_SPECULAR, // FOR OBJ-MTL FILES
-	//
-	//	//aiTextureType_METALNESS,
-	//	aiTextureType_AMBIENT, // FOR OBJ-MTL FILES
-	//
-	//	aiTextureType_AMBIENT_OCCLUSION,
-	//
-	//	//aiTextureType_SPECULAR,
-	//
-	//	aiTextureType_OPACITY,
-	//	aiTextureType_EMISSIVE,
-	//	//aiTextureType_EMISSION_COLOR,
-	//};
+	//GetFBXTextureMapping(validTextureTypes);
 
 	aiString path;
 	for (uint32 i = 0; i < validTextureTypes.Count(); ++i)
@@ -105,8 +84,6 @@ SED_AssimpMaterial::SED_AssimpMaterial(aiMaterial* aMaterial, const SC_FilePath&
 				break;
 			case aiTextureType_METALNESS:
 			case aiTextureType_AMBIENT:
-				mMaterialProperties.mTextures.Add(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Black_1x1.dds");
-				break;
 			case aiTextureType_EMISSIVE:
 			case aiTextureType_EMISSION_COLOR:
 				mMaterialProperties.mTextures.Add(SC_EnginePaths::Get().GetEngineDataDirectory() + "/Textures/Default_Black_1x1.dds");
@@ -123,19 +100,20 @@ SED_AssimpMaterial::SED_AssimpMaterial(aiMaterial* aMaterial, const SC_FilePath&
 	int twoSided = 0;
 	mImportedMaterial->Get(AI_MATKEY_TWOSIDED, twoSided);
 
-
 	mMaterialProperties.mShaderProperties.mRasterizerProperties.mCullMode = (twoSided) ? SR_CullMode::None : SR_CullMode::Back;
 	//mMaterialProperties.mShaderProperties.mRasterizerProperties.mWireframe = true;
-	mMaterialProperties.mShaderProperties.mBlendStateProperties.mNumRenderTargets = 1;
-	mMaterialProperties.mShaderProperties.mRTVFormats.mNumColorFormats = 1;
-	mMaterialProperties.mShaderProperties.mRTVFormats.mColorFormats[0] = SR_Format::RG11B10_FLOAT;
+	mMaterialProperties.mShaderProperties.mBlendStateProperties.mNumRenderTargets = 3;
+	mMaterialProperties.mShaderProperties.mRTVFormats.mNumColorFormats = 3;
+	mMaterialProperties.mShaderProperties.mRTVFormats.mColorFormats[0] = SR_Format::RGBA8_UNORM;
+	mMaterialProperties.mShaderProperties.mRTVFormats.mColorFormats[1] = SR_Format::RGB10A2_UNORM;
+	mMaterialProperties.mShaderProperties.mRTVFormats.mColorFormats[2] = SR_Format::RGBA8_UNORM;
 	mMaterialProperties.mShaderProperties.mDepthStencilProperties.mWriteDepth = false;
 	mMaterialProperties.mShaderProperties.mDepthStencilProperties.mDepthComparisonFunc = SR_ComparisonFunc::Equal;
 
 	SR_DirectXShaderCompiler compiler;
 	SR_ShaderCompileArgs args;
 	args.mEntryPoint = "Main";
-	args.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/PixelShaderDefault.ssf";
+	args.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/PixelShaderGBuffer.ssf";
 
 	//args.mDefines.Add(SC_Pair<std::string, std::string>("USE_PACKED_NORMALMAP", "1"));
 

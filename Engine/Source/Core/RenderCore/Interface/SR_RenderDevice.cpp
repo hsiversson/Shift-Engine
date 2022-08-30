@@ -284,7 +284,6 @@ SR_TempBuffer SR_RenderDevice::CreateTempBuffer(const SR_BufferResourcePropertie
 SR_BufferResource* SR_RenderDevice::GetTempBufferResource(uint64& aOutOffset, SR_BufferBindFlag aBufferType, uint32 aByteSize, const void* aInitialData, uint32 aAlignment, const SR_Fence& aCompletionFence)
 {
 	SC_MutexLock lock;
-	//bool isTaskThread = SC_Thread::gIsTaskThread;
 
 	TempRingBuffers* tempRingBuffers = nullptr;
 	uint32 size = 0;

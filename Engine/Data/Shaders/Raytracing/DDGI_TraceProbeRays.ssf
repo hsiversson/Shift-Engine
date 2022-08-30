@@ -19,14 +19,8 @@ float3 DDGI_CalculateGlobalIllumination(in MaterialData aMaterialData, in const 
     float3 F = F_Schlick(aMaterialData.mSpecularColor, nDotV);
     float3 kd = lerp(1.0f - F, 0.0f, aMaterialData.mMetallic);
 
-    float3 diffuse = (float3)0;
-    if (SR_GIConstants.mDiffuseEnabled)
-    {
-        float3 irradiance = SampleIrradiance(aWorldPosition, aMaterialData.mWorldNormal, aViewDirection);
-        diffuse = aMaterialData.mDiffuseColor * irradiance;
-    }
-
-    return diffuse;
+    float3 irradiance = SampleIrradiance(aWorldPosition, aMaterialData.mWorldNormal, aViewDirection);
+    return aMaterialData.mDiffuseColor * irradiance;
 }
 
 
@@ -52,7 +46,14 @@ float3 CalculateShadingRayHit(uint aHitInstanceIndex, uint aHitTriangleIndex, fl
 
     MaterialData materialData = BuildMaterialData(instanceData.mMaterialIndex, vertex.mUV, clipPos, tangentToWorld);
     materialData.mRoughness = max(0.5f, materialData.mRoughness);
-    return CalculateDirectLighting(materialData, worldPos.xyz, aViewDirection, 0.0f) + DDGI_CalculateGlobalIllumination(materialData, worldPos.xyz, aViewDirection);
+
+    float3 directLighting = CalculateDirectLighting(materialData, worldPos.xyz, aViewDirection, 0.0f);
+
+    float3 indirectLighting = (float3)0;
+    if (SR_GIConstants.mInfiniteBounces)
+        indirectLighting = DDGI_CalculateGlobalIllumination(materialData, worldPos.xyz, aViewDirection);
+
+    return directLighting + indirectLighting;
 }
 
 float3 SphericalFibonacci(float i, float n)
@@ -71,21 +72,14 @@ float3 SphericalFibonacci(float i, float n)
 [numthreads(8, 8, 1)]
 void Main(uint3 aThreadIndex : SV_DispatchThreadId)
 {
-    const uint2 pixelCoord = aThreadIndex.xy;
-    const uint probeId = pixelCoord.y;
-    const uint rayId = pixelCoord.x;
-
     RayDesc ray;
-    ray.Origin = GetProbeWorldPos(probeId);
-
+    ray.Origin = GetProbeWorldPos(aThreadIndex.y);
     ray.TMin = 0.001f;
     ray.TMax = 10000.f;
-    ray.Direction = normalize(mul((float3x3)Constants.mRandomOrientation, SphericalFibonacci(rayId, SR_GIConstants.mRaysPerProbe)));
-
-    uint rayFlags = 0;
+    ray.Direction = normalize(mul((float3x3)Constants.mRandomOrientation, SphericalFibonacci(aThreadIndex.x, SR_GIConstants.mRaysPerProbe)));
 
     RayQuery<RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES | RAY_FLAG_FORCE_OPAQUE> rayQuery;
-    rayQuery.TraceRayInline(SR_GetRaytracingScene(), rayFlags, ~0, ray);
+    rayQuery.TraceRayInline(SR_GetRaytracingScene(), 0, ~0, ray);
     rayQuery.Proceed();
 
     float3 L = (float3)0.0f;
@@ -102,6 +96,6 @@ void Main(uint3 aThreadIndex : SV_DispatchThreadId)
 
     RWTexture2D<float4> irradianceTexture = GetRWTexture2D<float4>(Constants.mIrradianceTextureDescriptorIndex);
     RWTexture2D<float4> directionDistTexture = GetRWTexture2D<float4>(Constants.mDirectionDistDescriptorIndex);
-    irradianceTexture[pixelCoord] = max((float4)0, float4(L, 0.0f));
-    directionDistTexture[pixelCoord] = float4(ray.Direction, hitDistance);
+    irradianceTexture[aThreadIndex.xy] = max((float4)0, float4(L, 0.0f));
+    directionDistTexture[aThreadIndex.xy] = float4(ray.Direction, hitDistance);
 }

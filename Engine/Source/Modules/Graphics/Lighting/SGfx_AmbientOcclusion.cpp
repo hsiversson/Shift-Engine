@@ -17,8 +17,10 @@ struct DenoiserConstants
 	uint32 mInputTexture;
 	uint32 mOutputTexture;
 	uint32 mDepthBufferTexture;
-	uint32 _pad;
+	uint32 mBlurRadius;
+
 	SC_Vector2 mBlurDirection;
+	uint32 _unused[2];
 };
 
 SGfx_AmbientOcclusion::SGfx_AmbientOcclusion()
@@ -46,7 +48,7 @@ bool SGfx_AmbientOcclusion::Init()
 
 	SR_ShaderStateProperties shaderProps2;
 	compileArgs.mEntryPoint = "Main";
-	compileArgs.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/Raytracing/RTAO_Denoise.ssf";
+	compileArgs.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/Raytracing/RTAO_DenoiseSpatial.ssf";
 	compileArgs.mType = SR_ShaderType::Compute;
 	if (!SR_RenderDevice::gInstance->CompileShader(compileArgs, shaderProps2.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Compute)], &shaderProps2.mShaderMetaDatas[static_cast<uint32>(SR_ShaderType::Compute)]))
 		return false;
@@ -55,7 +57,7 @@ bool SGfx_AmbientOcclusion::Init()
 #endif //SR_ENABLE_RAYTRACING
 
 	SR_TextureResourceProperties textureResourceProps;
-	textureResourceProps.mSize = SC_IntVector(SC_Vector2(SR_RenderDevice::gInstance->GetSwapChain()->GetProperties().mSize) * 0.75f, 1);
+	textureResourceProps.mSize = SC_IntVector(SC_Vector2(SR_RenderDevice::gInstance->GetSwapChain()->GetProperties().mSize) * 0.5f, 1);
 	textureResourceProps.mFormat = SR_Format::R8_UNORM;
 	textureResourceProps.mType = SR_ResourceType::Texture2D;
 	textureResourceProps.mAllowUnorderedAccess = true;
@@ -166,6 +168,7 @@ void SGfx_AmbientOcclusion::RenderRTAO(SR_CommandList* aCmdList, const SC_Ref<SR
 		denoiseConstants.mOutputTexture = mDenoisedRWTexture[0]->GetDescriptorHeapIndex();
 		denoiseConstants.mDepthBufferTexture = aDepthBuffer->GetDescriptorHeapIndex();
 		denoiseConstants.mBlurDirection = SC_Vector2(1.0f, 0.0f);
+		denoiseConstants.mBlurRadius = 4;
 		mDenoiserConstantBuffer[0]->UpdateData(0, &denoiseConstants, sizeof(DenoiserConstants));
 
 		aCmdList->SetRootConstantBuffer(mDenoiserConstantBuffer[0], 0);

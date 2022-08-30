@@ -2,7 +2,6 @@
 #include "ShadingModels.ssh"
 #include "AtmosphereCommon.ssh"
 
-#include "Raytracing/RTR_TraceRays.ssh"
 #include "Raytracing/DDGI.ssh"
 
 #define USE_RTGI (1)
@@ -43,6 +42,7 @@ float3 CalculateDynamicSkyIndirectLighting(in const MaterialData aMaterialData, 
 #if USE_RTGI
 float3 CalculateGlobalIllumination(in MaterialData aMaterialData, in const float3 aWorldPosition, in const float3 aViewDirection)
 {
+    const float2 fullscreenUV = (aMaterialData.mSvPosition.xy + 0.5f) * SR_ViewConstants.mRenderTargetSizeAndInvSize.zw;
     float nDotV = saturate(dot(aMaterialData.mWorldNormal, aViewDirection));
     float3 F = F_Schlick(aMaterialData.mSpecularColor, nDotV);
     float3 kd = lerp(1.0f - F, 0.0f, aMaterialData.mMetallic);
@@ -50,14 +50,17 @@ float3 CalculateGlobalIllumination(in MaterialData aMaterialData, in const float
     float3 diffuse = (float3)0;
     if (SR_GIConstants.mDiffuseEnabled)
     {
-        float3 irradiance = SampleIrradiance(aWorldPosition, aMaterialData.mWorldNormal, aViewDirection);
+        Texture2D<float3> diffuseGITexture = GetTexture2D<float3>(SR_GIConstants.mDiffuseGIDescriptorIndex);
+        float3 irradiance = diffuseGITexture.SampleLevel(gBilinearClamp, fullscreenUV, 0);
         diffuse = aMaterialData.mDiffuseColor * irradiance;
     }
 
     float3 specular = (float3)0;
     if (SR_GIConstants.mSpecularEnabled)
     {
-        float3 reflections = TraceReflections(aMaterialData, aWorldPosition, aViewDirection);
+        Texture2D<float3> reflectionsTexture = GetTexture2D<float3>(SR_GIConstants.mReflectionsDescriptorIndex);
+        float3 reflections = reflectionsTexture.SampleLevel(gBilinearClamp, fullscreenUV, 0);//TraceReflections(aMaterialData, aWorldPosition, aViewDirection);
+
         Texture2D<float2> environmentBrdfLUT = GetTexture2D<float2>(SR_EnvironmentConstants.mIrradianceBrdfLUTDescriptorIndex);
         float2 brdf = environmentBrdfLUT.SampleLevel(gBilinearClamp, float2(nDotV, aMaterialData.mRoughness), 0);
         specular = reflections * (aMaterialData.mSpecularColor * brdf.x + saturate(50.0f * aMaterialData.mSpecularColor.g) * brdf.y);

@@ -1,4 +1,3 @@
-#pragma once 
 #include "../SceneConstants.ssh"
 #include "../MaterialData.ssh"
 #include "../AtmosphereCommon.ssh"
@@ -10,7 +9,6 @@
 
 #define RTR_MIRROR_REFLECTIONS_ROUGHNESS_THRESHOLD 0.05f
 #define DDGI_REFLECTIONS_ROUGHNESS_THRESHOLD 0.75f
-
 
 float3 RTR_CalculateGlobalIllumination(in MaterialData aMaterialData, in const float3 aWorldPosition, in const float3 aViewDirection)
 {
@@ -53,37 +51,36 @@ float3 RTR_CalculateShadingRayHit(uint aHitInstanceIndex, uint aHitTriangleIndex
     return CalculateDirectLighting(materialData, worldPos.xyz, aViewDirection, 0.0f) + RTR_CalculateGlobalIllumination(materialData, worldPos.xyz, aViewDirection);
 }
 
-float3 TraceReflections(in MaterialData aMaterialData, float3 aWorldPosition, float3 aViewDirection, float aRayBias = 0.25f)
+float3 TraceReflections(in float3 aWorldPosition, in float3 aNormal, in float3 aViewDirection, in float aRoughness, in uint2 aPixelCoord, float aRayBias = 0.25f)
 {
     RayDesc ray;
-    ray.Origin = aWorldPosition + (aMaterialData.mWorldNormal * aRayBias);
+    ray.Origin = aWorldPosition + (aNormal * aRayBias);
     ray.TMin = 0.001f;
     ray.TMax = 10000.f;
 
     uint rayFlags = 0;
 
 #if RTR_SIMPLE_REFLECTIONS
-    ray.Direction = reflect(-aViewDirection, aMaterialData.mWorldNormal);
+    ray.Direction = reflect(-aViewDirection, aNormal);
 #else
-    if (aMaterialData.mRoughness > DDGI_REFLECTIONS_ROUGHNESS_THRESHOLD)
+    if (aRoughness > DDGI_REFLECTIONS_ROUGHNESS_THRESHOLD)
     {
-        float3 reflectionVector = reflect(-aViewDirection, aMaterialData.mWorldNormal);
-        return SampleIrradiance(aWorldPosition, aMaterialData.mWorldNormal, aViewDirection);
+        float3 reflectionVector = reflect(-aViewDirection, aNormal);
+        return SampleIrradiance(aWorldPosition, aNormal, aViewDirection);
     }
-    else if (aMaterialData.mRoughness < RTR_MIRROR_REFLECTIONS_ROUGHNESS_THRESHOLD)
+    else if (aRoughness < RTR_MIRROR_REFLECTIONS_ROUGHNESS_THRESHOLD)
     {
-        ray.Direction = reflect(-aViewDirection, aMaterialData.mWorldNormal);
+        ray.Direction = reflect(-aViewDirection, aNormal);
     }
     else
     {
-	    float a = aMaterialData.mRoughness * aMaterialData.mRoughness;
-	    float a2 = a * a;
-        float noise = InterleavedGradientNoise(aMaterialData.mSvPosition.xy, SR_SceneConstants.mFrameIndex);
+        float noise = InterleavedGradientNoise((float2)aPixelCoord, SR_SceneConstants.mFrameIndex);
 	    uint2 random = uint2(asuint(noise), 0x1813 * noise);
-		float3x3 tangentBasis = GetTangentBasis(aMaterialData.mWorldNormal);
-		float3 tangentV = mul(tangentBasis, aViewDirection);
-        
 		float2 E = Hammersley16(0, 1, random);
+
+	    float a2 = Pow4(aRoughness);
+		float3x3 tangentBasis = GetTangentBasis(aNormal);
+		float3 tangentV = mul(tangentBasis, aViewDirection);
 		float3 H = mul(ImportanceSampleVisibleGGX(UniformSampleDisk(E), a2, tangentV ).xyz, tangentBasis);
 		ray.Direction = normalize(2.0f * dot(aViewDirection, H) * H - aViewDirection);
     }
@@ -107,4 +104,38 @@ float3 TraceReflections(in MaterialData aMaterialData, float3 aWorldPosition, fl
     }
 
     return L;
+}
+
+struct TraceConstants
+{
+    float4 mTargetResolutionAndRcp;
+    uint mOutputTextureDescriptorIndex;
+    uint3 _unused;
+};
+ConstantBuffer<TraceConstants> Constants : register(b0);
+
+[numthreads(8,8,1)]
+void Main(uint3 aDispatchThreadId : SV_DispatchThreadId)
+{
+    uint2 pixelCoord = aDispatchThreadId.xy;
+    const float2 uv = (pixelCoord + 0.5f) * Constants.mTargetResolutionAndRcp.zw;
+
+    float depth = SR_SampleDepth(uv);
+
+    float3 result = (float3)0;
+    if (depth > 0.0f)
+    {
+        float2 clipPos = SR_PixelToClip(float2(pixelCoord + 0.5f));
+        float3 worldPosition = SR_ClipToWorld(float3(clipPos, depth));
+        float3 viewDirection = normalize(SR_ViewConstants.mCameraPosition - worldPosition);
+        float3 worldNormal = SR_SampleGBufferNormal(uv);
+
+        float4 color = SR_SampleGBufferColor(uv);
+        float4 materialRMAS = SR_SampleGBufferMaterialRMAS(uv);
+
+        result = TraceReflections(worldPosition, worldNormal, viewDirection, materialRMAS.r, pixelCoord);
+    }
+
+    RWTexture2D<float3> outputTexture = GetRWTexture2D<float3>(Constants.mOutputTextureDescriptorIndex);
+    outputTexture[pixelCoord] = result;
 }

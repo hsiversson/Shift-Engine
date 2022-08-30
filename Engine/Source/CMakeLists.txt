@@ -15,6 +15,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Core/Network)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Core/Physics)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Core/Platform)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Core/RenderCore)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Core/FacadeGUI)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Core/Scripting)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Core/Scripting/ShiftScriptCore)
 

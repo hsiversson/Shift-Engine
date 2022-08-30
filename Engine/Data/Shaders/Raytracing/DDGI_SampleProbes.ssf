@@ -1,0 +1,32 @@
+#include "DDGI.ssh"
+
+struct DispatchConstants
+{
+    float4 mTargetResolutionAndRcp;
+    uint mOutputTextureDescriptorIndex;
+    uint3 _unused;
+};
+ConstantBuffer<DispatchConstants> Constants : register(b0);
+
+[numthreads(8,8,1)]
+void Main(uint3 aDispatchThreadId : SV_DispatchThreadId)
+{
+    uint2 pixelCoord = aDispatchThreadId.xy;
+    const float2 uv = (pixelCoord + 0.5f) * Constants.mTargetResolutionAndRcp.zw;
+
+    float depth = SR_SampleDepth(uv);
+
+    float3 result = (float3)0;
+    if (depth > 0.0f)
+    {
+        float2 clipPos = SR_PixelToClip(float2(pixelCoord + 0.5f));
+        float3 worldPosition = SR_ClipToWorld(float3(clipPos, depth));
+        float3 viewDirection = normalize(SR_ViewConstants.mCameraPosition - worldPosition);
+        float3 worldNormal = SR_SampleGBufferNormal(uv);
+
+        result = SampleIrradiance(worldPosition, worldNormal, viewDirection);
+    }
+
+    RWTexture2D<float3> outputTexture = GetRWTexture2D<float3>(Constants.mOutputTextureDescriptorIndex);
+    outputTexture[pixelCoord] = result;
+}

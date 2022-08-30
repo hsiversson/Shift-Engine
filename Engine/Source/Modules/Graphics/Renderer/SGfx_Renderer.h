@@ -86,18 +86,19 @@ private:
 	void RenderShadows(SGfx_View* aView);
 	void RenderPrePass(SGfx_View* aView); // Depth, Visibility Buffer
 
+	void ComputeLightCulling(SGfx_View* aView);
+	void ComputeHierarchicalZ(SGfx_View* aView); // Generate HZB Chain
+	void ComputeParticlesSimple(SGfx_View* aView);
+
 	void RenderGBuffer(SGfx_View* aView);
 
-	void ComputeHierarchicalZ(SGfx_View* aView); // Generate HZB Chain
-	void ComputeLightCulling(SGfx_View* aView);
 	void ComputeAmbientOcclusion(SGfx_View* aView);
-
 	void RenderGI(SGfx_View* aView);
 
-	void RenderOpaque(SGfx_View* aView);
+	void RenderLighting(SGfx_View* aView);
+	void RenderForward(SGfx_View* aView);
 
 	void ComputeParticles(SGfx_View* aView);
-
 	void RenderVolumetrics(SGfx_View* aView);
 	void RenderTranslucency(SGfx_View* aView);
 
@@ -116,11 +117,18 @@ private:
 	SGfx_Environment* mEnvironment;
 
 	// Temp
+	SGfx_Surface mGBuffer_Color;
+	SGfx_Surface mGBuffer_Normals;
+	SGfx_Surface mGBuffer_Material_RMAS;
+	//SGfx_Surface mGBuffer_Material_Extra;
+
+
 	SC_Ref<SR_BufferResource> mViewConstantsBuffer;
 
 	SC_Ref<SR_ShaderState> mTonemapShader;
 	SC_Ref<SR_ShaderState> mTAAResolveShader;
 	SC_Ref<SR_ShaderState> mCopyShader;
+	SC_Ref<SR_ShaderState> mRenderLightingShader;
 	SC_Ref<SR_DepthStencil> mDepthStencil;
 	SC_Ref<SR_Texture> mDepthStencilSRV;
 	SGfx_Surface mSceneColor;

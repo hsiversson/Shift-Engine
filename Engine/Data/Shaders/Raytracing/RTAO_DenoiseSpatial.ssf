@@ -5,17 +5,20 @@ struct ConstantsStruct
     uint mInputTexture;
     uint mOutputTexture;
     uint mDepthBufferTexture;
-    uint _pad;
+    uint mBlurRadius;
 
     float2 mBlurDirection;
     uint2 _unused;
 };
 ConstantBuffer<ConstantsStruct> Constants : register(b0);
 
-static const float gGaussianKernel[5] =
+#define GAUSSIAN_BLUR_DEVIATION 1.5f
+float GaussianWeight(float aOffset, float aDeviation)
 {
-	0.05448868f, 0.2442013f, 0.40262f, 0.2442013f, 0.05448868f
-};
+    float weight = 1.0f / sqrt(2.0f * PI * aDeviation * aDeviation);
+    weight *= exp(-(aOffset * aOffset) / (2.0f * aDeviation * aDeviation));
+    return weight;
+}
 
 bool IsValidTap(float tapDepth, float centerDepth, float3 tapNormal, float3 centerNormal, float dotViewNormal)
 {
@@ -39,43 +42,46 @@ bool IsValidTap(float tapDepth, float centerDepth, float3 tapNormal, float3 cent
 void Main(uint3 aDispatchThreadId : SV_DispatchThreadId)
 {
     uint2 fullscreenCoord = aDispatchThreadId.xy << 1;
+    const float deviation = float(Constants.mBlurRadius) / GAUSSIAN_BLUR_DEVIATION;
 
     RWTexture2D<float> outTexture = GetRWTexture2D<float>(Constants.mOutputTexture);
     Texture2D<float> inputTexture = GetTexture2D<float>(Constants.mInputTexture);
     Texture2D<float> depthBuffer = GetTexture2D<float>(Constants.mDepthBufferTexture);
 
     const bool enableTemporalFilter = false;
-    float ao = 0.0f;
-    float weight = 1.0f;
+    float totalAO = inputTexture.Load(int3(aDispatchThreadId.xy, 0));
+    float totalWeight = 1.0f;
 
-    float depthSample = depthBuffer.Load(int3(fullscreenCoord, 0));
+    float depthSample = SR_LoadDepth(fullscreenCoord);
     float2 clipPos = SR_PixelToClip(float2(fullscreenCoord + 0.5f));
     float3 worldPosition = SR_ClipToWorld(float3(clipPos, depthSample));
-    float3 normal = ReconstructNormalFromDepth(depthBuffer, fullscreenCoord, worldPosition);
+    float3 normal = SR_LoadGBufferNormal(fullscreenCoord);
 
     float4 viewNormal = mul(SR_ViewConstants.mWorldToCamera, float4(normal, 0.0f));
     float viewNormalZ = abs(viewNormal.z);
 
-    [unroll]
-    for(int i = -2; i <= 2; ++i)
+    int radius = Constants.mBlurRadius;
+    for(int i = -radius; i <= radius; ++i)
     {
+        if (i == 0)
+            continue;
+
         int2 offset = i * int2(Constants.mBlurDirection);
         int2 fullscreenCoordTap = uint2(aDispatchThreadId.xy + offset) << 1;
 
-        float depthTap = depthBuffer.Load(int3(fullscreenCoordTap, 0));
+        float depthTap = SR_LoadDepth(fullscreenCoordTap);
         float2 clipPosTap = SR_PixelToClip(float2(fullscreenCoordTap + 0.5f));
         float3 worldPositionTap = SR_ClipToWorld(float3(clipPosTap, depthTap));
-        float3 normalTap = ReconstructNormalFromDepth(depthBuffer, fullscreenCoordTap, worldPositionTap);
+        float3 normalTap = SR_LoadGBufferNormal(fullscreenCoordTap);
 
         float aoTap = inputTexture.Load(int3(aDispatchThreadId.xy + offset, 0));
 
-        float tapWeight = gGaussianKernel[i + 2];
-
-        bool isValid = IsValidTap(depthTap, depthSample, normalTap, normal, viewNormalZ);
-        ao = (isValid) ? (ao + aoTap * tapWeight) : ao;
-		weight = (!isValid) ? (weight - tapWeight) : weight;
+        float weight = GaussianWeight(i, deviation);
+        weight *= IsValidTap(depthTap, depthSample, normalTap, normal, viewNormalZ);
+        totalAO += weight * aoTap;
+		totalWeight += weight;
     }
-    ao /= weight;
+    totalAO /= max(totalWeight, 0.0001f);;
 
-    outTexture[aDispatchThreadId.xy] = ao;
+    outTexture[aDispatchThreadId.xy] = totalAO;
 }

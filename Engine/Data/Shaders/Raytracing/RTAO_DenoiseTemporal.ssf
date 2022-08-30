@@ -1,0 +1,19 @@
+
+struct ConstantsStruct
+{
+    float4 mTextureSizeAndInvSize;
+
+    uint mPrevFrameTexture;
+
+};
+ConstantBuffer<ConstantsStruct> Constants : register(b0);
+
+[numthreads(8, 8, 1)]
+void Main(uint3 aDispatchThreadId : SV_DispatchThreadId)
+{
+    uint2 pixelCoord = aDispatchThreadId.xy;
+
+    RWTexture2D<float> outTexture = GetRWTexture2D<float>(Constants.mOutputTexture);
+
+    outTexture[aDispatchThreadId.xy] = ao;
+}

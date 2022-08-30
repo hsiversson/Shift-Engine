@@ -1,15 +1,16 @@
 #include "SGfx_Raytracing.h"
 #include "Graphics/View/SGfx_ViewData.h"
+#include "Graphics/View/SGfx_View.h"
 #include "Graphics/Misc/SGfx_Shapes.h"
 
 bool SGfx_DDGI::Init()
 {
-	const SC_Vector minExtents = SC_Vector(-16, -4, -16);
-	const SC_Vector maxExtents = SC_Vector(16, 4, 16);
+	const SC_Vector minExtents = SC_Vector(-16, -3, -16);
+	const SC_Vector maxExtents = SC_Vector(16, 3, 16);
 
 	SC_Vector sceneLength = maxExtents - minExtents;
 
-	mProbeGridProperties.mDistanceBetweenProbes = 1.0f;
+	mProbeGridProperties.mDistanceBetweenProbes = 1.5f;
 	mProbeGridProperties.mNumProbes = SC_IntVector(sceneLength / mProbeGridProperties.mDistanceBetweenProbes) + SC_IntVector(2);
 	mProbeGridProperties.mStartPosition = minExtents;
 	mProbeGridProperties.mMaxDistance = 4.0f;
@@ -22,9 +23,9 @@ bool SGfx_DDGI::Init()
 	mProbeGridProperties.mEnergyConservation = 0.85f;
 	mProbeGridProperties.mGlobalRoughnessMultiplier = 1.00f;
 	mProbeGridProperties.mDiffuseEnabled = true;
-	mProbeGridProperties.mSpecularEnabled = false;
+	mProbeGridProperties.mSpecularEnabled = true;
 	mProbeGridProperties.mVisualizeProbes = false;
-	mProbeGridProperties.mForceMetallic = false;
+	mProbeGridProperties.mInfiniteBounces = true;
 
 	if (!CreateShaders())
 		return false;
@@ -46,7 +47,7 @@ void SGfx_DDGI::GetConstants(SGfx_ViewData& aPrepareData)
 	camPos.y = roundf(camPos.y);
 	camPos.z = roundf(camPos.z);
 
-	giConstants.mGridStartPosition = camPos + mProbeGridProperties.mStartPosition;
+	giConstants.mGridStartPosition = mProbeGridProperties.mStartPosition + camPos;
 	giConstants.mGridStep = SC_Vector(mProbeGridProperties.mDistanceBetweenProbes);
 	giConstants.mNumProbes = mProbeGridProperties.mNumProbes;
 	giConstants.mMaxDistance = mProbeGridProperties.mMaxDistance;
@@ -62,16 +63,20 @@ void SGfx_DDGI::GetConstants(SGfx_ViewData& aPrepareData)
 	giConstants.mDepthTextureDescriptorIndex = mProbeDepthTexture->GetDescriptorHeapIndex();;
 	giConstants.mRaysPerProbe = mProbeGridProperties.mRaysPerProbe;
 	giConstants.mEnableVisibilityTesting = true;
+	giConstants.mDiffuseGIDescriptorIndex = mDiffuseGITexture->GetDescriptorHeapIndex();
+	giConstants.mReflectionsDescriptorIndex = mReflectionsTexture->GetDescriptorHeapIndex();
 	giConstants.mGlobalRoughnessMultiplier = mProbeGridProperties.mGlobalRoughnessMultiplier;
 	giConstants.mDiffuseEnabled = mProbeGridProperties.mDiffuseEnabled;
 	giConstants.mSpecularEnabled = mProbeGridProperties.mSpecularEnabled;
-	giConstants.mForceUpdate = (giConstants.mGridStartPosition != mPreviousBasePos) ? 1 : 0;
-
-	mPreviousBasePos = giConstants.mGridStartPosition;
+	giConstants.mInfiniteBounces = (aPrepareData.mSceneConstants.mFrameIndex == 0) ? 0 : mProbeGridProperties.mInfiniteBounces;
 }
 
-void SGfx_DDGI::RenderDiffuse(SGfx_View* /*aView*/)
+void SGfx_DDGI::RenderDiffuse(SGfx_View* aView)
 {
+	if (!mProbeGridProperties.mDiffuseEnabled)
+		return;
+
+	const SGfx_ViewData& renderData = aView->GetRenderData();
 	SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
 	cmdList->BeginEvent("SGfx_DDGI::RenderDiffuse");
 
@@ -169,25 +174,65 @@ void SGfx_DDGI::RenderDiffuse(SGfx_View* /*aView*/)
 		cmdList->SetShaderState(mUpdateProbesBorderShader[0].Get());
 		cmdList->Dispatch(dispatchX, dispatchY, 1); // Depth Border Update
 
+		transitions.RemoveAll();
+		transitions.Add(SC_Pair(SR_ResourceState_Read, mProbeIrradianceTextureRW->GetResource()));
+		transitions.Add(SC_Pair(SR_ResourceState_Read, mProbeDepthTextureRW->GetResource()));
+		transitions.Add(SC_Pair(SR_ResourceState_UnorderedAccess, mDiffuseGITextureRW->GetResource()));
+		cmdList->TransitionBarrier(transitions);
+		cmdList->EndEvent();
+	}
+	{
+		SC_PROFILER_EVENT_SCOPED("SGfx_RTGI::SampleGrid");
+		cmdList->BeginEvent("SGfx_RTGI::SampleGrid");
+
+		struct Constants
+		{
+			SC_Vector4 mTargetResolutionAndRcp;
+			uint32 mOutputTextureDescriptorIndex;
+			uint32 _unused[3];
+		} constants;
+
+		constants.mTargetResolutionAndRcp = SC_Vector4(mDiffuseGITextureRW->GetResourceProperties().mSize.XY(), SC_Vector2(1.0f) / mDiffuseGITextureRW->GetResourceProperties().mSize.XY());
+		constants.mOutputTextureDescriptorIndex = mDiffuseGITextureRW->GetDescriptorHeapIndex();
+		cmdList->SetRootConstantBuffer(sizeof(constants), &constants, 0);
+
+		uint32 dispatchX = (uint32)renderData.mSceneConstants.mViewConstants.mViewportSizeAndScale.x;
+		uint32 dispatchY = (uint32)renderData.mSceneConstants.mViewConstants.mViewportSizeAndScale.y;
+		cmdList->Dispatch(mSampleProbesShader, dispatchX, dispatchY, 1);
+
+		cmdList->TransitionBarrier(SR_ResourceState_Read, mDiffuseGITexture->GetResource());
 		cmdList->EndEvent();
 	}
 
-	// SampleGrid
-	//{
-	//	SC_PROFILER_EVENT_SCOPED("SGfx_RTGI::SampleGrid");
-	//	cmdList->BeginEvent("SGfx_RTGI::SampleGrid");
-	//	
-	//	const SC_IntVector& textureSize = mGridSampleTexture->GetResourceProperties().mSize;
-	//
-	//	cmdList->Dispatch(mSampleGridShader.Get(), textureSize.x, textureSize.y, 1);
-	//	cmdList->EndEvent();
-	//}
+	cmdList->EndEvent();
+}
 
-	transitions.RemoveAll();
-	transitions.Add(SC_Pair(SR_ResourceState_Read, mProbeIrradianceTextureRW->GetResource()));
-	transitions.Add(SC_Pair(SR_ResourceState_Read, mProbeDepthTextureRW->GetResource()));
-	cmdList->TransitionBarrier(transitions);
+void SGfx_DDGI::RenderSpecular(SGfx_View* aView)
+{
+	if (!mProbeGridProperties.mSpecularEnabled)
+		return;
 
+	const SGfx_ViewData& renderData = aView->GetRenderData();
+	SC_Ref<SR_CommandList> cmdList = SR_RenderDevice::gInstance->GetTaskCommandList();
+	cmdList->BeginEvent("SGfx_DDGI::RenderSpecular");
+	cmdList->TransitionBarrier(SR_ResourceState_UnorderedAccess, mReflectionsTextureRW->GetResource());
+
+	struct Constants
+	{
+		SC_Vector4 mTargetResolutionAndRcp;
+		uint32 mOutputTextureDescriptorIndex;
+		uint32 _unused[3];
+	} constants;
+
+	constants.mTargetResolutionAndRcp = SC_Vector4(mReflectionsTextureRW->GetResourceProperties().mSize.XY(), SC_Vector2(1.0f) / mReflectionsTextureRW->GetResourceProperties().mSize.XY());
+	constants.mOutputTextureDescriptorIndex = mReflectionsTextureRW->GetDescriptorHeapIndex();
+	cmdList->SetRootConstantBuffer(sizeof(constants), &constants, 0);
+
+	uint32 dispatchX = (uint32)renderData.mSceneConstants.mViewConstants.mViewportSizeAndScale.x;
+	uint32 dispatchY = (uint32)renderData.mSceneConstants.mViewConstants.mViewportSizeAndScale.y;
+	cmdList->Dispatch(mReflectionsTraceRaysShader, dispatchX, dispatchY, 1);
+
+	cmdList->TransitionBarrier(SR_ResourceState_Read, mReflectionsTextureRW->GetResource());
 	cmdList->EndEvent();
 }
 
@@ -239,6 +284,19 @@ bool SGfx_DDGI::CreateShaders()
 	if (!SR_RenderDevice::gInstance->CompileShader(compileArgs, shaderProps.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Compute)], &shaderProps.mShaderMetaDatas[static_cast<uint32>(SR_ShaderType::Compute)]))
 		return false;
 	mUpdateProbesBorderShader[0] = SR_RenderDevice::gInstance->CreateShaderState(shaderProps);
+	compileArgs.mDefines.RemoveAll();
+
+	compileArgs.mEntryPoint = "Main";
+	compileArgs.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/Raytracing/DDGI_SampleProbes.ssf";
+	if (!SR_RenderDevice::gInstance->CompileShader(compileArgs, shaderProps.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Compute)], &shaderProps.mShaderMetaDatas[static_cast<uint32>(SR_ShaderType::Compute)]))
+		return false;
+	mSampleProbesShader = SR_RenderDevice::gInstance->CreateShaderState(shaderProps);
+
+	compileArgs.mEntryPoint = "Main";
+	compileArgs.mShaderFile = SC_EnginePaths::Get().GetEngineDataDirectory() + "/Shaders/Raytracing/RTR_TraceRays.ssf"; 
+	if (!SR_RenderDevice::gInstance->CompileShader(compileArgs, shaderProps.mShaderByteCodes[static_cast<uint32>(SR_ShaderType::Compute)], &shaderProps.mShaderMetaDatas[static_cast<uint32>(SR_ShaderType::Compute)]))
+		return false;
+	mReflectionsTraceRaysShader = SR_RenderDevice::gInstance->CreateShaderState(shaderProps);
 
 	return true;
 }
@@ -307,6 +365,34 @@ bool SGfx_DDGI::CreateTextures()
 		mProbeDepthTexture = SR_RenderDevice::gInstance->CreateTexture(depthTextureProps, depthResource);
 		depthTextureProps.mWritable = true;
 		mProbeDepthTextureRW = SR_RenderDevice::gInstance->CreateTexture(depthTextureProps, depthResource);
+	}
+	{
+		SR_TextureResourceProperties resourceProps;
+		resourceProps.mType = SR_ResourceType::Texture2D;
+		resourceProps.mFormat = SR_Format::RG11B10_FLOAT;
+		resourceProps.mSize = SC_IntVector(SR_RenderDevice::gInstance->GetSwapChain()->GetProperties().mSize, 1);
+		resourceProps.mAllowUnorderedAccess = true;
+		resourceProps.mDebugName = "DiffuseGI";
+		SC_Ref<SR_TextureResource> ddgiResource = SR_RenderDevice::gInstance->CreateTextureResource(resourceProps);
+
+		SR_TextureProperties textureProps(resourceProps.mFormat);
+		mDiffuseGITexture = SR_RenderDevice::gInstance->CreateTexture(textureProps, ddgiResource);
+		textureProps.mWritable = true;
+		mDiffuseGITextureRW = SR_RenderDevice::gInstance->CreateTexture(textureProps, ddgiResource);
+	}
+	{
+		SR_TextureResourceProperties resourceProps;
+		resourceProps.mType = SR_ResourceType::Texture2D;
+		resourceProps.mFormat = SR_Format::RG11B10_FLOAT;
+		resourceProps.mSize = SC_IntVector(SR_RenderDevice::gInstance->GetSwapChain()->GetProperties().mSize, 1);
+		resourceProps.mAllowUnorderedAccess = true;
+		resourceProps.mDebugName = "Reflections";
+		SC_Ref<SR_TextureResource> rtrResource = SR_RenderDevice::gInstance->CreateTextureResource(resourceProps);
+
+		SR_TextureProperties textureProps(resourceProps.mFormat);
+		mReflectionsTexture = SR_RenderDevice::gInstance->CreateTexture(textureProps, rtrResource);
+		textureProps.mWritable = true;
+		mReflectionsTextureRW = SR_RenderDevice::gInstance->CreateTexture(textureProps, rtrResource);
 	}
 	return true;
 }

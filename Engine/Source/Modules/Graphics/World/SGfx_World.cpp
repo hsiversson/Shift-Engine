@@ -17,7 +17,6 @@ SGfx_World::SGfx_World()
 		SC_ASSERT(false);
 		return;
 	}
-
 }
 
 SGfx_World::~SGfx_World()

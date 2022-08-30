@@ -63,21 +63,21 @@ bool SGF_World::LoadLevel(const char* /*aLevel*/)
 	mLevels.Add(level);
 
 
-	SGF_EntityManager* entityManager = GetEntityManager();
-	SGF_Entity entity = entityManager->CreateEntity();
-	entity.AddComponent<SGF_EntityIdComponent>();
-	entity.AddComponent<SGF_EntityNameComponent>()->mName = "Light";
-
-	SGF_TransformComponent* transform = entity.AddComponent<SGF_TransformComponent>();
-	transform->mPosition = SC_Vector(4.f, 2.0f, 0.0f);
-
-	SGF_PointLightComponent* lightComp = entity.AddComponent<SGF_PointLightComponent>();
-	lightComp->mColor = SC_Color(128, 128, 255, 255);
-	lightComp->mRange = 10.0f;
-	lightComp->mIntensity = 140.0f;
-	lightComp->mSourceRadius = 0.06f;
-	lightComp->OnCreate();
-	lightComp->OnUpdate();
+	//SGF_EntityManager* entityManager = GetEntityManager();
+	//SGF_Entity entity = entityManager->CreateEntity();
+	//entity.AddComponent<SGF_EntityIdComponent>();
+	//entity.AddComponent<SGF_EntityNameComponent>()->mName = "Light";
+	//
+	//SGF_TransformComponent* transform = entity.AddComponent<SGF_TransformComponent>();
+	//transform->mPosition = SC_Vector(4.f, 2.0f, 0.0f);
+	//
+	//SGF_PointLightComponent* lightComp = entity.AddComponent<SGF_PointLightComponent>();
+	//lightComp->mColor = SC_Color(128, 128, 255, 255);
+	//lightComp->mRange = 10.0f;
+	//lightComp->mIntensity = 140.0f;
+	//lightComp->mSourceRadius = 0.06f;
+	//lightComp->OnCreate();
+	//lightComp->OnUpdate();
 
 	SC_LOG("Loading level [<name>] took: {:.3f} ms", timer.Stop<float>());
 	return true;

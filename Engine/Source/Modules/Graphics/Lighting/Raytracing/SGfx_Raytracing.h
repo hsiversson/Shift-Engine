@@ -11,7 +11,7 @@ public:
 	void GetConstants(SGfx_ViewData& aPrepareData);
 
 	void RenderDiffuse(SGfx_View* aView);
-	//void RenderSpecular(SGfx_View* aView);
+	void RenderSpecular(SGfx_View* aView);
 
 	void DebugRenderProbes(SGfx_View* aView);
 
@@ -32,7 +32,7 @@ public:
 		float mDepthSharpness;
 		float mEnergyConservation;
 
-		bool mForceMetallic;
+		bool mInfiniteBounces;
 		bool mDiffuseEnabled;
 		bool mSpecularEnabled;
 		bool mVisualizeProbes;
@@ -62,8 +62,12 @@ public:
 		uint32 mDepthProbeSideLength;
 		uint32 mDepthTextureDescriptorIndex;
 
+		uint32 mDiffuseGIDescriptorIndex;
+		uint32 mReflectionsDescriptorIndex;
+		uint32 _unused[2];
+
 		float mGlobalRoughnessMultiplier;
-		uint32 mForceUpdate;
+		uint32 mInfiniteBounces;
 		uint32 mDiffuseEnabled;
 		uint32 mSpecularEnabled;
 	};
@@ -78,6 +82,8 @@ private:
 	SC_Ref<SR_ShaderState> mTraceRaysShader;
 	SC_Ref<SR_ShaderState> mUpdateProbesShader[2];
 	SC_Ref<SR_ShaderState> mUpdateProbesBorderShader[2];
+	SC_Ref<SR_ShaderState> mSampleProbesShader;
+	SC_Ref<SR_ShaderState> mReflectionsTraceRaysShader;
 
 	SC_Ref<SR_Texture> mProbeIrradianceTexture;
 	SC_Ref<SR_Texture> mProbeIrradianceTextureRW;
@@ -87,13 +93,15 @@ private:
 	SC_Ref<SR_Texture> mTraceRaysRadianceTextureRW;
 	SC_Ref<SR_Texture> mTraceRaysDirectionDepthTexture;
 	SC_Ref<SR_Texture> mTraceRaysDirectionDepthTextureRW;
+	SC_Ref<SR_Texture> mDiffuseGITexture;
+	SC_Ref<SR_Texture> mDiffuseGITextureRW;
+	SC_Ref<SR_Texture> mReflectionsTexture;
+	SC_Ref<SR_Texture> mReflectionsTextureRW;
 
 	// DEBUG
 	SC_Ref<SR_ShaderState> mDebugSphereShader;
 	SC_Ref<SR_BufferResource> mSphereVertexBuffer;
 	SC_Ref<SR_BufferResource> mSphereIndexBuffer;
-
-	SC_Vector mPreviousBasePos;
 };
 
 

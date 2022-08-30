@@ -220,8 +220,8 @@ bool SED_Editor::Render()
 				SED_FloatSlider("Normal Bias", probeGridProperties.mNormalBias, 0.0001f, 0.5f);
 				SED_FloatSlider("Depth Sharpness", probeGridProperties.mDepthSharpness, 0.0f, 100.f);
 				SED_FloatSlider("Global Roughness Multiplier", probeGridProperties.mGlobalRoughnessMultiplier, 0.0f, 1.0f);
+				SED_Checkbox("Infinite Bounces", probeGridProperties.mInfiniteBounces);
 				SED_Checkbox("Visualize Probes", probeGridProperties.mVisualizeProbes);
-				SED_Checkbox("Force Metallic", probeGridProperties.mForceMetallic);
 				ImGui::EndMenu();
 			}
 			if (ImGui::BeginMenu("TEMP Sun"))

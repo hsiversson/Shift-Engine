@@ -39,12 +39,12 @@ struct SGfx_RenderObject
 	bool mOutputVelocity;
 };
 
-struct SGfx_VisibilityBufferConstants
+struct SGfx_GBufferConstants
 {
 	uint32 mDepthDescriptorIndex; // D32_FLOAT
+	uint32 mColorDescriptorIndex; // RGBA8_UNORM
 	uint32 mNormalsDescriptorIndex; // RG16_FLOAT
-	uint32 mMaterialsDescriptorIndex; // RGBA16_FLOAT
-	uint32 _unused;
+	uint32 mMaterialRMASDescriptorIndex; // RGBA8_UNORM
 };
 
 struct SGfx_LightRenderData
@@ -62,7 +62,7 @@ struct alignas(16) SGfx_SceneConstants
 	}
 
 	SGfx_ViewConstants mViewConstants;
-	SGfx_VisibilityBufferConstants mVisibilityBufferConstants;
+	SGfx_GBufferConstants mGBufferConstants;
 	SGfx_EnvironmentConstants mEnvironmentConstants;
 	SGfx_ShadowConstants mShadowConstants;
 	SGfx_LightCullingConstants mLightCullingConstants;
@@ -162,10 +162,12 @@ public:
 		mPreRenderUpdatesEvent.Reset();
 		mPrePassEvent.Reset();
 		mLightCullingEvent.Reset();
+		mRenderGBufferEvent.Reset();
 		mRenderGIEvent.Reset();
 		mShadowsEvent.Reset();
 		mAmbientOcclusionEvent.Reset();
 		mRenderOpaqueEvent.Reset();
+		mRenderLightingEvent.Reset();
 		mRenderDebugObjectsEvent.Reset();
 		mPostEffectsEvent.Reset();
 
@@ -203,9 +205,11 @@ public:
 	SC_Ref<SR_TaskEvent> mPreRenderUpdatesEvent;
 	SC_Ref<SR_TaskEvent> mPrePassEvent;
 	SC_Ref<SR_TaskEvent> mLightCullingEvent;
+	SC_Ref<SR_TaskEvent> mRenderGBufferEvent;
 	SC_Ref<SR_TaskEvent> mRenderGIEvent;
 	SC_Ref<SR_TaskEvent> mShadowsEvent;
 	SC_Ref<SR_TaskEvent> mAmbientOcclusionEvent;
+	SC_Ref<SR_TaskEvent> mRenderLightingEvent;
 	SC_Ref<SR_TaskEvent> mRenderOpaqueEvent;
 	SC_Ref<SR_TaskEvent> mRenderDebugObjectsEvent;
 	SC_Ref<SR_TaskEvent> mPostEffectsEvent;

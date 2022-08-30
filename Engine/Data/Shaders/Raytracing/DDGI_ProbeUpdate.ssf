@@ -122,14 +122,14 @@ void Main(uint3 aDispatchThreadId : SV_DispatchThreadId, uint aGroupIndex : SV_G
 #ifdef PROBE_DEPTH_UPDATE 
     RWTexture2D<float2> outputTexture = GetRWTexture2D<float2>(Constants.mTextureDescriptorIndex);
     float2 previousResult = outputTexture[currentPixel];
-    if (SR_GIConstants.mForceUpdate == 0)
+    if (SR_SceneConstants.mFrameIndex > 0)
         result.rg = lerp(result.rg, previousResult, SR_GIConstants.mHistoryFactor);
 
     outputTexture[currentPixel] = clamp(result.rg, (float2)0, (float2)10000.0f);
 #else
     RWTexture2D<float3> outputTexture = GetRWTexture2D<float3>(Constants.mTextureDescriptorIndex);
     float3 previousResult = outputTexture[currentPixel];
-    if (SR_GIConstants.mForceUpdate == 0)
+    if (SR_SceneConstants.mFrameIndex > 0)
         result = lerp(result, previousResult, SR_GIConstants.mHistoryFactor);
 
     outputTexture[currentPixel] = clamp(result, (float3)0, (float3)10000.0f);

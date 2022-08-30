@@ -39,7 +39,7 @@ MaterialData BuildMaterialData(float4 aSvPosition, float4 aBaseColor, float3 aWo
     materialData.mColor = aBaseColor.rgb;
     materialData.mAlpha = aBaseColor.a;
     materialData.mWorldNormal = aWorldNormal;
-    materialData.mRoughness = aRMAS.r * SR_GIConstants.mGlobalRoughnessMultiplier;
+    materialData.mRoughness = aRMAS.r;
     materialData.mMetallic = aRMAS.g;
     materialData.mAmbientOcclusion = aRMAS.b;
     materialData.mSpecular = aRMAS.a;

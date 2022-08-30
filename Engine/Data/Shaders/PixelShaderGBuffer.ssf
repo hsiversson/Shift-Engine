@@ -1,0 +1,65 @@
+#include "Common.ssh"
+#include "SceneConstants.ssh"
+#include "Lighting.ssh"
+
+struct PixelShaderInput
+{
+    float4 mClipPosition : SV_POSITION;
+    float3 mViewPosition : View_POSITION;
+    float3 mWorldPosition : WORLD_POSITION;
+    float3 mPrevWorldPosition : PREV_WORLD_POSITION;
+    float3 mNormal : NORMAL0;
+    float3 mTangent : TANGENT;
+    float3 mBitangent : BITANGENT;
+    float2 mUV : UV0;
+    nointerpolation uint mMaterialIndex : MATERIAL_INDEX;
+};
+
+struct GBufferOutput
+{
+    float4 mColor : SV_Target0;
+    float4 mNormal : SV_Target1;
+    float4 mMaterialRMAS : SV_Target2;
+};
+
+GBufferOutput Main(in PixelShaderInput aInput)
+{
+    float3x3 tangentToWorld = float3x3(
+            aInput.mTangent.x, aInput.mBitangent.x, aInput.mNormal.x,
+            aInput.mTangent.y, aInput.mBitangent.y, aInput.mNormal.y,
+            aInput.mTangent.z, aInput.mBitangent.z, aInput.mNormal.z
+        );
+
+    const SR_MaterialInfo materialInfo = SR_GetMaterialInfo(aInput.mMaterialIndex);
+    Texture2D<float4> baseColorMap = GetTexture2D<float4>(materialInfo.mTextureIndices[0]);
+    Texture2D<float3> normalMap = GetTexture2D<float3>(materialInfo.mTextureIndices[1]);
+    Texture2D<float> roughnessMap = GetTexture2D<float>(materialInfo.mTextureIndices[2]);
+    Texture2D<float> metallicMap = GetTexture2D<float>(materialInfo.mTextureIndices[3]);
+    //Texture2D<float> aoMap = GetTexture2D<float>(materialInfo.mTextureIndices[4]);
+    Texture2D<float2> specularMap = GetTexture2D<float2>(materialInfo.mTextureIndices[5]);
+    //Texture2D<float> opacityMap = GetTexture2D<float>(materialInfo.mTextureIndices[6]);
+    Texture2D<float3> emissiveMap = GetTexture2D<float3>(materialInfo.mTextureIndices[7]);
+
+    float4 baseColorSample = baseColorMap.Sample(gAnisotropicWrap, aInput.mUV);
+    
+#ifdef USE_PACKED_NORMALMAP
+    float3 normalSample = normalize(UnpackNormal(normalMap.Sample(gAnisotropicWrap, aInput.mUV).rg) * 2.0f - 1.0f); // Remap to -1 -> 1 range (NormalMaps are stored in 0 -> 1 range)
+#else
+    float3 normalSample = normalize(normalMap.Sample(gAnisotropicWrap, aInput.mUV).rgb * 2.0f - 1.0f); // Remap to -1 -> 1 range (NormalMaps are stored in 0 -> 1 range)
+#endif
+    normalSample = mul(tangentToWorld, normalSample);
+    //normalSample = mul(SR_ViewConstants.mWorldToCamera, float4(normalSample, 0.0f)).xyz;
+    //float2 encodedNormal = EncodeNormal(normalSample);
+
+    float roughnessSample = roughnessMap.Sample(gAnisotropicWrap, aInput.mUV).r * SR_GIConstants.mGlobalRoughnessMultiplier;
+    float metallicSample = metallicMap.Sample(gAnisotropicWrap, aInput.mUV).r;
+    float specularSample = 1.0f;//specularMap.Sample(gAnisotropicWrap, aUV).g;
+    float3 emissiveSample = emissiveMap.Sample(gAnisotropicWrap, aInput.mUV).rgb;
+
+    GBufferOutput output;
+    output.mColor = float4(baseColorSample.rgb, 1.0f);
+    output.mNormal = float4(normalSample * 0.5f + 0.5f, 0.0f);
+    output.mMaterialRMAS = float4(roughnessSample, metallicSample, 1.0f, specularSample);
+
+    return output;
+}

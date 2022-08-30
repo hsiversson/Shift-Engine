@@ -83,6 +83,23 @@ float LumaRec709(in float3 aColor)
 	return RelativeLuminance(aColor);
 }
 
+/** Normal Encoding */
+float2 EncodeNormal(float3 aNormal)
+{
+    float p = sqrt(aNormal.z * 8.0f + 8.0f);
+    return aNormal.xy / p + 0.5f;
+}
+float3 DecodeNormal(float2 aEncodedNormal)
+{
+    float2 fenc = aEncodedNormal * 4.0f - 2.0f;
+    float f = dot(fenc, fenc);
+    float g = sqrt(1.0f - f / 4.0f);
+    float3 n;
+    n.xy = fenc * g;
+    n.z = 1.0f - f / 2.0f;
+    return n;
+}
+
 // TEMP
 #define SR_AtomicAdd InterlockedAdd
 #define SR_AtomicExchange InterlockedExchange
