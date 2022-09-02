@@ -39,6 +39,9 @@ public:
 	SC_SizeT GetAvailableVRAM() const override;
 	SC_SizeT GetUsedVRAM() const override;
 
+	VkDevice& GetVkDevice();
+	VkInstance& GetVkInstance();
+
 	static SR_RenderDevice_Vk* gInstance;
 
 private:

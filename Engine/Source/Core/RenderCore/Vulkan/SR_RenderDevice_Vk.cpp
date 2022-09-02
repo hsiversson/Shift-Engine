@@ -117,6 +117,16 @@ SC_SizeT SR_RenderDevice_Vk::GetUsedVRAM() const
 
 }
 
+VkDevice& SR_RenderDevice_Vk::GetVkDevice()
+{
+	return mVkLogicalDevice;
+}
+
+VkInstance& SR_RenderDevice_Vk::GetVkInstance()
+{
+	return mVkInstance;
+}
+
 bool SR_RenderDevice_Vk::Init(void* /*aWindowHandle*/)
 {
 
